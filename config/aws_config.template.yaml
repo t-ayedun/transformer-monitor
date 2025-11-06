@@ -1,0 +1,58 @@
+aws:
+  iot:
+    enabled: true
+    endpoint: "{{IOT_ENDPOINT}}"
+    thing_name: "{{IOT_THING_NAME}}"
+    region: "{{AWS_REGION}}"
+    port: 8883
+    
+    certificates:
+      ca_cert: "/data/certs/AmazonRootCA1.pem"
+      device_cert: "/data/certs/certificate.pem.crt"
+      private_key: "/data/certs/private.pem.key"
+    
+    topics:
+      telemetry: "transformers/{{IOT_THING_NAME}}/telemetry"
+      images: "transformers/{{IOT_THING_NAME}}/images"
+      heartbeat: "transformers/{{IOT_THING_NAME}}/heartbeat"
+      commands: "transformers/{{IOT_THING_NAME}}/commands"
+      
+    qos: 1  # 0 or 1
+    retry_attempts: 3
+    retry_delay: 5  # seconds
+    
+  s3:
+    enabled: true
+    bucket: "{{S3_BUCKET_NAME}}"
+    region: "{{AWS_REGION}}"
+    prefix: "sites/{{SITE_ID}}/"
+    
+    upload:
+      thermal_images: true
+      camera_snapshots: true
+      
+ftp:
+  enabled: false
+  host: "{{FTP_HOST}}"
+  port: 21
+  username: "{{FTP_USERNAME}}"
+  password: "{{FTP_PASSWORD}}"
+  remote_dir: "/transformer_data/{{SITE_ID}}"
+  passive: true
+  upload_interval: 300  # seconds
+  retry_attempts: 3
+
+local_storage:
+  enabled: true
+  database_path: "/data/buffer/readings.db"
+  max_size_mb: 500
+  retention_days: 7
+  
+  cleanup:
+    enabled: true
+    interval: 3600  # seconds (1 hour)
+
+heartbeat:
+  enabled: true
+  interval: 300  # seconds (5 minutes)
+  include_system_stats: true

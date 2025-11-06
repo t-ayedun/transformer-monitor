@@ -1,0 +1,46 @@
+# Core dependencies
+python-dotenv==1.0.0
+PyYAML==6.0.1
+
+# Thermal camera
+adafruit-circuitpython-mlx90640==1.2.15
+adafruit-blinka==8.20.0
+
+# Pi Camera
+picamera2==0.3.12
+Pillow==10.1.0
+
+# Computer vision (for motion detection)
+opencv-python==4.8.1.78
+numpy==1.24.3
+
+# AWS
+AWSIoTPythonSDK==1.5.2
+boto3==1.34.0
+botocore==1.34.0
+
+# MQTT (alternative)
+paho-mqtt==1.6.1
+
+# Web interface
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Data handling
+pandas==2.0.3
+
+# System monitoring
+psutil==5.9.6
+
+# Networking
+requests==2.31.0
+
+# Time/Date
+pytz==2023.3
+
+# GPIO (for IR LEDs)
+gpiozero==2.0
+RPi.GPIO==0.7.1
+
+# Utilities
+urllib3==2.0.7

@@ -1,0 +1,116 @@
+# Default ROI Definitions
+# These are template ROIs for common transformer configurations
+
+# For Distribution Pad Mount Transformers (100-500 kVA)
+distribution_pad_mount:
+  full_frame:
+    coordinates: [[0, 0], [32, 24]]
+    weight: 1.0
+    emissivity: 0.95
+    thresholds:
+      warning: 75.0
+      critical: 85.0
+      emergency: 95.0
+  
+  top_winding:
+    coordinates: [[8, 0], [24, 8]]
+    weight: 1.5
+    emissivity: 0.95
+    thresholds:
+      warning: 80.0
+      critical: 90.0
+      emergency: 100.0
+  
+  middle_core:
+    coordinates: [[8, 8], [24, 16]]
+    weight: 1.2
+    emissivity: 0.8  # Steel core
+    thresholds:
+      warning: 75.0
+      critical: 85.0
+      emergency: 95.0
+  
+  bottom_oil:
+    coordinates: [[8, 16], [24, 24]]
+    weight: 1.0
+    emissivity: 0.95  # Transformer oil
+    thresholds:
+      warning: 70.0
+      critical: 80.0
+      emergency: 90.0
+
+# For Pole-Mounted Transformers (25-100 kVA)
+pole_mounted:
+  full_frame:
+    coordinates: [[0, 0], [32, 24]]
+    weight: 1.0
+    emissivity: 0.95
+    thresholds:
+      warning: 70.0
+      critical: 80.0
+      emergency: 90.0
+  
+  upper_section:
+    coordinates: [[10, 0], [22, 12]]
+    weight: 1.3
+    emissivity: 0.95
+    thresholds:
+      warning: 75.0
+      critical: 85.0
+      emergency: 95.0
+  
+  lower_section:
+    coordinates: [[10, 12], [22, 24]]
+    weight: 1.0
+    emissivity: 0.95
+    thresholds:
+      warning: 70.0
+      critical: 80.0
+      emergency: 90.0
+
+# For Power/Substation Transformers (>500 kVA)
+substation:
+  full_frame:
+    coordinates: [[0, 0], [32, 24]]
+    weight: 1.0
+    emissivity: 0.95
+    thresholds:
+      warning: 80.0
+      critical: 90.0
+      emergency: 100.0
+  
+  hv_bushing:
+    coordinates: [[4, 0], [14, 8]]
+    weight: 1.8
+    emissivity: 0.2  # Porcelain bushing
+    thresholds:
+      warning: 85.0
+      critical: 95.0
+      emergency: 105.0
+  
+  core_area:
+    coordinates: [[8, 8], [24, 16]]
+    weight: 1.5
+    emissivity: 0.8
+    thresholds:
+      warning: 85.0
+      critical: 95.0
+      emergency: 105.0
+  
+  lv_bushing:
+    coordinates: [[18, 0], [28, 8]]
+    weight: 1.8
+    emissivity: 0.2
+    thresholds:
+      warning: 85.0
+      critical: 95.0
+      emergency: 105.0
+  
+  cooling_system:
+    coordinates: [[0, 16], [32, 24]]
+    weight: 1.0
+    emissivity: 0.9
+    thresholds:
+      warning: 75.0
+      critical: 85.0
+      emergency: 95.0

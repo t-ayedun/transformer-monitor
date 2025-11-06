@@ -1,0 +1,20 @@
+version: '2.1'
+
+services:
+  monitor:
+    build: .
+    privileged: true
+    restart: always
+    network_mode: host
+    volumes:
+      - 'monitor-data:/data'
+    labels:
+      io.balena.features.dbus: '1'
+      io.balena.features.kernel-modules: '1'
+    devices:
+      - "/dev/i2c-1:/dev/i2c-1"
+      - "/dev/vchiq:/dev/vchiq"
+      - "/dev/video0:/dev/video0"
+
+volumes:
+  monitor-data:

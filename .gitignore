@@ -1,0 +1,46 @@
+# Credentials and certificates
+*.pem
+*.crt
+*.key
+certs/*
+!certs/.gitkeep
+config/*_local.yaml
+config/*_production.yaml
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Data files
+*.db
+*.sqlite
+*.log
+data/
+*.json
+!config/*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary
+tmp/
+temp/
+*.tmp
+```
+
+**`VERSION`**:
+```
+1.0.0

@@ -1,0 +1,106 @@
+# MINIMAL CONFIGURATION FOR TESTING
+site:
+  id: "TEST_SITE"
+  name: "Test Lab"
+  location:
+    address: "Office Lab"
+  timezone: "Africa/Lagos"
+
+transformer:
+  type: "Test Unit"
+  rating_kva: 100
+
+thermal_camera:
+  model: "MLX90640"
+  i2c_address: 0x33
+  i2c_bus: 1
+  refresh_rate: 8
+  resolution: [32, 24]
+  emissivity: 0.95
+
+# DEFAULT ROIs - Will be replaced by visual mapper
+regions_of_interest:
+  - name: "full_frame"
+    enabled: true
+    coordinates: [[0, 0], [32, 24]]
+    weight: 1.0
+    emissivity: 0.95
+    thresholds:
+      warning: 75.0
+      critical: 85.0
+      emergency: 95.0
+
+composite_temperature:
+  method: "weighted_average"
+  enabled: true
+
+# Pi Camera Configuration
+pi_camera:
+  enabled: true
+  model: "Pi Camera 3"
+  resolution: [1920, 1080]
+  framerate: 30
+  quality: 85
+  
+  motion_detection:
+    enabled: true
+    threshold: 1500
+    min_area: 500
+    
+  recording:
+    pre_record_seconds: 10
+    post_record_seconds: 10
+    max_duration_seconds: 300
+    
+  snapshot_interval: 1800  # 30 minutes
+  
+  night_mode:
+    enabled: true
+    start_hour: 18
+    end_hour: 6
+    ir_leds_enabled: false
+    
+  storage:
+    max_local_storage_gb: 10
+    auto_cleanup_days: 7
+    
+  live_view:
+    enabled: true
+    port: 5000
+    require_auth: false  # Disable for testing
+    username: "admin"
+    password: "admin"
+
+# Data Capture
+data_capture:
+  interval: 60  # 1 minute
+  save_full_frame_interval: 10
+  buffer_size: 100
+
+# Local Storage (NO AWS/FTP/MQTT YET)
+local_storage:
+  enabled: true
+  database_path: "/data/buffer/readings.db"
+  max_size_mb: 500
+  retention_days: 7
+
+# Network (for testing)
+network:
+  router:
+    local_ip: "192.168.1.1"
+  pi:
+    static_ip: "192.168.1.100"
+  connectivity:
+    check_interval: 60
+
+# Heartbeat
+heartbeat:
+  enabled: true
+  interval: 300  # 5 minutes
+
+# Logging
+logging:
+  level: "INFO"
+  max_file_size_mb: 10
+  backup_count: 5
+  log_to_console: true

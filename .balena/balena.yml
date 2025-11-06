@@ -1,0 +1,33 @@
+version: "2"
+name: "transformer-monitor"
+type: "sw.application"
+description: "Thermal monitoring system for distribution transformers"
+
+data:
+  applicationEnvironmentVariables:
+    # Logging
+    - LOG_LEVEL: "INFO"
+    
+    # Data capture
+    - CAPTURE_INTERVAL: "60"
+    - HEARTBEAT_INTERVAL: "300"
+    
+    # Default timezones
+    - TZ: "Africa/Lagos"
+  
+  defaultDeviceType: "raspberrypi4-64"
+  
+  supportedDeviceTypes:
+    - raspberrypi4-64
+    - raspberrypi3-64
+  
+  # Fleet configuration
+  fleet:
+    PUBLIC_URL: false
+```
+
+**`certs/.gitkeep`**:
+```
+# This directory stores AWS IoT certificates
+# DO NOT commit certificates to git
+# Upload certificates to /data/certs/ on deployed devices

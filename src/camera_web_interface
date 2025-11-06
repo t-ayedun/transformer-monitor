@@ -1,0 +1,818 @@
+"""
+Camera Web Interface
+Provides web-based camera control and live view
+"""
+
+import io
+import logging
+import numpy as np
+from pathlib import Path
+from flask import Flask, Response, render_template_string, request, jsonify
+from PIL import Image
+import threading
+import yaml
+
+
+class CameraWebInterface:
+    """Simple web interface for camera control"""
+    
+    def __init__(self, smart_camera, config, port=5000):
+        self.logger = logging.getLogger(__name__)
+        self.camera = smart_camera
+        self.config = config
+        self.port = port
+        
+        self.app = Flask(__name__)
+        self.setup_routes()
+        
+        # Authentication
+        self.auth_enabled = config.get('pi_camera.live_view.require_auth', True)
+        self.username = config.get('pi_camera.live_view.username', 'admin')
+        self.password = config.get('pi_camera.live_view.password', 'changeme')
+    
+    def setup_routes(self):
+        """Setup Flask routes"""
+        
+        @self.app.route('/')
+        def index():
+            """Main control page"""
+            return render_template_string(self.get_html_template())
+        
+        @self.app.route('/stream')
+        def stream():
+            """Live MJPEG stream"""
+            if self.auth_enabled and not self.check_auth():
+                return "Unauthorized", 401
+            
+            return Response(
+                self.generate_frames(),
+                mimetype='multipart/x-mixed-replace; boundary=frame'
+            )
+        
+        @self.app.route('/snapshot', methods=['POST'])
+        def snapshot():
+            """Capture snapshot on demand"""
+            if self.auth_enabled and not self.check_auth():
+                return jsonify({'error': 'Unauthorized'}), 401
+            
+            filepath = self.camera.capture_snapshot(custom_name='manual')
+            if filepath:
+                return jsonify({'success': True, 'filepath': filepath})
+            else:
+                return jsonify({'error': 'Snapshot failed'}), 500
+        
+        @self.app.route('/stats')
+        def stats():
+            """Get camera statistics"""
+            return jsonify(self.camera.get_stats())
+        
+        @self.app.route('/settings', methods=['GET', 'POST'])
+        def settings():
+            """Get/update camera settings"""
+            if self.auth_enabled and not self.check_auth():
+                return jsonify({'error': 'Unauthorized'}), 401
+            
+            if request.method == 'GET':
+                return jsonify({
+                    'motion_enabled': self.camera.motion_enabled,
+                    'motion_threshold': self.camera.motion_threshold,
+                    'night_mode_enabled': self.camera.night_mode_enabled,
+                    'snapshot_interval': self.camera.snapshot_interval
+                })
+            
+            elif request.method == 'POST':
+                data = request.json
+                
+                # Update settings
+                if 'motion_enabled' in data:
+                    self.camera.motion_enabled = data['motion_enabled']
+                
+                if 'motion_threshold' in data:
+                    self.camera.motion_threshold = data['motion_threshold']
+                
+                if 'snapshot_interval' in data:
+                    self.camera.snapshot_interval = data['snapshot_interval']
+                
+                self.logger.info(f"Settings updated: {data}")
+                return jsonify({'success': True})
+        
+        @self.app.route('/health')
+        def health():
+            """Health check endpoint"""
+            from datetime import datetime
+            return jsonify({'status': 'ok', 'timestamp': datetime.utcnow().isoformat()})
+        
+        # ========================================================
+        # ROI SETUP ROUTES
+        # ========================================================
+        
+        @self.app.route('/roi-setup')
+        def roi_setup():
+            """ROI setup page with visual mapping"""
+            return render_template_string(self.get_roi_setup_html())
+        
+        @self.app.route('/capture-setup-images', methods=['POST'])
+        def capture_setup_images():
+            """Capture both visual and thermal images for setup"""
+            try:
+                # Capture visual image
+                visual_path = self.camera.capture_snapshot(custom_name='roi_setup_visual')
+                
+                # Capture thermal frame
+                import sys
+                sys.path.insert(0, '/app/src')
+                from thermal_capture import ThermalCapture
+                
+                thermal_config = self.config.get('thermal_camera', {})
+                thermal_camera = ThermalCapture(
+                    i2c_addr=thermal_config.get('i2c_address', 0x33),
+                    i2c_bus=thermal_config.get('i2c_bus', 1),
+                    refresh_rate=thermal_config.get('refresh_rate', 8)
+                )
+                thermal_frame = thermal_camera.get_frame()
+                thermal_camera.close()
+                
+                if thermal_frame is None:
+                    return jsonify({'error': 'Failed to capture thermal frame'}), 500
+                
+                # Save thermal frame
+                thermal_path = '/data/images/roi_setup_thermal.npy'
+                np.save(thermal_path, thermal_frame)
+                
+                return jsonify({
+                    'success': True,
+                    'visual_image': f'/images/{Path(visual_path).name}',
+                    'thermal_data': thermal_frame.tolist()
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Failed to capture setup images: {e}")
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/save-roi-mapping', methods=['POST'])
+        def save_roi_mapping():
+            """Save ROI mapping from visual clicks"""
+            try:
+                data = request.json
+                
+                # Import ROI mapper
+                from roi_mapper import ROIMapper
+                
+                # Get camera resolutions from config
+                visual_res = tuple(self.config.get('pi_camera.resolution', [1920, 1080]))
+                thermal_res = tuple(self.config.get('thermal_camera.resolution', [32, 24]))
+                
+                mapper = ROIMapper(
+                    visual_resolution=visual_res,
+                    thermal_resolution=thermal_res
+                )
+                
+                rois = []
+                for roi_data in data['rois']:
+                    roi_config = mapper.create_roi_from_clicks(
+                        roi_data['points'],
+                        roi_data['name']
+                    )
+                    # Add user-specified values
+                    roi_config['emissivity'] = roi_data.get('emissivity', 0.95)
+                    roi_config['weight'] = roi_data.get('weight', 1.0)
+                    
+                    rois.append(roi_config)
+                
+                # Save to config file
+                config_path = Path('/data/config/site_config.yaml')
+                
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f)
+                
+                config['regions_of_interest'] = rois
+                
+                with open(config_path, 'w') as f:
+                    yaml.dump(config, f, default_flow_style=False)
+                
+                self.logger.info(f"Saved {len(rois)} ROIs to configuration")
+                return jsonify({'success': True, 'rois': rois})
+                
+            except Exception as e:
+                self.logger.error(f"Failed to save ROI mapping: {e}")
+                return jsonify({'error': str(e)}), 500
+        
+        @self.app.route('/images/<filename>')
+        def serve_image(filename):
+            """Serve images from data directory"""
+            from flask import send_file
+            image_path = Path('/data/images') / filename
+            if image_path.exists():
+                return send_file(image_path)
+            else:
+                return "Image not found", 404
+    
+    def check_auth(self):
+        """Check basic authentication"""
+        auth = request.authorization
+        if not auth:
+            return False
+        return auth.username == self.username and auth.password == self.password
+    
+    def generate_frames(self):
+        """Generate frames for MJPEG stream"""
+        from datetime import datetime
+        
+        while True:
+            try:
+                # Capture frame from camera
+                frame_array = self.camera.camera.capture_array("main")
+                
+                # Convert to JPEG
+                image = Image.fromarray(frame_array)
+                
+                # Add overlay
+                self.camera._add_overlay(image, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                
+                # Convert to bytes
+                buffer = io.BytesIO()
+                image.save(buffer, format='JPEG', quality=70)
+                frame_bytes = buffer.getvalue()
+                
+                # Yield frame
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                
+            except Exception as e:
+                self.logger.error(f"Frame generation error: {e}")
+                break
+    
+    def get_html_template(self):
+        """HTML template for main web interface"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transformer Site Camera</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .video-container {
+            width: 100%;
+            background: #000;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .video-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online {
+            background: #28a745;
+        }
+        .status-offline {
+            background: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span class="status-indicator status-online" id="statusIndicator"></span>
+            Transformer Site Camera
+        </h1>
+        
+        <div class="video-container">
+            <img src="/stream" alt="Live Camera Feed" id="videoFeed">
+        </div>
+        
+        <div class="controls">
+            <button onclick="captureSnapshot()">📸 Capture Snapshot</button>
+            <button onclick="refreshStats()">🔄 Refresh Stats</button>
+            <button onclick="window.location.href='/roi-setup'">⚙️ ROI Setup</button>
+        </div>
+        
+        <h2>Statistics</h2>
+        <div class="stats" id="stats">
+            <div class="stat-box">
+                <div class="stat-label">Motion Events</div>
+                <div class="stat-value" id="motionEvents">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Recordings</div>
+                <div class="stat-value" id="recordings">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Snapshots</div>
+                <div class="stat-value" id="snapshots">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Recording Now</div>
+                <div class="stat-value" id="isRecording">-</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh stats every 10 seconds
+        setInterval(refreshStats, 10000);
+        
+        // Initial load
+        refreshStats();
+        
+        function refreshStats() {
+            fetch('/stats')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('motionEvents').textContent = data.motion_events || 0;
+                    document.getElementById('recordings').textContent = data.recordings_saved || 0;
+                    document.getElementById('snapshots').textContent = data.snapshots_taken || 0;
+                    document.getElementById('isRecording').textContent = data.is_recording ? 'YES' : 'NO';
+                    document.getElementById('isRecording').style.color = data.is_recording ? '#dc3545' : '#28a745';
+                })
+                .catch(err => console.error('Stats fetch error:', err));
+        }
+        
+        function captureSnapshot() {
+            fetch('/snapshot', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Snapshot captured: ' + data.filepath);
+                        refreshStats();
+                    } else {
+                        alert('Snapshot failed');
+                    }
+                })
+                .catch(err => alert('Error: ' + err));
+        }
+        
+        // Check video feed status
+        document.getElementById('videoFeed').onerror = function() {
+            document.getElementById('statusIndicator').className = 'status-indicator status-offline';
+        };
+        
+        document.getElementById('videoFeed').onload = function() {
+            document.getElementById('statusIndicator').className = 'status-indicator status-online';
+        };
+    </script>
+</body>
+</html>
+        """
+    
+    def get_roi_setup_html(self):
+        """HTML for ROI setup interface"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ROI Setup - Transformer Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .setup-area {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+        .image-container {
+            position: relative;
+            border: 2px solid #ddd;
+            cursor: crosshair;
+        }
+        .image-container img {
+            width: 100%;
+            display: block;
+        }
+        .roi-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .controls {
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .roi-list {
+            margin-top: 20px;
+        }
+        .roi-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.delete {
+            background: #dc3545;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .instructions {
+            padding: 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            margin-bottom: 20px;
+        }
+        .thermal-preview {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 ROI Setup - Visual Mapping</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click "Capture Setup Images" to take photos</li>
+                <li>Click corners to define each ROI (Region of Interest)</li>
+                <li>Name the ROI (e.g., "HV Bushing", "Upper Tank")</li>
+                <li>Set emissivity based on surface type</li>
+                <li>Click "Add ROI" and repeat for all areas</li>
+                <li>Click "Save Configuration" when done</li>
+            </ol>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <button onclick="captureSetupImages()">📸 Capture Setup Images</button>
+            <button onclick="clearAll()">🗑️ Clear All</button>
+            <button onclick="window.location.href='/'">← Back to Main</button>
+        </div>
+        
+        <div class="setup-area">
+            <div>
+                <h3>Visual Image (Click to Define ROI)</h3>
+                <div class="image-container" id="imageContainer" onclick="handleClick(event)">
+                    <img id="visualImage" src="" alt="Capture images first" style="max-width: 100%;">
+                    <svg class="roi-overlay" id="roiOverlay"></svg>
+                </div>
+                
+                <div class="thermal-preview" id="thermalPreview" style="display: none;">
+                    <h4>Thermal Preview</h4>
+                    <canvas id="thermalCanvas" width="320" height="240"></canvas>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <h3>Current ROI</h3>
+                
+                <label>ROI Name:</label>
+                <select id="roiName">
+                    <option value="hv_bushing">HV Bushing</option>
+                    <option value="lv_bushing">LV Bushing</option>
+                    <option value="upper_tank">Upper Tank (Winding)</option>
+                    <option value="middle_tank">Middle Tank (Core)</option>
+                    <option value="lower_tank">Lower Tank (Oil)</option>
+                    <option value="full_frame">Full Frame</option>
+                </select>
+                
+                <label>Emissivity:</label>
+                <select id="emissivity">
+                    <option value="0.95">0.95 - Painted tank</option>
+                    <option value="0.90">0.90 - Porcelain bushing</option>
+                    <option value="0.85">0.85 - Weathered steel</option>
+                    <option value="0.20">0.20 - Galvanized metal</option>
+                </select>
+                
+                <label>Weight (importance):</label>
+                <select id="weight">
+                    <option value="2.0">2.0 - Critical (bushings)</option>
+                    <option value="1.5">1.5 - High (winding area)</option>
+                    <option value="1.0" selected>1.0 - Normal</option>
+                    <option value="0.8">0.8 - Low priority</option>
+                </select>
+                
+                <div style="margin-top: 20px;">
+                    <strong>Points clicked:</strong> <span id="pointCount">0</span>
+                </div>
+                
+                <button onclick="addROI()">➕ Add ROI</button>
+                <button onclick="clearPoints()">↺ Clear Points</button>
+                
+                <div class="roi-list">
+                    <h3>Defined ROIs</h3>
+                    <div id="roiList"></div>
+                </div>
+                
+                <button onclick="saveConfiguration()" style="width: 100%; margin-top: 20px; background: #28a745;">
+                    💾 Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let clickedPoints = [];
+        let definedROIs = [];
+        let thermalData = null;
+        
+        async function captureSetupImages() {
+            try {
+                const response = await fetch('/capture-setup-images', {method: 'POST'});
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('visualImage').src = data.visual_image + '?' + new Date().getTime();
+                    thermalData = data.thermal_data;
+                    document.getElementById('thermalPreview').style.display = 'block';
+                    drawThermalPreview();
+                    alert('Images captured! Now click on the image to define ROIs.');
+                } else {
+                    alert('Failed to capture images: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error capturing images: ' + error);
+            }
+        }
+        
+        function handleClick(event) {
+            const img = document.getElementById('visualImage');
+            if (!img.src || img.src.endsWith('alt')) {
+                alert('Capture images first!');
+                return;
+            }
+            
+            const rect = img.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Convert to image coordinates
+            const scaleX = img.naturalWidth / img.width;
+            const scaleY = img.naturalHeight / img.height;
+            
+            const imageX = Math.round(x * scaleX);
+            const imageY = Math.round(y * scaleY);
+            
+            clickedPoints.push([imageX, imageY]);
+            updatePointsDisplay();
+            drawPoints();
+        }
+        
+        function drawPoints() {
+            const svg = document.getElementById('roiOverlay');
+            const img = document.getElementById('visualImage');
+            const scaleX = img.width / img.naturalWidth;
+            const scaleY = img.height / img.naturalHeight;
+            
+            svg.innerHTML = '';
+            
+            clickedPoints.forEach((point, idx) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point[0] * scaleX);
+                circle.setAttribute('cy', point[1] * scaleY);
+                circle.setAttribute('r', 5);
+                circle.setAttribute('fill', 'red');
+                svg.appendChild(circle);
+                
+                if (idx > 0) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', clickedPoints[idx-1][0] * scaleX);
+                    line.setAttribute('y1', clickedPoints[idx-1][1] * scaleY);
+                    line.setAttribute('x2', point[0] * scaleX);
+                    line.setAttribute('y2', point[1] * scaleY);
+                    line.setAttribute('stroke', 'red');
+                    line.setAttribute('stroke-width', 2);
+                    svg.appendChild(line);
+                }
+            });
+            
+            if (clickedPoints.length >= 2) {
+                const xCoords = clickedPoints.map(p => p[0]);
+                const yCoords = clickedPoints.map(p => p[1]);
+                const minX = Math.min(...xCoords) * scaleX;
+                const minY = Math.min(...yCoords) * scaleY;
+                const maxX = Math.max(...xCoords) * scaleX;
+                const maxY = Math.max(...yCoords) * scaleY;
+                
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', minX);
+                rect.setAttribute('y', minY);
+                rect.setAttribute('width', maxX - minX);
+                rect.setAttribute('height', maxY - minY);
+                rect.setAttribute('fill', 'rgba(255, 0, 0, 0.2)');
+                rect.setAttribute('stroke', 'red');
+                rect.setAttribute('stroke-width', 2);
+                svg.appendChild(rect);
+            }
+        }
+        
+        function updatePointsDisplay() {
+            document.getElementById('pointCount').textContent = clickedPoints.length;
+        }
+        
+        function addROI() {
+            if (clickedPoints.length < 2) {
+                alert('Click at least 2 points to define an ROI');
+                return;
+            }
+            
+            const roiName = document.getElementById('roiName').value;
+            const emissivity = parseFloat(document.getElementById('emissivity').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            
+            const roi = {
+                name: roiName,
+                points: [...clickedPoints],
+                emissivity: emissivity,
+                weight: weight
+            };
+            
+            definedROIs.push(roi);
+            updateROIList();
+            clearPoints();
+        }
+        
+        function updateROIList() {
+            const list = document.getElementById('roiList');
+            list.innerHTML = '';
+            
+            definedROIs.forEach((roi, idx) => {
+                const div = document.createElement('div');
+                div.className = 'roi-item';
+                div.innerHTML = `
+                    <strong>${roi.name}</strong><br>
+                    Points: ${roi.points.length}<br>
+                    Emissivity: ${roi.emissivity}<br>
+                    Weight: ${roi.weight}<br>
+                    <button class="delete" onclick="deleteROI(${idx})">Delete</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+        
+        function deleteROI(idx) {
+            definedROIs.splice(idx, 1);
+            updateROIList();
+        }
+        
+        function clearPoints() {
+            clickedPoints = [];
+            updatePointsDisplay();
+            drawPoints();
+        }
+        
+        function clearAll() {
+            clearPoints();
+            definedROIs = [];
+            updateROIList();
+        }
+        
+        async function saveConfiguration() {
+            if (definedROIs.length === 0) {
+                alert('Define at least one ROI first');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/save-roi-mapping', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({rois: definedROIs})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Configuration saved! Restart the application to apply changes.\\n\\nRun: balena restart <device-uuid>');
+                } else {
+                    alert('Failed to save configuration: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error saving configuration: ' + error);
+            }
+        }
+        
+        function drawThermalPreview() {
+            if (!thermalData) return;
+            
+            const canvas = document.getElementById('thermalCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const height = thermalData.length;
+            const width = thermalData[0].length;
+            const cellWidth = canvas.width / width;
+            const cellHeight = canvas.height / height;
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const temp = thermalData[y][x];
+                    const normalized = Math.max(0, Math.min(1, (temp - 20) / 80));
+                    const hue = (1 - normalized) * 240;
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+        """
+    
+    def start(self):
+        """Start web server"""
+        def run():
+            self.app.run(host='0.0.0.0', port=self.port, threaded=True, debug=False)
+        
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        self.logger.info(f"Camera web interface started on port {self.port}")
