@@ -96,8 +96,10 @@ class TransformerMonitor:
             if self.config.get('pi_camera.live_view.enabled', True):
                 self.logger.info("Initializing camera web interface...")
                 self.camera_web = CameraWebInterface(
-                    self.smart_camera,
-                    self.config,
+                    smart_camera=self.smart_camera,
+                    config=self.config,
+                    thermal_capture=self.thermal_camera,
+                    data_processor=self.data_processor,
                     port=5000
                 )
                 self.camera_web.start()
@@ -183,14 +185,18 @@ class TransformerMonitor:
         
         # Save to local buffer
         self.local_buffer.store(processed_data)
-        
+
+        # Update web interface with thermal frame
+        if self.camera_web:
+            self.camera_web.update_thermal_frame(thermal_frame, processed_data)
+
         # Log (since no AWS/FTP/MQTT)
         self.logger.info(
             f"Capture {capture_count}: "
             f"Composite={processed_data.get('composite_temperature', 0):.1f}°C "
             f"(saved to local buffer)"
         )
-        
+
         # Save full frame periodically
         save_interval = self.config.get('data_capture.save_full_frame_interval', 10)
         if capture_count % save_interval == 0:
