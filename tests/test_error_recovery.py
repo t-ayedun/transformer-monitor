@@ -63,7 +63,7 @@ class TestComponentHealthMonitor(unittest.TestCase):
         result = self.monitor.check_smart_camera(mock_camera)
         self.assertFalse(result)
 
-    @patch('src.error_recovery.os.statvfs')
+    @patch('error_recovery.os.statvfs')
     def test_check_disk_space_sufficient(self, mock_statvfs):
         """Test disk space check - sufficient space"""
         # Mock filesystem stats (10 GB free)
@@ -75,7 +75,7 @@ class TestComponentHealthMonitor(unittest.TestCase):
         result = self.monitor.check_disk_space(min_free_gb=2.0)
         self.assertTrue(result)
 
-    @patch('src.error_recovery.os.statvfs')
+    @patch('error_recovery.os.statvfs')
     def test_check_disk_space_insufficient(self, mock_statvfs):
         """Test disk space check - insufficient space"""
         # Mock filesystem stats (1 GB free)
@@ -87,7 +87,7 @@ class TestComponentHealthMonitor(unittest.TestCase):
         result = self.monitor.check_disk_space(min_free_gb=2.0)
         self.assertFalse(result)
 
-    @patch('src.error_recovery.psutil.virtual_memory')
+    @patch('error_recovery.psutil.virtual_memory')
     def test_check_memory_acceptable(self, mock_memory):
         """Test memory check - acceptable usage"""
         mock_memory.return_value = Mock(percent=75.0)
@@ -95,7 +95,7 @@ class TestComponentHealthMonitor(unittest.TestCase):
         result = self.monitor.check_memory(max_percent=90)
         self.assertTrue(result)
 
-    @patch('src.error_recovery.psutil.virtual_memory')
+    @patch('error_recovery.psutil.virtual_memory')
     def test_check_memory_high(self, mock_memory):
         """Test memory check - high usage"""
         mock_memory.return_value = Mock(percent=95.0)

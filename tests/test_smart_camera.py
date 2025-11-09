@@ -25,9 +25,9 @@ from smart_camera import SmartCamera
 
 class TestSmartCamera(unittest.TestCase):
 
-    @patch('src.smart_camera.Picamera2')
-    @patch('src.smart_camera.H264Encoder')
-    @patch('src.smart_camera.CircularOutput')
+    @patch('smart_camera.Picamera2')
+    @patch('smart_camera.H264Encoder')
+    @patch('smart_camera.CircularOutput')
     def setUp(self, mock_output, mock_encoder, mock_camera):
         """Set up test fixtures"""
         self.mock_camera = mock_camera.return_value
