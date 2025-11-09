@@ -5,8 +5,13 @@ Unit tests for error recovery system
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 import time
+import sys
+import os
 
-from src.error_recovery import ComponentHealthMonitor, ErrorRecoveryManager
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from error_recovery import ComponentHealthMonitor, ErrorRecoveryManager
 
 
 class TestComponentHealthMonitor(unittest.TestCase):

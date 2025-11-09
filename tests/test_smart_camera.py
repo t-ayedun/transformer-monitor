@@ -6,14 +6,21 @@ import unittest
 from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 from collections import deque
-
-# Mock picamera2 before importing
 import sys
+import os
+
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Mock hardware-specific modules before importing
 sys.modules['picamera2'] = MagicMock()
 sys.modules['picamera2.encoders'] = MagicMock()
 sys.modules['picamera2.outputs'] = MagicMock()
+sys.modules['board'] = MagicMock()
+sys.modules['busio'] = MagicMock()
+sys.modules['adafruit_mlx90640'] = MagicMock()
 
-from src.smart_camera import SmartCamera
+from smart_camera import SmartCamera
 
 
 class TestSmartCamera(unittest.TestCase):
