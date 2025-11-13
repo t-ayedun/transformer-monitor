@@ -63,30 +63,65 @@ class ThermalCapture:
         self._initialize_camera()
 
     def _initialize_camera(self):
-        """Initialize I2C connection and camera"""
-        try:
-            self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
+        """Initialize I2C connection and camera with retry logic"""
+        max_init_attempts = 5
 
-            # Initialize I2C with lower frequency for more reliable communication
-            # 400kHz can be unreliable on some Pi setups, 100kHz is more stable
-            i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)
+        for attempt in range(max_init_attempts):
+            try:
+                if attempt > 0:
+                    self.logger.info(f"Retrying MLX90640 initialization (attempt {attempt + 1}/{max_init_attempts})...")
+                    time.sleep(2)  # Wait before retry
+                else:
+                    self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
 
-            # Initialize MLX90640
-            self.mlx = adafruit_mlx90640.MLX90640(i2c)
-            self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
+                # Initialize I2C with lower frequency for more reliable communication
+                # 100kHz is more stable than 400kHz for reading EEPROM calibration data
+                i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)
 
-            # Calculate minimum time between frame reads based on refresh rate
-            # Frame time = 1/refresh_rate, add 20% buffer
-            self.frame_time = (1.0 / self.refresh_rate) * 1.2
+                # Initialize MLX90640 (this reads EEPROM calibration data)
+                self.mlx = adafruit_mlx90640.MLX90640(i2c)
+                self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
 
-            self.logger.info(
-                f"MLX90640 initialized at {self.refresh_rate}Hz "
-                f"(Frame time: {self.frame_time:.2f}s, Advanced processing: {self.enable_advanced_processing})"
-            )
+                # Calculate minimum time between frame reads based on refresh rate
+                # Frame time = 1/refresh_rate, add 20% buffer
+                self.frame_time = (1.0 / self.refresh_rate) * 1.2
 
-        except Exception as e:
-            self.logger.error(f"Failed to initialize MLX90640: {e}")
-            raise
+                # CRITICAL: Test that calibration data is valid by capturing a test frame
+                # If calibration data is corrupted, this will fail with "math domain error"
+                self.logger.info("Verifying calibration data with test frame...")
+                test_frame = [0] * 768
+                time.sleep(self.frame_time)  # Wait for first frame to be ready
+                self.mlx.getFrame(test_frame)
+
+                # Verify frame has reasonable temperature values
+                min_temp = min(test_frame)
+                max_temp = max(test_frame)
+
+                if min_temp < -40 or max_temp > 300 or min_temp == max_temp:
+                    raise ValueError(f"Invalid test frame: temps {min_temp:.1f}°C to {max_temp:.1f}°C")
+
+                self.logger.info(
+                    f"MLX90640 initialized at {self.refresh_rate}Hz "
+                    f"(Frame time: {self.frame_time:.2f}s, Test frame: {min_temp:.1f}°C to {max_temp:.1f}°C, "
+                    f"Advanced processing: {self.enable_advanced_processing})"
+                )
+                return  # Success!
+
+            except ValueError as e:
+                # Math domain error or invalid frame - calibration data is corrupted
+                self.logger.warning(
+                    f"Calibration verification failed (attempt {attempt + 1}/{max_init_attempts}): {e}"
+                )
+                if attempt == max_init_attempts - 1:
+                    raise RuntimeError(
+                        "MLX90640 calibration data is corrupted. Try power cycling the sensor."
+                    )
+
+            except Exception as e:
+                self.logger.warning(f"Initialization attempt {attempt + 1}/{max_init_attempts} failed: {e}")
+                if attempt == max_init_attempts - 1:
+                    self.logger.error(f"Failed to initialize MLX90640 after {max_init_attempts} attempts")
+                    raise
 
     def _get_refresh_rate_constant(self, rate):
         """Convert refresh rate to MLX90640 constant"""
