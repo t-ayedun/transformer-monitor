@@ -105,13 +105,15 @@ class ThermalCapture:
                 self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
 
                 # Calculate minimum time between frame reads based on actual refresh rate
-                # Frame time = 1/refresh_rate, add 50% buffer for reliability
-                self.frame_time = (1.0 / self.refresh_rate) * 1.5
+                # Frame time = 1/refresh_rate, add 100% buffer for I2C reliability
+                self.frame_time = (1.0 / self.refresh_rate) * 2.0
+
+                # Wait for sensor to stabilize at new refresh rate
+                time.sleep(1.0)
 
                 self.logger.info(
                     f"MLX90640 initialized at {self.refresh_rate}Hz "
-                    f"(Frame time: {self.frame_time:.2f}s, Test frame: {min_temp:.1f}°C to {max_temp:.1f}°C, "
-                    f"Advanced processing: {self.enable_advanced_processing})"
+                    f"(Test frame: {min_temp:.1f}°C to {max_temp:.1f}°C)"
                 )
                 return  # Success!
 
@@ -189,10 +191,12 @@ class ThermalCapture:
 
             except OSError as e:
                 # OSError usually means I2C timeout or communication failure
-                self.logger.warning(f"I2C communication error (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:  # Only log on last attempt
+                    self.logger.warning(f"I2C communication error after {max_retries} attempts: {e}")
                 time.sleep(self.frame_time * 2)  # Wait longer on I2C errors
             except Exception as e:
-                self.logger.error(f"Frame capture error (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:  # Only log on last attempt
+                    self.logger.error(f"Frame capture failed after {max_retries} attempts: {e}")
                 time.sleep(self.frame_time)
 
         self.logger.error("Failed to capture valid frame after retries")

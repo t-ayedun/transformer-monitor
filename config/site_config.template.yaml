@@ -14,7 +14,7 @@ thermal_camera:
   model: "MLX90640"
   i2c_address: 0x33
   i2c_bus: 1
-  refresh_rate: 8
+  refresh_rate: 4
   resolution: [32, 24]
   emissivity: 0.95
 
