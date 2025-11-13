@@ -40,7 +40,11 @@
             position: relative;
             border: 2px solid #ddd;
             background-color: #000;
+        }
+        .canvas-container.drawing-mode {
             cursor: crosshair;
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
         }
         #canvas {
             display: block;
@@ -156,6 +160,16 @@
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
         .mode-indicator {
             padding: 8px 12px;
@@ -353,9 +367,11 @@
         function startDrawing() {
             isDrawingMode = true;
             points = [];
-            modeIndicator.textContent = 'Drawing Mode - Click 2 Points';
+            currentROI = null;
+            modeIndicator.textContent = '🎯 Drawing Mode - Click 2 Corners';
             modeIndicator.className = 'mode-indicator mode-draw';
-            showStatus('Click two corners to define ROI', 'success');
+            document.querySelector('.canvas-container').classList.add('drawing-mode');
+            showStatus('✓ Click first corner of the ROI rectangle', 'success');
         }
 
         canvas.addEventListener('click', (e) => {
@@ -367,22 +383,30 @@
 
             points.push({x, y});
 
-            if (points.length === 2) {
+            if (points.length === 1) {
+                showStatus('✓ First corner set! Click the opposite corner', 'success');
+            } else if (points.length === 2) {
                 // Create ROI from points
                 const visualCoords = [
                     [Math.min(points[0].x, points[1].x), Math.min(points[0].y, points[1].y)],
                     [Math.max(points[0].x, points[1].x), Math.max(points[0].y, points[1].y)]
                 ];
 
+                const thermalCoords = visualToThermal(visualCoords);
+
                 currentROI = {
                     visual_coordinates: visualCoords,
-                    coordinates: visualToThermal(visualCoords)
+                    coordinates: thermalCoords
                 };
 
                 isDrawingMode = false;
-                modeIndicator.textContent = 'View Mode - ROI Defined';
+                document.querySelector('.canvas-container').classList.remove('drawing-mode');
+                modeIndicator.textContent = '✓ ROI Defined - Ready to Save';
                 modeIndicator.className = 'mode-indicator mode-view';
-                showStatus('ROI defined! Configure and save it.', 'success');
+
+                const width = thermalCoords[1][0] - thermalCoords[0][0];
+                const height = thermalCoords[1][1] - thermalCoords[0][1];
+                showStatus(`✓ ROI created! Thermal coords: [${thermalCoords[0]}] to [${thermalCoords[1]}] (${width}x${height} pixels). Fill in details and click "Save Current ROI"`, 'success');
             }
 
             drawCanvas();
@@ -390,13 +414,13 @@
 
         function saveCurrentROI() {
             if (!currentROI) {
-                showStatus('Please draw an ROI first', 'error');
+                showStatus('❌ Please draw an ROI first by clicking "Start Drawing" and selecting 2 corners', 'error');
                 return;
             }
 
-            const name = document.getElementById('roiName').value;
+            const name = document.getElementById('roiName').value.trim();
             if (!name) {
-                showStatus('Please enter an ROI name', 'error');
+                showStatus('❌ Please enter an ROI name', 'error');
                 return;
             }
 
@@ -420,10 +444,17 @@
 
             drawCanvas();
             updateROIList();
-            showStatus('ROI saved to list!', 'success');
+            showStatus(`✓ ROI "${name}" saved to list! Click "Save All to System" to apply changes.`, 'success');
 
             // Clear form
             document.getElementById('roiName').value = '';
+
+            // Show reminder to save to system
+            setTimeout(() => {
+                if (rois.length > 0) {
+                    showStatus('⚠️ Don\'t forget to click "Save All to System" to activate your ROIs!', 'warning');
+                }
+            }, 3000);
         }
 
         function updateROIList() {
@@ -465,9 +496,11 @@
 
         function saveAllROIs() {
             if (rois.length === 0) {
-                showStatus('No ROIs to save', 'error');
+                showStatus('❌ No ROIs to save. Draw and save at least one ROI first.', 'error');
                 return;
             }
+
+            showStatus('⏳ Saving ' + rois.length + ' ROI(s) to system...', 'info');
 
             fetch('/api/rois', {
                 method: 'POST',
@@ -479,13 +512,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showStatus('ROIs saved to system successfully!', 'success');
+                    showStatus(`✅ SUCCESS! ${rois.length} ROI(s) saved to system and activated! Thermal camera will now use these ROIs for temperature monitoring.`, 'success');
                 } else {
-                    showStatus('Error: ' + data.error, 'error');
+                    showStatus('❌ Error saving ROIs: ' + (data.error || 'Unknown error'), 'error');
+                    console.error('Save error:', data);
                 }
             })
             .catch(error => {
-                showStatus('Network error: ' + error, 'error');
+                showStatus('❌ Network error: ' + error.message, 'error');
+                console.error('Network error:', error);
             });
         }
 
@@ -494,9 +529,12 @@
             statusMessage.className = 'status-message status-' + type;
             statusMessage.style.display = 'block';
 
+            // Keep important messages visible longer
+            const timeout = type === 'error' ? 10000 : type === 'success' ? 8000 : 6000;
+
             setTimeout(() => {
                 statusMessage.style.display = 'none';
-            }, 5000);
+            }, timeout);
         }
 
         // Load existing ROIs on page load
