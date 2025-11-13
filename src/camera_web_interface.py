@@ -176,10 +176,10 @@ class CameraWebInterface:
         def serve_snapshot(filename):
             """Serve snapshot images"""
             try:
-                snapshot_dir = Path('/data/snapshots')
+                snapshot_dir = Path('/data/images')  # Snapshots are in /data/images not /data/snapshots
                 filepath = snapshot_dir / filename
 
-                # Security: ensure the file is in the snapshots directory
+                # Security: ensure the file is in the images directory
                 if not filepath.resolve().is_relative_to(snapshot_dir.resolve()):
                     return jsonify({'error': 'Invalid file path'}), 403
 
