@@ -6,15 +6,20 @@ import unittest
 from unittest.mock import Mock, patch, MagicMock
 import json
 from datetime import datetime
+import sys
+import os
 
-from src.aws_publisher import AWSPublisher
-from src.ftp_publisher import FTPPublisher
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from aws_publisher import AWSPublisher
+from ftp_publisher import FTPPublisher
 
 
 class TestAWSPublisher(unittest.TestCase):
-    
-    @patch('src.aws_publisher.AWSIoTMQTTClient')
-    @patch('src.aws_publisher.boto3.client')
+
+    @patch('aws_publisher.AWSIoTMQTTClient')
+    @patch('aws_publisher.boto3.client')
     def setUp(self, mock_boto, mock_mqtt):
         """Set up test fixtures"""
         self.mock_mqtt = mock_mqtt.return_value
@@ -88,8 +93,8 @@ class TestAWSPublisher(unittest.TestCase):
 
 
 class TestFTPPublisher(unittest.TestCase):
-    
-    @patch('src.ftp_publisher.ftplib.FTP')
+
+    @patch('ftp_publisher.ftplib.FTP')
     def setUp(self, mock_ftp_class):
         """Set up test fixtures"""
         self.mock_ftp = mock_ftp_class.return_value

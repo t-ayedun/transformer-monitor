@@ -4,7 +4,13 @@ Unit tests for data processor
 
 import unittest
 import numpy as np
-from src.data_processor import DataProcessor
+import sys
+import os
+
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from data_processor import DataProcessor
 
 
 class TestDataProcessor(unittest.TestCase):

@@ -5,14 +5,24 @@ Unit tests for thermal capture
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 import numpy as np
+import sys
+import os
 
-from src.thermal_capture import ThermalCapture
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Mock hardware-specific modules
+sys.modules['board'] = MagicMock()
+sys.modules['busio'] = MagicMock()
+sys.modules['adafruit_mlx90640'] = MagicMock()
+
+from thermal_capture import ThermalCapture
 
 
 class TestThermalCapture(unittest.TestCase):
-    
-    @patch('src.thermal_capture.busio.I2C')
-    @patch('src.thermal_capture.adafruit_mlx90640.MLX90640')
+
+    @patch('thermal_capture.busio.I2C')
+    @patch('thermal_capture.adafruit_mlx90640.MLX90640')
     def setUp(self, mock_mlx, mock_i2c):
         """Set up test fixtures"""
         self.mock_mlx = mock_mlx.return_value

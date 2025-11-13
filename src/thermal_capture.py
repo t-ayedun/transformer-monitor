@@ -1,46 +1,88 @@
 """
 Thermal Camera Interface
-Handles MLX90640 thermal camera communication
+Handles MLX90640 thermal camera communication with advanced processing
+
+Advanced Features:
+- Image denoising (Gaussian and temporal filtering)
+- Ambient temperature compensation
+- Hotspot detection and tracking
+- Thermal gradient analysis
+- Super-resolution upscaling
+- Bad pixel correction
 """
 
 import time
 import logging
 import numpy as np
+from collections import deque
+from datetime import datetime
 import board
 import busio
 import adafruit_mlx90640
+import cv2
+from scipy import ndimage
 
 
 class ThermalCapture:
-    """Interface for MLX90640 thermal camera"""
-    
-    def __init__(self, i2c_addr=0x33, i2c_bus=1, refresh_rate=8):
+    """
+    Interface for MLX90640 thermal camera with advanced processing
+
+    Processing Pipeline:
+    1. Raw frame capture
+    2. Bad pixel correction
+    3. Temporal filtering (noise reduction)
+    4. Spatial denoising
+    5. Ambient compensation (optional)
+    6. Emissivity correction
+    7. Super-resolution upscaling (optional)
+    """
+
+    def __init__(self, i2c_addr=0x33, i2c_bus=1, refresh_rate=8, enable_advanced_processing=True):
         self.logger = logging.getLogger(__name__)
         self.i2c_addr = i2c_addr
         self.refresh_rate = refresh_rate
         self.mlx = None
         self.frame_shape = (24, 32)  # MLX90640 resolution
-        
+
+        # Advanced processing settings
+        self.enable_advanced_processing = enable_advanced_processing
+        self.temporal_buffer_size = 5  # Frames to keep for temporal filtering
+        self.frame_buffer = deque(maxlen=self.temporal_buffer_size)
+
+        # Bad pixel map (will be learned during operation)
+        self.bad_pixels = set()
+        self.frame_count = 0
+
+        # Hotspot tracking
+        self.hotspots_history = deque(maxlen=10)
+        self.hotspot_threshold = 80.0  # °C
+
+        # Ambient temperature for compensation
+        self.ambient_temp = None
+
         self._initialize_camera()
-    
+
     def _initialize_camera(self):
         """Initialize I2C connection and camera"""
         try:
             self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
-            
+
             # Initialize I2C
             i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
-            
+
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
             self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
-            
-            self.logger.info(f"MLX90640 initialized at {self.refresh_rate}Hz")
-            
+
+            self.logger.info(
+                f"MLX90640 initialized at {self.refresh_rate}Hz "
+                f"(Advanced processing: {self.enable_advanced_processing})"
+            )
+
         except Exception as e:
             self.logger.error(f"Failed to initialize MLX90640: {e}")
             raise
-    
+
     def _get_refresh_rate_constant(self, rate):
         """Convert refresh rate to MLX90640 constant"""
         rate_map = {
@@ -54,82 +96,351 @@ class ThermalCapture:
             64: adafruit_mlx90640.RefreshRate.REFRESH_64_HZ,
         }
         return rate_map.get(rate, adafruit_mlx90640.RefreshRate.REFRESH_8_HZ)
-    
-    def get_frame(self, max_retries=3):
+
+    def get_frame(self, max_retries=3, apply_processing=True):
         """
-        Capture a thermal frame
-        Returns: numpy array of shape (24, 32) with temperatures in Celsius
+        Capture a thermal frame with optional advanced processing
+
+        Args:
+            max_retries: Number of retry attempts
+            apply_processing: Apply advanced processing pipeline
+
+        Returns:
+            numpy array of shape (24, 32) with temperatures in Celsius
         """
         for attempt in range(max_retries):
             try:
                 frame = [0] * 768  # 24x32 = 768 pixels
                 self.mlx.getFrame(frame)
-                
+
                 # Convert to numpy array and reshape
-                frame_array = np.array(frame).reshape(self.frame_shape)
-                
+                frame_array = np.array(frame, dtype=np.float32).reshape(self.frame_shape)
+
                 # Basic validation
-                if self._validate_frame(frame_array):
-                    return frame_array
-                else:
+                if not self._validate_frame(frame_array):
                     self.logger.warning(f"Invalid frame data (attempt {attempt + 1})")
                     time.sleep(0.1)
-                    
+                    continue
+
+                # Apply advanced processing if enabled
+                if apply_processing and self.enable_advanced_processing:
+                    frame_array = self._process_frame(frame_array)
+
+                # Add to temporal buffer
+                self.frame_buffer.append(frame_array.copy())
+                self.frame_count += 1
+
+                return frame_array
+
             except Exception as e:
                 self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
                 time.sleep(0.1)
-        
+
         self.logger.error("Failed to capture valid frame after retries")
         return None
-    
+
+    def _process_frame(self, frame):
+        """
+        Apply advanced processing pipeline to thermal frame
+
+        Steps:
+        1. Bad pixel correction
+        2. Temporal filtering (if buffer has enough frames)
+        3. Spatial denoising
+        4. Ambient compensation
+        """
+        # 1. Bad pixel correction
+        frame = self._correct_bad_pixels(frame)
+
+        # 2. Temporal filtering (reduces noise by averaging recent frames)
+        if len(self.frame_buffer) >= 3:
+            frame = self._temporal_filter(frame)
+
+        # 3. Spatial denoising (Gaussian blur)
+        frame = self._spatial_denoise(frame)
+
+        # 4. Ambient compensation (if ambient temp is set)
+        if self.ambient_temp is not None:
+            frame = self._ambient_compensation(frame)
+
+        return frame
+
+    def _correct_bad_pixels(self, frame):
+        """
+        Correct bad/dead pixels using interpolation from neighbors
+
+        Bad pixels are detected as outliers that appear consistently
+        """
+        # Auto-detect bad pixels (very simple heuristic)
+        # A more robust implementation would calibrate during startup
+        median_temp = np.median(frame)
+        std_temp = np.std(frame)
+
+        # Pixels that are >5 std deviations from median might be bad
+        outliers = np.abs(frame - median_temp) > (5 * std_temp)
+
+        if np.any(outliers):
+            # Replace bad pixels with median of neighbors
+            for y, x in zip(*np.where(outliers)):
+                # Get neighbor values
+                y_min = max(0, y - 1)
+                y_max = min(frame.shape[0], y + 2)
+                x_min = max(0, x - 1)
+                x_max = min(frame.shape[1], x + 2)
+
+                neighbors = frame[y_min:y_max, x_min:x_max]
+                frame[y, x] = np.median(neighbors)
+
+                self.bad_pixels.add((y, x))
+
+        return frame
+
+    def _temporal_filter(self, current_frame):
+        """
+        Temporal filtering: Average recent frames to reduce noise
+
+        This is effective for stationary scenes (transformers)
+        Uses exponential weighted moving average
+        """
+        if len(self.frame_buffer) < 2:
+            return current_frame
+
+        # Convert deque to array
+        buffer_array = np.array(list(self.frame_buffer))
+
+        # Weighted average: more weight on recent frames
+        weights = np.exp(np.linspace(-1, 0, len(buffer_array)))
+        weights /= weights.sum()
+
+        # Weighted average along time axis
+        filtered = np.average(buffer_array, axis=0, weights=weights)
+
+        return filtered.astype(np.float32)
+
+    def _spatial_denoise(self, frame):
+        """
+        Spatial denoising using Gaussian filter
+
+        Reduces high-frequency noise while preserving thermal gradients
+        """
+        # Use small kernel to preserve detail
+        denoised = cv2.GaussianBlur(frame, (3, 3), 0.5)
+
+        return denoised
+
+    def _ambient_compensation(self, frame):
+        """
+        Compensate for ambient temperature
+
+        Thermal cameras can drift with ambient temp changes
+        This uses the ambient temp to adjust readings
+        """
+        if self.ambient_temp is None:
+            return frame
+
+        # Simple linear compensation
+        # More sophisticated methods would use sensor-specific calibration
+        compensation = (self.ambient_temp - 25.0) * 0.1  # 10% drift per 10°C
+
+        return frame - compensation
+
+    def detect_hotspots(self, frame, threshold=None):
+        """
+        Detect and track thermal hotspots
+
+        Args:
+            frame: Thermal frame
+            threshold: Temperature threshold for hotspot detection
+
+        Returns:
+            List of hotspot dictionaries with location and temperature
+        """
+        if threshold is None:
+            threshold = self.hotspot_threshold
+
+        # Find pixels above threshold
+        hotspot_mask = frame > threshold
+
+        # Label connected components (blobs)
+        labeled, num_features = ndimage.label(hotspot_mask)
+
+        hotspots = []
+
+        for i in range(1, num_features + 1):
+            # Get pixels in this hotspot
+            hotspot_pixels = frame[labeled == i]
+            hotspot_coords = np.argwhere(labeled == i)
+
+            # Calculate hotspot properties
+            max_temp = np.max(hotspot_pixels)
+            avg_temp = np.mean(hotspot_pixels)
+            center_y, center_x = hotspot_coords.mean(axis=0)
+            area = len(hotspot_pixels)
+
+            hotspots.append({
+                'center': (int(center_x), int(center_y)),
+                'max_temp': float(max_temp),
+                'avg_temp': float(avg_temp),
+                'area': int(area),
+                'timestamp': datetime.now().isoformat()
+            })
+
+        # Track hotspots history
+        self.hotspots_history.append({
+            'timestamp': datetime.now().isoformat(),
+            'hotspots': hotspots
+        })
+
+        return hotspots
+
+    def calculate_thermal_gradient(self, frame):
+        """
+        Calculate thermal gradient magnitude and direction
+
+        Useful for detecting uneven heating patterns
+        that might indicate faults
+
+        Returns:
+            gradient_magnitude: Magnitude of temperature gradient
+            gradient_direction: Direction of gradient in degrees
+        """
+        # Calculate gradients using Sobel operators
+        grad_x = cv2.Sobel(frame, cv2.CV_32F, 1, 0, ksize=3)
+        grad_y = cv2.Sobel(frame, cv2.CV_32F, 0, 1, ksize=3)
+
+        # Magnitude and direction
+        gradient_magnitude = np.sqrt(grad_x**2 + grad_y**2)
+        gradient_direction = np.arctan2(grad_y, grad_x) * 180 / np.pi
+
+        return gradient_magnitude, gradient_direction
+
+    def super_resolution_upscale(self, frame, scale_factor=4):
+        """
+        Upscale thermal frame using bicubic interpolation
+
+        Increases resolution from 24x32 to larger size for better
+        visualization and analysis
+
+        Args:
+            frame: Input thermal frame (24x32)
+            scale_factor: Upscaling factor (default 4 -> 96x128)
+
+        Returns:
+            Upscaled frame
+        """
+        new_height = frame.shape[0] * scale_factor
+        new_width = frame.shape[1] * scale_factor
+
+        # Use bicubic interpolation for smooth upscaling
+        upscaled = cv2.resize(
+            frame,
+            (new_width, new_height),
+            interpolation=cv2.INTER_CUBIC
+        )
+
+        return upscaled
+
+    def get_frame_statistics(self, frame):
+        """
+        Calculate comprehensive frame statistics
+
+        Returns:
+            Dictionary with detailed statistics
+        """
+        return {
+            'min': float(np.min(frame)),
+            'max': float(np.max(frame)),
+            'mean': float(np.mean(frame)),
+            'median': float(np.median(frame)),
+            'std': float(np.std(frame)),
+            'percentile_95': float(np.percentile(frame, 95)),
+            'percentile_5': float(np.percentile(frame, 5)),
+            'range': float(np.ptp(frame)),  # peak-to-peak
+        }
+
     def _validate_frame(self, frame):
         """Validate thermal frame data"""
         # Check for reasonable temperature range (-40°C to 300°C)
         if np.any(frame < -40) or np.any(frame > 300):
             return False
-        
+
         # Check for NaN or inf values
         if np.any(np.isnan(frame)) or np.any(np.isinf(frame)):
             return False
-        
+
         return True
-    
+
+    def set_ambient_temperature(self, temp):
+        """
+        Set ambient temperature for compensation
+
+        Args:
+            temp: Ambient temperature in Celsius
+        """
+        self.ambient_temp = temp
+        self.logger.info(f"Ambient temperature set to {temp}°C")
+
     def get_sensor_temp(self):
-        """Get internal sensor temperature"""
+        """
+        Get internal sensor temperature
+
+        This can be used for ambient temperature estimation
+        """
         try:
             # The sensor temperature is embedded in the frame data
             # This is a simplified approach - actual implementation may vary
-            frame = self.get_frame()
+            frame = self.get_frame(apply_processing=False)
             if frame is not None:
                 # Sensor temp is typically around ambient
-                # This is approximate - check MLX90640 datasheet for exact method
-                return float(np.median(frame) - 5)  # Rough estimate
+                # Use minimum temperature as estimate
+                return float(np.percentile(frame, 10))  # 10th percentile
             return None
         except Exception as e:
             self.logger.error(f"Failed to get sensor temperature: {e}")
             return None
-    
+
     def apply_emissivity_correction(self, frame, emissivity=0.95):
         """
         Apply emissivity correction to thermal frame
-        
-        Simplified Stefan-Boltzmann approach:
+
+        Stefan-Boltzmann approach:
         T_actual = T_measured / emissivity^0.25
+
+        Args:
+            frame: Thermal frame in Celsius
+            emissivity: Material emissivity (0-1)
+
+        Returns:
+            Corrected frame
         """
         if emissivity == 1.0:
             return frame
-        
+
         # Convert to Kelvin
         frame_k = frame + 273.15
-        
+
         # Apply correction
         corrected_k = frame_k / (emissivity ** 0.25)
-        
+
         # Convert back to Celsius
         return corrected_k - 273.15
-    
+
+    def get_processing_stats(self):
+        """Get processing statistics"""
+        return {
+            'frames_processed': self.frame_count,
+            'bad_pixels_detected': len(self.bad_pixels),
+            'buffer_size': len(self.frame_buffer),
+            'hotspots_tracked': len(self.hotspots_history),
+            'advanced_processing_enabled': self.enable_advanced_processing
+        }
+
     def close(self):
         """Cleanup camera resources"""
         self.logger.info("Closing thermal camera")
+        self.logger.info(
+            f"Processed {self.frame_count} frames, "
+            f"detected {len(self.bad_pixels)} bad pixels"
+        )
         # MLX90640 doesn't require explicit cleanup
         self.mlx = None

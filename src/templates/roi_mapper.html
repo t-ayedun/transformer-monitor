@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROI Mapper - Transformer Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .main-content {
+            display: flex;
+            gap: 20px;
+        }
+        .canvas-section {
+            flex: 1;
+        }
+        .canvas-container {
+            position: relative;
+            border: 2px solid #ddd;
+            background-color: #000;
+            cursor: crosshair;
+        }
+        #canvas {
+            display: block;
+            max-width: 100%;
+        }
+        .sidebar {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .panel {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .panel h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #1976D2;
+        }
+        .btn-success {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #45a049;
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #da190b;
+        }
+        .btn-secondary {
+            background-color: #757575;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #616161;
+        }
+        .roi-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .roi-item {
+            background-color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        .roi-item h4 {
+            margin: 0 0 8px 0;
+            color: #333;
+        }
+        .roi-item p {
+            margin: 4px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        .roi-item button {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .mode-indicator {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .mode-draw {
+            background-color: #fff9c4;
+            color: #f57f17;
+        }
+        .mode-view {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive ROI Mapper</h1>
+        <div class="info">
+            <strong>Instructions:</strong> Click two opposite corners on the image to define a Region of Interest (ROI).
+            The coordinates will automatically be converted from visual camera space to thermal camera space.
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="main-content">
+            <div class="canvas-section">
+                <div class="mode-indicator" id="modeIndicator">View Mode</div>
+                <div class="canvas-container">
+                    <canvas id="canvas" width="1920" height="1080"></canvas>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn-primary" onclick="startDrawing()">Start Drawing ROI</button>
+                    <button class="btn-secondary" onclick="clearCanvas()">Clear All</button>
+                    <button class="btn-secondary" onclick="refreshImage()">Refresh Image</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <!-- ROI Configuration Panel -->
+                <div class="panel">
+                    <h3>New ROI Configuration</h3>
+                    <div class="form-group">
+                        <label for="roiName">ROI Name</label>
+                        <input type="text" id="roiName" placeholder="e.g., Top Winding">
+                    </div>
+                    <div class="form-group">
+                        <label for="roiWeight">Weight</label>
+                        <input type="number" id="roiWeight" value="1.0" step="0.1" min="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="roiEmissivity">Emissivity</label>
+                        <input type="number" id="roiEmissivity" value="0.95" step="0.01" min="0.1" max="1.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="roiWarning">Warning Threshold (°C)</label>
+                        <input type="number" id="roiWarning" value="75" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="roiCritical">Critical Threshold (°C)</label>
+                        <input type="number" id="roiCritical" value="85" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="roiEmergency">Emergency Threshold (°C)</label>
+                        <input type="number" id="roiEmergency" value="95" step="1">
+                    </div>
+                    <button class="btn-success" onclick="saveCurrentROI()" style="width: 100%;">
+                        Save ROI
+                    </button>
+                </div>
+
+                <!-- Existing ROIs Panel -->
+                <div class="panel">
+                    <h3>Defined ROIs</h3>
+                    <div id="roiList" class="roi-list">
+                        <p style="text-align: center; color: #999;">No ROIs defined yet</p>
+                    </div>
+                    <button class="btn-success" onclick="saveAllROIs()" style="width: 100%;">
+                        Save All to System
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let image = new Image();
+        let isDrawingMode = false;
+        let points = [];
+        let rois = [];
+        let currentROI = null;
+
+        // Thermal camera specs
+        const THERMAL_WIDTH = 32;
+        const THERMAL_HEIGHT = 24;
+        const VISUAL_WIDTH = 1920;
+        const VISUAL_HEIGHT = 1080;
+
+        // Load snapshot image
+        function refreshImage() {
+            fetch('/api/snapshot')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Load the captured image
+                        image.src = data.filepath + '?' + new Date().getTime();
+                        image.onload = () => {
+                            drawCanvas();
+                        };
+                    }
+                });
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (image.complete) {
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            }
+
+            // Draw existing ROIs
+            rois.forEach((roi, index) => {
+                drawROI(roi, index);
+            });
+
+            // Draw current points
+            if (points.length > 0) {
+                points.forEach(point => {
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+
+                if (points.length === 2) {
+                    drawROIRectangle(points[0], points[1], 'yellow', 'New ROI');
+                }
+            }
+        }
+
+        function drawROI(roi, index) {
+            const coords = roi.visual_coordinates;
+            const colors = ['#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0'];
+            const color = colors[index % colors.length];
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                coords[0][0], coords[0][1],
+                coords[1][0] - coords[0][0],
+                coords[1][1] - coords[0][1]
+            );
+
+            // Draw label
+            ctx.fillStyle = color;
+            ctx.fillRect(coords[0][0], coords[0][1] - 25, 200, 25);
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.fillText(roi.name, coords[0][0] + 5, coords[0][1] - 8);
+        }
+
+        function drawROIRectangle(p1, p2, color, label) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(
+                Math.min(p1.x, p2.x),
+                Math.min(p1.y, p2.y),
+                Math.abs(p2.x - p1.x),
+                Math.abs(p2.y - p1.y)
+            );
+            ctx.setLineDash([]);
+        }
+
+        function visualToThermal(visualCoords) {
+            return [
+                [
+                    Math.round(visualCoords[0][0] / VISUAL_WIDTH * THERMAL_WIDTH),
+                    Math.round(visualCoords[0][1] / VISUAL_HEIGHT * THERMAL_HEIGHT)
+                ],
+                [
+                    Math.round(visualCoords[1][0] / VISUAL_WIDTH * THERMAL_WIDTH),
+                    Math.round(visualCoords[1][1] / VISUAL_HEIGHT * THERMAL_HEIGHT)
+                ]
+            ];
+        }
+
+        function startDrawing() {
+            isDrawingMode = true;
+            points = [];
+            modeIndicator.textContent = 'Drawing Mode - Click 2 Points';
+            modeIndicator.className = 'mode-indicator mode-draw';
+            showStatus('Click two corners to define ROI', 'success');
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (!isDrawingMode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            points.push({x, y});
+
+            if (points.length === 2) {
+                // Create ROI from points
+                const visualCoords = [
+                    [Math.min(points[0].x, points[1].x), Math.min(points[0].y, points[1].y)],
+                    [Math.max(points[0].x, points[1].x), Math.max(points[0].y, points[1].y)]
+                ];
+
+                currentROI = {
+                    visual_coordinates: visualCoords,
+                    coordinates: visualToThermal(visualCoords)
+                };
+
+                isDrawingMode = false;
+                modeIndicator.textContent = 'View Mode - ROI Defined';
+                modeIndicator.className = 'mode-indicator mode-view';
+                showStatus('ROI defined! Configure and save it.', 'success');
+            }
+
+            drawCanvas();
+        });
+
+        function saveCurrentROI() {
+            if (!currentROI) {
+                showStatus('Please draw an ROI first', 'error');
+                return;
+            }
+
+            const name = document.getElementById('roiName').value;
+            if (!name) {
+                showStatus('Please enter an ROI name', 'error');
+                return;
+            }
+
+            const roi = {
+                name: name,
+                enabled: true,
+                coordinates: currentROI.coordinates,
+                visual_coordinates: currentROI.visual_coordinates,
+                weight: parseFloat(document.getElementById('roiWeight').value),
+                emissivity: parseFloat(document.getElementById('roiEmissivity').value),
+                thresholds: {
+                    warning: parseFloat(document.getElementById('roiWarning').value),
+                    critical: parseFloat(document.getElementById('roiCritical').value),
+                    emergency: parseFloat(document.getElementById('roiEmergency').value)
+                }
+            };
+
+            rois.push(roi);
+            currentROI = null;
+            points = [];
+
+            drawCanvas();
+            updateROIList();
+            showStatus('ROI saved to list!', 'success');
+
+            // Clear form
+            document.getElementById('roiName').value = '';
+        }
+
+        function updateROIList() {
+            const listDiv = document.getElementById('roiList');
+
+            if (rois.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #999;">No ROIs defined yet</p>';
+                return;
+            }
+
+            listDiv.innerHTML = rois.map((roi, index) => `
+                <div class="roi-item">
+                    <h4>${roi.name}</h4>
+                    <p>Thermal: [${roi.coordinates[0].join(', ')}] to [${roi.coordinates[1].join(', ')}]</p>
+                    <p>Weight: ${roi.weight} | Emissivity: ${roi.emissivity}</p>
+                    <p>Thresholds: W:${roi.thresholds.warning}°C C:${roi.thresholds.critical}°C E:${roi.thresholds.emergency}°C</p>
+                    <button class="btn-danger" onclick="deleteROI(${index})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteROI(index) {
+            rois.splice(index, 1);
+            drawCanvas();
+            updateROIList();
+            showStatus('ROI deleted', 'success');
+        }
+
+        function clearCanvas() {
+            if (confirm('Clear all ROIs?')) {
+                rois = [];
+                points = [];
+                currentROI = null;
+                drawCanvas();
+                updateROIList();
+                showStatus('All ROIs cleared', 'success');
+            }
+        }
+
+        function saveAllROIs() {
+            if (rois.length === 0) {
+                showStatus('No ROIs to save', 'error');
+                return;
+            }
+
+            fetch('/api/rois', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({rois: rois})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('ROIs saved to system successfully!', 'success');
+                } else {
+                    showStatus('Error: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('Network error: ' + error, 'error');
+            });
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message status-' + type;
+            statusMessage.style.display = 'block';
+
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load existing ROIs on page load
+        fetch('/api/rois')
+            .then(response => response.json())
+            .then(data => {
+                if (data.rois && data.rois.length > 0) {
+                    rois = data.rois;
+                    updateROIList();
+                    drawCanvas();
+                }
+            });
+
+        // Initial image load
+        refreshImage();
+    </script>
+</body>
+</html>
