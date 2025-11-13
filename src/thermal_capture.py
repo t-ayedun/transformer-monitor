@@ -80,17 +80,18 @@ class ThermalCapture:
 
                 # Initialize MLX90640 (this reads EEPROM calibration data)
                 self.mlx = adafruit_mlx90640.MLX90640(i2c)
-                self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
 
-                # Calculate minimum time between frame reads based on refresh rate
-                # Frame time = 1/refresh_rate, add 20% buffer
-                self.frame_time = (1.0 / self.refresh_rate) * 1.2
+                # Start with slow refresh rate for initialization (more reliable)
+                self.mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_2_HZ
+                init_frame_time = 0.5  # 2Hz = 0.5s per frame
 
                 # CRITICAL: Test that calibration data is valid by capturing a test frame
                 # If calibration data is corrupted, this will fail with "math domain error"
-                self.logger.info("Verifying calibration data with test frame...")
+                self.logger.info("Verifying calibration data with test frame at 2Hz...")
                 test_frame = [0] * 768
-                time.sleep(self.frame_time)  # Wait for first frame to be ready
+
+                # Wait longer for first frame (sensor needs time to stabilize after init)
+                time.sleep(1.0)  # Give sensor 1 second to stabilize
                 self.mlx.getFrame(test_frame)
 
                 # Verify frame has reasonable temperature values
@@ -99,6 +100,13 @@ class ThermalCapture:
 
                 if min_temp < -40 or max_temp > 300 or min_temp == max_temp:
                     raise ValueError(f"Invalid test frame: temps {min_temp:.1f}°C to {max_temp:.1f}°C")
+
+                # Test frame successful! Now set the actual desired refresh rate
+                self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
+
+                # Calculate minimum time between frame reads based on actual refresh rate
+                # Frame time = 1/refresh_rate, add 50% buffer for reliability
+                self.frame_time = (1.0 / self.refresh_rate) * 1.5
 
                 self.logger.info(
                     f"MLX90640 initialized at {self.refresh_rate}Hz "
