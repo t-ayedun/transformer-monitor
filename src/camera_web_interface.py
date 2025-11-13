@@ -166,7 +166,27 @@ class CameraWebInterface:
 
             try:
                 filepath = self.smart_camera.capture_snapshot(custom_name='manual')
-                return jsonify({'success': True, 'filepath': filepath})
+                # Return just the filename as a web-accessible path
+                filename = Path(filepath).name
+                return jsonify({'success': True, 'filepath': f'/snapshots/{filename}'})
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/snapshots/<filename>')
+        def serve_snapshot(filename):
+            """Serve snapshot images"""
+            try:
+                snapshot_dir = Path('/data/snapshots')
+                filepath = snapshot_dir / filename
+
+                # Security: ensure the file is in the snapshots directory
+                if not filepath.resolve().is_relative_to(snapshot_dir.resolve()):
+                    return jsonify({'error': 'Invalid file path'}), 403
+
+                if not filepath.exists():
+                    return jsonify({'error': 'File not found'}), 404
+
+                return send_file(str(filepath), mimetype='image/jpeg')
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
 
