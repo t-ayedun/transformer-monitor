@@ -41,16 +41,16 @@ class DataProcessor:
         # Process each ROI
         roi_temps = []
         roi_weights = []
-        
+
         for roi_config in self.rois:
             if not roi_config.get('enabled', True):
                 continue
-            
+
             roi_data = self._process_roi(thermal_frame, roi_config)
             result['regions'].append(roi_data)
-            
-            # Collect for composite calculation
-            roi_temps.append(roi_data['max_temp'])
+
+            # Collect for composite calculation (use average, not max)
+            roi_temps.append(roi_data['avg_temp'])
             roi_weights.append(roi_config.get('weight', 1.0))
         
         # Calculate composite temperature
