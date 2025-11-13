@@ -12,6 +12,7 @@ Pillow
 # Computer vision
 opencv-python
 numpy
+scipy
 
 # AWS
 AWSIoTPythonSDK
