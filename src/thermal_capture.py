@@ -67,16 +67,21 @@ class ThermalCapture:
         try:
             self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
 
-            # Initialize I2C
-            i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+            # Initialize I2C with lower frequency for more reliable communication
+            # 400kHz can be unreliable on some Pi setups, 100kHz is more stable
+            i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)
 
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
             self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
 
+            # Calculate minimum time between frame reads based on refresh rate
+            # Frame time = 1/refresh_rate, add 20% buffer
+            self.frame_time = (1.0 / self.refresh_rate) * 1.2
+
             self.logger.info(
                 f"MLX90640 initialized at {self.refresh_rate}Hz "
-                f"(Advanced processing: {self.enable_advanced_processing})"
+                f"(Frame time: {self.frame_time:.2f}s, Advanced processing: {self.enable_advanced_processing})"
             )
 
         except Exception as e:
@@ -97,7 +102,7 @@ class ThermalCapture:
         }
         return rate_map.get(rate, adafruit_mlx90640.RefreshRate.REFRESH_8_HZ)
 
-    def get_frame(self, max_retries=3, apply_processing=True):
+    def get_frame(self, max_retries=5, apply_processing=True):
         """
         Capture a thermal frame with optional advanced processing
 
@@ -110,7 +115,14 @@ class ThermalCapture:
         """
         for attempt in range(max_retries):
             try:
+                # Wait for frame to be ready (respect refresh rate)
+                if attempt > 0:
+                    time.sleep(self.frame_time)
+
                 frame = [0] * 768  # 24x32 = 768 pixels
+
+                # getFrame() can timeout if I2C is busy or frame not ready
+                # This is the most common failure point
                 self.mlx.getFrame(frame)
 
                 # Convert to numpy array and reshape
@@ -119,7 +131,7 @@ class ThermalCapture:
                 # Basic validation
                 if not self._validate_frame(frame_array):
                     self.logger.warning(f"Invalid frame data (attempt {attempt + 1})")
-                    time.sleep(0.1)
+                    time.sleep(self.frame_time)
                     continue
 
                 # Apply advanced processing if enabled
@@ -132,9 +144,13 @@ class ThermalCapture:
 
                 return frame_array
 
+            except OSError as e:
+                # OSError usually means I2C timeout or communication failure
+                self.logger.warning(f"I2C communication error (attempt {attempt + 1}/{max_retries}): {e}")
+                time.sleep(self.frame_time * 2)  # Wait longer on I2C errors
             except Exception as e:
-                self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
-                time.sleep(0.1)
+                self.logger.error(f"Frame capture error (attempt {attempt + 1}/{max_retries}): {e}")
+                time.sleep(self.frame_time)
 
         self.logger.error("Failed to capture valid frame after retries")
         return None
