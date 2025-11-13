@@ -213,7 +213,7 @@
             <div class="sidebar">
                 <!-- ROI Configuration Panel -->
                 <div class="panel">
-                    <h3>New ROI Configuration</h3>
+                    <h3 id="configPanelTitle">New ROI Configuration</h3>
                     <div class="form-group">
                         <label for="roiName">ROI Name</label>
                         <input type="text" id="roiName" placeholder="e.g., Top Winding">
@@ -238,8 +238,11 @@
                         <label for="roiEmergency">Emergency Threshold (°C)</label>
                         <input type="number" id="roiEmergency" value="95" step="1">
                     </div>
-                    <button class="btn-success" onclick="saveCurrentROI()" style="width: 100%;">
+                    <button id="saveROIButton" class="btn-success" onclick="saveCurrentROI()" style="width: 100%;">
                         Save ROI
+                    </button>
+                    <button id="cancelEditButton" class="btn-secondary" onclick="cancelEdit()" style="width: 100%; display: none;">
+                        Cancel Edit
                     </button>
                 </div>
 
@@ -271,6 +274,7 @@
         let rois = [];
         let currentROI = null;
         let autoRefreshInterval = null;
+        let editingIndex = null;  // Track which ROI is being edited (null = creating new)
 
         // Thermal camera specs
         const THERMAL_WIDTH = 32;
@@ -380,6 +384,14 @@
         }
 
         function startDrawing() {
+            // If in edit mode, exit it
+            if (editingIndex !== null) {
+                editingIndex = null;
+                document.getElementById('configPanelTitle').textContent = 'New ROI Configuration';
+                document.getElementById('saveROIButton').textContent = 'Save ROI';
+                document.getElementById('cancelEditButton').style.display = 'none';
+            }
+
             isDrawingMode = true;
             points = [];
             currentROI = null;
@@ -452,8 +464,63 @@
             drawCanvas();
         });
 
+        function editROI(index) {
+            const roi = rois[index];
+
+            // Populate form fields
+            document.getElementById('roiName').value = roi.name;
+            document.getElementById('roiWeight').value = roi.weight;
+            document.getElementById('roiEmissivity').value = roi.emissivity;
+            document.getElementById('roiWarning').value = roi.thresholds.warning;
+            document.getElementById('roiCritical').value = roi.thresholds.critical;
+            document.getElementById('roiEmergency').value = roi.thresholds.emergency;
+
+            // Set editing state
+            editingIndex = index;
+
+            // Set currentROI to show the existing ROI on canvas
+            currentROI = {
+                coordinates: roi.coordinates,
+                visual_coordinates: roi.visual_coordinates
+            };
+
+            // Update UI to show edit mode
+            document.getElementById('configPanelTitle').textContent = `Edit ROI: ${roi.name}`;
+            document.getElementById('saveROIButton').textContent = 'Update ROI';
+            document.getElementById('cancelEditButton').style.display = 'block';
+
+            // Redraw canvas to show the ROI being edited
+            drawCanvas();
+
+            showStatus(`✏️ Editing "${roi.name}". Modify the details and click "Update ROI" to save changes.`, 'info');
+        }
+
+        function cancelEdit() {
+            // Clear editing state
+            editingIndex = null;
+            currentROI = null;
+            points = [];
+
+            // Reset form
+            document.getElementById('roiName').value = '';
+            document.getElementById('roiWeight').value = '1.0';
+            document.getElementById('roiEmissivity').value = '0.95';
+            document.getElementById('roiWarning').value = '75';
+            document.getElementById('roiCritical').value = '85';
+            document.getElementById('roiEmergency').value = '95';
+
+            // Reset UI
+            document.getElementById('configPanelTitle').textContent = 'New ROI Configuration';
+            document.getElementById('saveROIButton').textContent = 'Save ROI';
+            document.getElementById('cancelEditButton').style.display = 'none';
+
+            drawCanvas();
+            showStatus('Edit cancelled', 'info');
+        }
+
         function saveCurrentROI() {
-            if (!currentROI) {
+            // For editing existing ROI, we don't need currentROI to be drawn
+            if (editingIndex === null && !currentROI) {
                 showStatus('❌ Please draw an ROI first by clicking "Start Drawing" and dragging to select area', 'error');
                 return;
             }
@@ -467,8 +534,8 @@
             const roi = {
                 name: name,
                 enabled: true,
-                coordinates: currentROI.coordinates,
-                visual_coordinates: currentROI.visual_coordinates,
+                coordinates: currentROI ? currentROI.coordinates : rois[editingIndex].coordinates,
+                visual_coordinates: currentROI ? currentROI.visual_coordinates : rois[editingIndex].visual_coordinates,
                 weight: parseFloat(document.getElementById('roiWeight').value),
                 emissivity: parseFloat(document.getElementById('roiEmissivity').value),
                 thresholds: {
@@ -478,16 +545,29 @@
                 }
             };
 
-            rois.push(roi);
+            if (editingIndex !== null) {
+                // Update existing ROI
+                rois[editingIndex] = roi;
+                showStatus(`✓ ROI "${name}" updated! Click "Save All to System" to apply changes.`, 'success');
+                editingIndex = null;
+
+                // Reset UI
+                document.getElementById('configPanelTitle').textContent = 'New ROI Configuration';
+                document.getElementById('saveROIButton').textContent = 'Save ROI';
+                document.getElementById('cancelEditButton').style.display = 'none';
+            } else {
+                // Add new ROI
+                rois.push(roi);
+                showStatus(`✓ ROI "${name}" saved to list! Image refresh resumed. Click "Save All to System" when done adding ROIs.`, 'success');
+
+                // Resume auto-refresh after saving new ROI
+                startAutoRefresh();
+            }
+
             currentROI = null;
             points = [];
-
-            // Resume auto-refresh after saving ROI
-            startAutoRefresh();
-
             drawCanvas();
             updateROIList();
-            showStatus(`✓ ROI "${name}" saved to list! Image refresh resumed. Click "Save All to System" when done adding ROIs.`, 'success');
 
             // Clear form
             document.getElementById('roiName').value = '';
@@ -514,12 +594,21 @@
                     <p>Thermal: [${roi.coordinates[0].join(', ')}] to [${roi.coordinates[1].join(', ')}]</p>
                     <p>Weight: ${roi.weight} | Emissivity: ${roi.emissivity}</p>
                     <p>Thresholds: W:${roi.thresholds.warning}°C C:${roi.thresholds.critical}°C E:${roi.thresholds.emergency}°C</p>
+                    <button class="btn-secondary" onclick="editROI(${index})">Edit</button>
                     <button class="btn-danger" onclick="deleteROI(${index})">Delete</button>
                 </div>
             `).join('');
         }
 
         function deleteROI(index) {
+            // If deleting the ROI being edited, cancel edit mode
+            if (editingIndex === index) {
+                cancelEdit();
+            } else if (editingIndex !== null && editingIndex > index) {
+                // Adjust editing index if deleting a ROI before the one being edited
+                editingIndex--;
+            }
+
             rois.splice(index, 1);
             drawCanvas();
             updateROIList();
@@ -531,6 +620,12 @@
                 rois = [];
                 points = [];
                 currentROI = null;
+
+                // Cancel edit mode if active
+                if (editingIndex !== null) {
+                    cancelEdit();
+                }
+
                 drawCanvas();
                 updateROIList();
                 showStatus('All ROIs cleared', 'success');
