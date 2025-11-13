@@ -265,9 +265,12 @@
 
         let image = new Image();
         let isDrawingMode = false;
+        let isDragging = false;
+        let startPoint = null;
         let points = [];
         let rois = [];
         let currentROI = null;
+        let autoRefreshInterval = null;
 
         // Thermal camera specs
         const THERMAL_WIDTH = 32;
@@ -288,6 +291,18 @@
                         };
                     }
                 });
+        }
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            autoRefreshInterval = setInterval(refreshImage, 5000); // Refresh every 5 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
         }
 
         function drawCanvas() {
@@ -368,53 +383,78 @@
             isDrawingMode = true;
             points = [];
             currentROI = null;
-            modeIndicator.textContent = '🎯 Drawing Mode - Click 2 Corners';
+            stopAutoRefresh(); // Freeze the image while drawing
+            modeIndicator.textContent = '🎯 Drawing Mode - Click and Drag';
             modeIndicator.className = 'mode-indicator mode-draw';
             document.querySelector('.canvas-container').classList.add('drawing-mode');
-            showStatus('✓ Click first corner of the ROI rectangle', 'success');
+            showStatus('✓ Image frozen. Click and drag to define ROI rectangle', 'success');
         }
 
-        canvas.addEventListener('click', (e) => {
+        // Mouse down - start drawing
+        canvas.addEventListener('mousedown', (e) => {
             if (!isDrawingMode) return;
+
+            isDragging = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            startPoint = {x, y};
+            points = [startPoint];
+        });
+
+        // Mouse move - show preview
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawingMode || !isDragging) return;
 
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            points.push({x, y});
+            points = [startPoint, {x, y}];
+            drawCanvas();
+        });
 
-            if (points.length === 1) {
-                showStatus('✓ First corner set! Click the opposite corner', 'success');
-            } else if (points.length === 2) {
-                // Create ROI from points
-                const visualCoords = [
-                    [Math.min(points[0].x, points[1].x), Math.min(points[0].y, points[1].y)],
-                    [Math.max(points[0].x, points[1].x), Math.max(points[0].y, points[1].y)]
-                ];
+        // Mouse up - finish drawing
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawingMode || !isDragging) return;
 
-                const thermalCoords = visualToThermal(visualCoords);
+            isDragging = false;
 
-                currentROI = {
-                    visual_coordinates: visualCoords,
-                    coordinates: thermalCoords
-                };
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-                isDrawingMode = false;
-                document.querySelector('.canvas-container').classList.remove('drawing-mode');
-                modeIndicator.textContent = '✓ ROI Defined - Ready to Save';
-                modeIndicator.className = 'mode-indicator mode-view';
+            const endPoint = {x, y};
 
-                const width = thermalCoords[1][0] - thermalCoords[0][0];
-                const height = thermalCoords[1][1] - thermalCoords[0][1];
-                showStatus(`✓ ROI created! Thermal coords: [${thermalCoords[0]}] to [${thermalCoords[1]}] (${width}x${height} pixels). Fill in details and click "Save Current ROI"`, 'success');
-            }
+            // Create ROI from drag
+            const visualCoords = [
+                [Math.min(startPoint.x, endPoint.x), Math.min(startPoint.y, endPoint.y)],
+                [Math.max(startPoint.x, endPoint.x), Math.max(startPoint.y, endPoint.y)]
+            ];
+
+            const thermalCoords = visualToThermal(visualCoords);
+
+            currentROI = {
+                visual_coordinates: visualCoords,
+                coordinates: thermalCoords
+            };
+
+            isDrawingMode = false;
+            document.querySelector('.canvas-container').classList.remove('drawing-mode');
+            modeIndicator.textContent = '✓ ROI Defined - Ready to Save';
+            modeIndicator.className = 'mode-indicator mode-view';
+
+            const width = thermalCoords[1][0] - thermalCoords[0][0];
+            const height = thermalCoords[1][1] - thermalCoords[0][1];
+            showStatus(`✓ ROI created! Thermal coords: [${thermalCoords[0]}] to [${thermalCoords[1]}] (${width}x${height} pixels). Fill in details and click "Save Current ROI"`, 'success');
 
             drawCanvas();
         });
 
         function saveCurrentROI() {
             if (!currentROI) {
-                showStatus('❌ Please draw an ROI first by clicking "Start Drawing" and selecting 2 corners', 'error');
+                showStatus('❌ Please draw an ROI first by clicking "Start Drawing" and dragging to select area', 'error');
                 return;
             }
 
@@ -442,9 +482,12 @@
             currentROI = null;
             points = [];
 
+            // Resume auto-refresh after saving ROI
+            startAutoRefresh();
+
             drawCanvas();
             updateROIList();
-            showStatus(`✓ ROI "${name}" saved to list! Click "Save All to System" to apply changes.`, 'success');
+            showStatus(`✓ ROI "${name}" saved to list! Image refresh resumed. Click "Save All to System" when done adding ROIs.`, 'success');
 
             // Clear form
             document.getElementById('roiName').value = '';
@@ -452,9 +495,9 @@
             // Show reminder to save to system
             setTimeout(() => {
                 if (rois.length > 0) {
-                    showStatus('⚠️ Don\'t forget to click "Save All to System" to activate your ROIs!', 'warning');
+                    showStatus('⚠️ Don\'t forget to click "Save All to System" to activate your ROIs on the thermal camera!', 'warning');
                 }
-            }, 3000);
+            }, 4000);
         }
 
         function updateROIList() {
