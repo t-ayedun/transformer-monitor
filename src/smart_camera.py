@@ -92,6 +92,7 @@ class SmartCamera:
         self.is_recording = False
         self.current_recording_path = None
         self.recording_start_time = None
+        self.recording_file_handle = None
         self.last_motion_time = None
         self.last_snapshot_time = 0
         self.last_recording_end_time = 0
@@ -355,8 +356,11 @@ class SmartCamera:
                 # Ensure directory exists
                 Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
+                # Open file for writing (FileOutput requires file object, not path)
+                file_handle = open(filepath, 'wb')
+
                 # Start recording to file (includes circular buffer content)
-                file_output = FileOutput(filepath)
+                file_output = FileOutput(file_handle)
 
                 # This writes the circular buffer content first, then continues with live frames
                 self.circular_output.fileoutput = file_output
@@ -365,6 +369,7 @@ class SmartCamera:
                 self.is_recording = True
                 self.current_recording_path = filepath
                 self.recording_start_time = time.time()
+                self.recording_file_handle = file_handle  # Keep reference to close later
 
                 self.logger.info(
                     f"Recording started: {filename} "
@@ -392,6 +397,11 @@ class SmartCamera:
             try:
                 # Stop recording
                 self.circular_output.stop()
+
+                # Close the file handle
+                if hasattr(self, 'recording_file_handle') and self.recording_file_handle:
+                    self.recording_file_handle.close()
+                    self.recording_file_handle = None
 
                 # Calculate duration
                 if self.recording_start_time:
