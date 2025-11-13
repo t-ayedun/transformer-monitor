@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer Monitor - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header .site-id {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            display: inline-block;
+            padding: 12px 25px;
+            margin: 0 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .video-container {
+            grid-column: 1 / -1;
+        }
+
+        .video-container img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .roi-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .roi-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .roi-item.warning {
+            border-left-color: #FFC107;
+        }
+
+        .roi-item.critical {
+            border-left-color: #FF9800;
+        }
+
+        .roi-item.emergency {
+            border-left-color: #F44336;
+        }
+
+        .roi-item h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .roi-temps {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .alert-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .alert-badge.normal {
+            background: #4CAF50;
+        }
+
+        .alert-badge.warning {
+            background: #FFC107;
+            color: #000;
+        }
+
+        .alert-badge.critical {
+            background: #FF9800;
+        }
+
+        .alert-badge.emergency {
+            background: #F44336;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+        }
+
+        .timestamp {
+            text-align: center;
+            opacity: 0.7;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .nav-links a {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 Transformer Thermal Monitor</h1>
+            <div class="site-id">Site: {{ site_id }}</div>
+        </header>
+
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/roi-mapper">ROI Mapper</a>
+            <a href="/video/thermal" target="_blank">Thermal Stream</a>
+            <a href="/video/visual" target="_blank">Visual Stream</a>
+            <a href="/video/fusion" target="_blank">Fusion View</a>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Thermal Camera View -->
+            <div class="card video-container">
+                <h2>📷 Thermal Camera (with ROI Overlays)</h2>
+                <img src="/video/thermal" alt="Thermal camera stream" id="thermalStream">
+                <div class="timestamp" id="streamTimestamp">Loading...</div>
+            </div>
+
+            <!-- Current Status -->
+            <div class="card">
+                <h2>📊 Current Status</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-item">
+                        <div class="stat-label">Composite Temp</div>
+                        <div class="stat-value" id="compositeTemp">--</div>
+                        <div class="stat-unit">°C</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Max Temp</div>
+                        <div class="stat-value" id="maxTemp">--</div>
+                        <div class="stat-unit">°C</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Min Temp</div>
+                        <div class="stat-value" id="minTemp">--</div>
+                        <div class="stat-unit">°C</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Avg Temp</div>
+                        <div class="stat-value" id="avgTemp">--</div>
+                        <div class="stat-unit">°C</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROI Status -->
+            <div class="card">
+                <h2>🎯 Regions of Interest</h2>
+                <div class="roi-list" id="roiList">
+                    <div class="loading">Loading ROI data...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let updateInterval;
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const thermal = data.thermal_data;
+                    if (!thermal) return;
+
+                    // Update composite temperature
+                    document.getElementById('compositeTemp').textContent =
+                        thermal.composite_temperature?.toFixed(1) || '--';
+
+                    // Update frame stats
+                    if (thermal.frame_stats) {
+                        document.getElementById('maxTemp').textContent =
+                            thermal.frame_stats.max_temp.toFixed(1);
+                        document.getElementById('minTemp').textContent =
+                            thermal.frame_stats.min_temp.toFixed(1);
+                        document.getElementById('avgTemp').textContent =
+                            thermal.frame_stats.avg_temp.toFixed(1);
+                    }
+
+                    // Update ROI list
+                    const roiList = document.getElementById('roiList');
+                    if (thermal.regions && thermal.regions.length > 0) {
+                        roiList.innerHTML = thermal.regions.map(roi => {
+                            const alertLevel = roi.alert_level || 'normal';
+                            return `
+                                <div class="roi-item ${alertLevel}">
+                                    <h3>
+                                        ${roi.name}
+                                        <span class="alert-badge ${alertLevel}">${alertLevel.toUpperCase()}</span>
+                                    </h3>
+                                    <div class="roi-temps">
+                                        <span>Max: ${roi.max_temp.toFixed(1)}°C</span>
+                                        <span>Avg: ${roi.avg_temp.toFixed(1)}°C</span>
+                                        <span>Min: ${roi.min_temp.toFixed(1)}°C</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        roiList.innerHTML = '<div class="loading">No ROIs configured. Use <a href="/roi-mapper" style="color: #FFC107;">ROI Mapper</a> to create regions.</div>';
+                    }
+
+                    // Update timestamp
+                    document.getElementById('streamTimestamp').textContent =
+                        `Last update: ${new Date(thermal.timestamp).toLocaleString()}`;
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                });
+        }
+
+        // Update every 2 seconds
+        updateStatus();
+        updateInterval = setInterval(updateStatus, 2000);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(updateInterval);
+        });
+    </script>
+</body>
+</html>
