@@ -1,0 +1,74 @@
+version: '2.1'
+
+# Balena-specific Docker Compose configuration
+# Extends base docker-compose.yml with Balena cloud features
+
+services:
+  transformer-monitor:
+    build: .
+    privileged: true
+    restart: unless-stopped
+
+    # Device access
+    devices:
+      - "/dev/i2c-1:/dev/i2c-1"  # Thermal camera
+      - "/dev/vchiq:/dev/vchiq"   # Pi Camera
+      - "/dev/video0:/dev/video0" # Camera device
+
+    # Volume mounts
+    volumes:
+      - 'thermal-data:/data'
+      - 'certificates:/data/certificates'
+      - 'config:/app/config'
+      - 'logs:/data/logs'
+
+    # Environment variables
+    # These can be overridden per-device in Balena dashboard
+    environment:
+      # Site Configuration (set per-device)
+      - SITE_ID=${SITE_ID:-SITE_UNKNOWN}
+      - SITE_NAME=${SITE_NAME:-Unknown Site}
+      - SITE_ADDRESS=${SITE_ADDRESS:-}
+      - TRANSFORMER_SN=${TRANSFORMER_SN:-UNKNOWN}
+      - TIMEZONE=${TIMEZONE:-UTC}
+
+      # AWS IoT Configuration (set per-device)
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - IOT_ENDPOINT=${IOT_ENDPOINT}
+      - IOT_THING_NAME=${IOT_THING_NAME}
+
+      # FTP Configuration (optional, set per-device if needed)
+      - FTP_HOST=${FTP_HOST:-}
+      - FTP_USERNAME=${FTP_USERNAME:-}
+      - FTP_PASSWORD=${FTP_PASSWORD:-}
+
+      # Application Configuration
+      - PRODUCTION_MODE=${PRODUCTION_MODE:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CAPTURE_INTERVAL=${CAPTURE_INTERVAL:-60}
+      - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-300}
+
+      # Balena-specific
+      - BALENA=1
+      - BALENA_DEVICE_UUID=${BALENA_DEVICE_UUID}
+      - BALENA_APP_NAME=${BALENA_APP_NAME}
+      - BALENA_DEVICE_NAME_AT_INIT=${BALENA_DEVICE_NAME_AT_INIT}
+
+    # Network configuration
+    network_mode: host  # Required for I2C and camera access
+
+    # Labels for Balena
+    labels:
+      io.balena.features.dbus: '1'
+      io.balena.features.kernel-modules: '1'
+      io.balena.features.firmware: '1'
+      io.balena.features.balena-api: '1'
+      io.balena.update.strategy: download-then-kill
+      io.balena.update.handover-timeout: '180000'  # 3 minutes
+
+# Named volumes
+volumes:
+  thermal-data:
+  certificates:
+  config:
+  logs:

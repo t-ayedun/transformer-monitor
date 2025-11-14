@@ -39,8 +39,11 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
-```
 
-**`VERSION`**:
-```
-1.0.0
+# Provisioning output
+provisioned_sites/
+output/
+*.zip
+
+# Balena
+balena-*.img

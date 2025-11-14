@@ -1,0 +1,31 @@
+# Balena Application Configuration
+# Transformer Thermal Monitor Fleet
+
+name: transformer-monitor
+type: raspberrypi4-64
+version: 1.0.0
+
+data:
+  description: 'Transformer thermal monitoring system with AWS IoT integration'
+
+  # Device configuration
+  defaultDeviceType: raspberrypi4-64
+  supportedDeviceTypes:
+    - raspberrypi4-64
+    - raspberrypi3-64
+
+  # Application environment variables (fleet-wide)
+  applicationEnvironmentVariables:
+    - PRODUCTION_MODE: 'true'
+    - LOG_LEVEL: 'INFO'
+    - TZ: 'UTC'
+
+  # Device type environment variables
+  deviceTypeEnvironmentVariables:
+    raspberrypi4-64:
+      - I2C_ENABLED: '1'
+      - CAMERA_ENABLED: '1'
+
+# Build configuration
+build:
+  dockerfile: Dockerfile
