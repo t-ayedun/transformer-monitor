@@ -1,14 +1,27 @@
-# MINIMAL CONFIGURATION FOR TESTING
+# Transformer Monitor Site Configuration
+# Set production_mode to true for live deployment
+production_mode: false  # Set to true for production deployments
+
 site:
-  id: "TEST_SITE"
-  name: "Test Lab"
+  id: "{{SITE_ID}}"
+  name: "{{SITE_NAME}}"
   location:
-    address: "Office Lab"
-  timezone: "Africa/Lagos"
+    address: "{{SITE_ADDRESS}}"
+    latitude: null  # Optional
+    longitude: null  # Optional
+  timezone: "{{TIMEZONE}}"
+  contact:
+    email: null  # Optional: site contact email
+    phone: null  # Optional: site contact phone
 
 transformer:
-  type: "Test Unit"
-  rating_kva: 100
+  serial_number: "{{TRANSFORMER_SN}}"
+  manufacturer: null  # Optional
+  model: null  # Optional
+  type: "Distribution"  # Distribution, Power, etc.
+  rating_kva: 100  # Transformer rating in kVA
+  year_installed: null  # Optional
+  last_maintenance: null  # Optional
 
 thermal_camera:
   model: "MLX90640"

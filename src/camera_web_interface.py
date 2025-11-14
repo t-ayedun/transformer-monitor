@@ -21,11 +21,12 @@ import cv2
 class CameraWebInterface:
     """Web interface for camera monitoring and configuration"""
 
-    def __init__(self, smart_camera, config, thermal_capture=None, data_processor=None, port=5000):
+    def __init__(self, smart_camera, config, thermal_capture=None, data_processor=None, data_uploader=None, port=5000):
         self.logger = logging.getLogger(__name__)
         self.smart_camera = smart_camera
         self.thermal_capture = thermal_capture
         self.data_processor = data_processor
+        self.data_uploader = data_uploader
         self.config = config
         self.port = port
 
@@ -64,7 +65,7 @@ class CameraWebInterface:
 
         @self.app.route('/health')
         def health():
-            """Health check endpoint"""
+            """Basic health check endpoint"""
             return jsonify({
                 'status': 'healthy',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
@@ -72,6 +73,141 @@ class CameraWebInterface:
                 'smart_camera': self.smart_camera is not None,
                 'site_id': self.config.get('site.id', 'UNKNOWN')
             })
+
+        @self.app.route('/health/deep')
+        def deep_health_check():
+            """Comprehensive health check endpoint"""
+            import psutil
+            import os
+
+            health_status = {
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'site_id': self.config.get('site.id', 'UNKNOWN'),
+                'site_name': self.config.get('site.name', 'Unknown'),
+                'components': {},
+                'system': {},
+                'network': {},
+                'status': 'healthy'
+            }
+
+            issues = []
+
+            # Check thermal camera
+            if self.thermal_capture:
+                try:
+                    sensor_temp = self.thermal_capture.get_sensor_temp()
+                    health_status['components']['thermal_camera'] = {
+                        'status': 'ok',
+                        'sensor_temp': sensor_temp
+                    }
+                except Exception as e:
+                    health_status['components']['thermal_camera'] = {
+                        'status': 'error',
+                        'error': str(e)
+                    }
+                    issues.append('thermal_camera_error')
+            else:
+                health_status['components']['thermal_camera'] = {'status': 'not_initialized'}
+                issues.append('thermal_camera_missing')
+
+            # Check visual camera
+            if self.smart_camera and self.smart_camera.camera:
+                health_status['components']['visual_camera'] = {
+                    'status': 'ok',
+                    'stats': self.smart_camera.get_stats()
+                }
+            elif self.smart_camera:
+                health_status['components']['visual_camera'] = {
+                    'status': 'degraded',
+                    'message': 'Camera object not initialized'
+                }
+                issues.append('visual_camera_degraded')
+            else:
+                health_status['components']['visual_camera'] = {'status': 'disabled'}
+
+            # Check AWS connection
+            if self.data_uploader and self.data_uploader.aws_publisher:
+                health_status['network']['aws_iot'] = {
+                    'status': 'ok' if self.data_uploader.aws_publisher.connected else 'disconnected',
+                    'connected': self.data_uploader.aws_publisher.connected,
+                    'stats': self.data_uploader.aws_publisher.get_stats()
+                }
+                if not self.data_uploader.aws_publisher.connected:
+                    issues.append('aws_disconnected')
+            else:
+                health_status['network']['aws_iot'] = {'status': 'disabled'}
+
+            # Check FTP connection
+            if self.data_uploader and self.data_uploader.ftp_publisher:
+                health_status['network']['ftp'] = {
+                    'status': 'configured',
+                    'stats': self.data_uploader.ftp_publisher.stats
+                }
+            else:
+                health_status['network']['ftp'] = {'status': 'disabled'}
+
+            # Check data uploader
+            if self.data_uploader:
+                health_status['components']['data_uploader'] = {
+                    'status': 'ok',
+                    'stats': self.data_uploader.get_stats()
+                }
+            else:
+                health_status['components']['data_uploader'] = {'status': 'not_initialized'}
+                issues.append('data_uploader_missing')
+
+            # System metrics
+            try:
+                health_status['system']['cpu_percent'] = psutil.cpu_percent(interval=1)
+                memory = psutil.virtual_memory()
+                health_status['system']['memory'] = {
+                    'percent': memory.percent,
+                    'available_mb': memory.available // (1024 * 1024),
+                    'total_mb': memory.total // (1024 * 1024)
+                }
+
+                disk = psutil.disk_usage('/data')
+                health_status['system']['disk'] = {
+                    'percent': disk.percent,
+                    'free_gb': disk.free // (1024**3),
+                    'total_gb': disk.total // (1024**3)
+                }
+
+                # Check disk space
+                if disk.percent > 90:
+                    issues.append('disk_space_critical')
+                elif disk.percent > 80:
+                    issues.append('disk_space_warning')
+
+                # Check memory
+                if memory.percent > 90:
+                    issues.append('memory_critical')
+
+                # CPU temperature (Raspberry Pi specific)
+                try:
+                    with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
+                        cpu_temp = float(f.read()) / 1000.0
+                        health_status['system']['cpu_temp'] = cpu_temp
+                        if cpu_temp > 80:
+                            issues.append('cpu_temp_high')
+                except:
+                    pass
+
+            except Exception as e:
+                health_status['system']['error'] = str(e)
+
+            # Determine overall status
+            if len(issues) == 0:
+                health_status['status'] = 'healthy'
+            elif any('critical' in issue or 'error' in issue for issue in issues):
+                health_status['status'] = 'unhealthy'
+            else:
+                health_status['status'] = 'degraded'
+
+            health_status['issues'] = issues
+            health_status['issues_count'] = len(issues)
+
+            return jsonify(health_status)
 
         @self.app.route('/api/status')
         def get_status():

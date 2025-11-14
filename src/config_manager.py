@@ -74,6 +74,7 @@ class ConfigManager:
             'SITE_ID': os.getenv('SITE_ID', 'SITE_UNKNOWN'),
             'SITE_NAME': os.getenv('SITE_NAME', 'Unknown Site'),
             'SITE_ADDRESS': os.getenv('SITE_ADDRESS', 'Unknown Address'),
+            'TIMEZONE': os.getenv('TIMEZONE', 'UTC'),
             'TRANSFORMER_SN': os.getenv('TRANSFORMER_SN', 'UNKNOWN'),
             'IOT_ENDPOINT': os.getenv('IOT_ENDPOINT', ''),
             'IOT_THING_NAME': os.getenv('IOT_THING_NAME', ''),

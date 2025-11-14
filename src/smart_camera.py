@@ -55,9 +55,10 @@ class SmartCamera:
     - Real-time statistics
     """
 
-    def __init__(self, config):
+    def __init__(self, config, data_uploader=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
+        self.data_uploader = data_uploader  # For uploading snapshots/videos to cloud
 
         # Camera settings
         self.resolution = tuple(config.get('pi_camera.resolution', [1920, 1080]))
@@ -416,6 +417,16 @@ class SmartCamera:
                     f"(duration: {duration:.1f}s)"
                 )
 
+                # Upload video to cloud (if data uploader available)
+                if self.data_uploader and self.current_recording_path:
+                    metadata = {
+                        'site_id': self.config.get('site.id'),
+                        'duration': duration,
+                        'trigger_type': 'motion',
+                        'type': 'motion_video'
+                    }
+                    self.data_uploader.upload_video(self.current_recording_path, metadata)
+
                 # Reset state
                 self.is_recording = False
                 self.current_recording_path = None
@@ -467,6 +478,15 @@ class SmartCamera:
 
             self.stats['snapshots_taken'] += 1
             self.logger.info(f"Snapshot captured: {filename}")
+
+            # Upload to cloud (if data uploader available)
+            if self.data_uploader:
+                metadata = {
+                    'site_id': site_id,
+                    'timestamp': timestamp,
+                    'type': 'snapshot'
+                }
+                self.data_uploader.upload_snapshot(filepath, metadata)
 
             return filepath
 
