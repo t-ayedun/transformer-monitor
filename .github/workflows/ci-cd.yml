@@ -65,7 +65,8 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term -m "not requires_hardware"
         continue-on-error: false
 
       - name: Upload coverage to Codecov
@@ -229,6 +230,11 @@ jobs:
           test -f docs/DEPLOYMENT.md
           test -f docs/TROUBLESHOOTING.md
           test -f docs/CALIBRATION.md
+          test -f HARDWARE_SETUP.md
+          test -f PILOT_DEPLOYMENT.md
+          test -f PROVISIONING.md
+          test -f PROJECT_STATUS.md
+          test -f DEPLOYMENT_PLAN.md
 
       - name: Check code documentation
         run: |
