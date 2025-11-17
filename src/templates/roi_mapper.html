@@ -471,20 +471,41 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Load the captured image
-                        image.src = data.filepath + '?' + new Date().getTime();
+                        // Encode the filepath to handle spaces and special characters
+                        const encodedPath = encodeURI(data.filepath);
+                        image.src = encodedPath + '?' + new Date().getTime();
                         image.onload = () => {
                             drawCanvas();
                         };
+                        image.onerror = () => {
+                            console.error('Failed to load image:', data.filepath);
+                            showStatus('⚠️ Failed to load snapshot image. Try refreshing again.', 'error');
+                            drawCanvas(); // Draw placeholder
+                        };
+                    } else {
+                        showStatus('❌ Failed to capture snapshot', 'error');
                     }
+                })
+                .catch(error => {
+                    console.error('Snapshot error:', error);
+                    showStatus('❌ Error capturing snapshot', 'error');
                 });
         }
 
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (image.complete) {
+            // Only draw image if it loaded successfully
+            if (image.complete && image.naturalWidth > 0) {
                 ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            } else {
+                // Draw placeholder if no image
+                ctx.fillStyle = '#333';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Click "Refresh Image" to capture a snapshot', canvas.width / 2, canvas.height / 2);
             }
 
             // Draw existing ROIs
@@ -650,10 +671,13 @@
         }
 
         function deleteROI(index) {
-            rois.splice(index, 1);
-            drawCanvas();
-            updateROIList();
-            showStatus('✅ ROI deleted', 'success');
+            const roi = rois[index];
+            if (confirm(`🗑️ Delete ROI "${roi.name}"?\n\nThis will remove it from the list but won't affect the system until you click "Save All to System".`)) {
+                rois.splice(index, 1);
+                drawCanvas();
+                updateROIList();
+                showStatus(`✅ ROI "${roi.name}" deleted from list`, 'success');
+            }
         }
 
         function clearCanvas() {
