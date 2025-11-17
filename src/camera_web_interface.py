@@ -61,6 +61,33 @@ class CameraWebInterface:
             """ROI mapper interface"""
             return render_template('roi_mapper.html')
 
+        @self.app.route('/thermal-heatmap')
+        def thermal_heatmap():
+            """Thermal heatmap validation view"""
+            return render_template('thermal_heatmap.html')
+
+        @self.app.route('/api/thermal-data')
+        def get_thermal_data():
+            """Get current thermal frame data with actual temperature values"""
+            try:
+                if self.latest_thermal_frame is None:
+                    return jsonify({'success': False, 'error': 'No thermal data available'})
+
+                with self.thermal_frame_lock:
+                    # Convert numpy array to list for JSON serialization
+                    frame_list = self.latest_thermal_frame.tolist()
+
+                return jsonify({
+                    'success': True,
+                    'frame': frame_list,
+                    'width': 32,
+                    'height': 24,
+                    'timestamp': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to get thermal data: {e}")
+                return jsonify({'success': False, 'error': str(e)})
+
         @self.app.route('/health')
         def health():
             """Health check endpoint"""
@@ -103,11 +130,14 @@ class CameraWebInterface:
                 self.config.set('regions_of_interest', new_rois)
                 self.config.save_config('site')
 
+                # Force config reload to ensure fresh data
+                self.config.load_config('site')
+
                 # Reload data processor with new ROIs
                 if self.data_processor:
                     self.data_processor.rois = new_rois
 
-                self.logger.info(f"Updated {len(new_rois)} ROIs")
+                self.logger.info(f"Updated {len(new_rois)} ROIs - config reloaded")
                 return jsonify({'success': True, 'message': f'Updated {len(new_rois)} ROIs'})
 
             except Exception as e:
@@ -165,8 +195,26 @@ class CameraWebInterface:
 
             try:
                 filepath = self.smart_camera.capture_snapshot(custom_name='manual')
-                return jsonify({'success': True, 'filepath': filepath})
+                # Return relative path that can be served via /snapshots/ route
+                filename = Path(filepath).name
+                return jsonify({'success': True, 'filepath': f'/snapshots/{filename}'})
             except Exception as e:
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/snapshots/<filename>')
+        def serve_snapshot(filename):
+            """Serve captured snapshot images"""
+            try:
+                # Snapshots are stored in /data/images or local path
+                snapshot_dir = Path('/data/images') if Path('/data/images').exists() else Path('.')
+                filepath = snapshot_dir / filename
+
+                if filepath.exists():
+                    return send_file(str(filepath), mimetype='image/jpeg')
+                else:
+                    return jsonify({'error': 'Snapshot not found'}), 404
+            except Exception as e:
+                self.logger.error(f"Error serving snapshot: {e}")
                 return jsonify({'error': str(e)}), 500
 
         @self.app.route('/video/thermal')
