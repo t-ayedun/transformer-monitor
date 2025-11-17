@@ -267,6 +267,28 @@
             to { transform: rotate(360deg); }
         }
 
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
         .temperature-display {
             font-size: 2rem;
             font-weight: 700;
@@ -377,7 +399,7 @@
                     <button class="action-btn" onclick="window.location.href='/roi-mapper'">
                         🎯 ROI Mapper
                     </button>
-                    <button class="action-btn" onclick="refreshStatus()">
+                    <button class="action-btn" onclick="refreshStatus(); loadROIs();">
                         🔄 Refresh
                     </button>
                 </div>
@@ -394,7 +416,10 @@
             </div>
 
             <div class="card full-width">
-                <h2>📍 Regions of Interest</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin: 0;">📍 Regions of Interest</h2>
+                    <span id="roiLastUpdate" style="font-size: 0.85rem; color: #666;"></span>
+                </div>
                 <div id="roiInfo">
                     <p style="color: #666;">Loading ROI configurations...</p>
                 </div>
@@ -404,6 +429,8 @@
 
     <script>
         let statusUpdateInterval;
+        let roiUpdateInterval;
+        let lastROICount = 0;
 
         async function refreshStatus() {
             try {
@@ -469,6 +496,18 @@
                 const data = await response.json();
 
                 const roiDiv = document.getElementById('roiInfo');
+                const roiTimestamp = document.getElementById('roiLastUpdate');
+                const currentROICount = data.rois ? data.rois.length : 0;
+
+                // Update timestamp
+                const now = new Date();
+                roiTimestamp.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+
+                // Check if ROIs changed and show notification
+                if (lastROICount !== 0 && lastROICount !== currentROICount) {
+                    showNotification(`ROI configuration updated: ${currentROICount} ROI(s) loaded`, 'success');
+                }
+                lastROICount = currentROICount;
 
                 if (data.rois && data.rois.length > 0) {
                     let html = '<div style="display: grid; gap: 1rem;">';
@@ -510,6 +549,30 @@
             }
         }
 
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                max-width: 400px;
+                z-index: 2000;
+                animation: slideInRight 0.3s ease;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            `;
+            notification.innerHTML = `<strong>${type === 'success' ? '✅' : 'ℹ️'}</strong> ${message}`;
+
+            document.body.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
         async function captureSnapshot() {
             try {
                 const response = await fetch('/api/snapshot');
@@ -532,12 +595,18 @@
 
             // Update status every 5 seconds
             statusUpdateInterval = setInterval(refreshStatus, 5000);
+
+            // Update ROIs every 10 seconds to detect changes from ROI mapper
+            roiUpdateInterval = setInterval(loadROIs, 10000);
         });
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             if (statusUpdateInterval) {
                 clearInterval(statusUpdateInterval);
+            }
+            if (roiUpdateInterval) {
+                clearInterval(roiUpdateInterval);
             }
         });
     </script>

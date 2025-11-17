@@ -683,7 +683,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showStatus('✅ ROIs saved to system successfully!', 'success');
+                    showStatus('✅ ROIs saved to system successfully! Dashboard will update automatically within 10 seconds.', 'success');
                 } else {
                     showStatus('❌ Error: ' + data.error, 'error');
                 }
