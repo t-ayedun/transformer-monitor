@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer Monitor - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            font-size: 1.5rem;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .site-id {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .status-item .label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-item .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 0.5rem;
+        }
+
+        .status-online {
+            background: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+
+        .status-offline {
+            background: #f44336;
+            box-shadow: 0 0 10px #f44336;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .video-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .video-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 400;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-left-color: #0dcaf0;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-left-color: #4CAF50;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .temperature-display {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <h1>🔥 Transformer Monitor</h1>
+            <div class="site-id" id="siteId">{{ site_id }}</div>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/roi-mapper">ROI Mapper</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="alert alert-info">
+            <strong>ℹ️ Configuration Interface</strong> - This dashboard is for installation, configuration, and calibration.
+            Data extraction happens automatically in the background and is sent to AWS.
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="label">Thermal Camera</div>
+                <div class="value" id="thermalStatus">
+                    <span class="loading"></span>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="label">Visual Camera</div>
+                <div class="value" id="visualStatus">
+                    <span class="loading"></span>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="label">Last Update</div>
+                <div class="value" id="lastUpdate">--:--:--</div>
+            </div>
+            <div class="status-item">
+                <div class="label">Temperature Range</div>
+                <div class="value temperature-display" id="tempRange">-- °C</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>🌡️ Thermal Camera Feed</h2>
+                <div class="video-container">
+                    <img src="/video/thermal" alt="Thermal Camera Feed">
+                    <div class="video-label">LIVE - Thermal with ROI</div>
+                </div>
+                <p style="font-size: 0.9rem; color: #666;">
+                    Real-time thermal imaging with temperature overlays and ROI markers.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>📷 Visual Camera Feed</h2>
+                <div class="video-container">
+                    <img src="/video/visual" alt="Visual Camera Feed">
+                    <div class="video-label">LIVE - Visual</div>
+                </div>
+                <p style="font-size: 0.9rem; color: #666;">
+                    High-resolution visual camera for motion detection and context.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>🔀 Fusion View</h2>
+                <div class="video-container">
+                    <img src="/video/fusion" alt="Fusion Feed">
+                    <div class="video-label">LIVE - Fusion</div>
+                </div>
+                <p style="font-size: 0.9rem; color: #666;">
+                    Blended thermal and visual overlay for enhanced analysis.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>⚡ Quick Actions</h2>
+                <div class="quick-actions">
+                    <button class="action-btn" onclick="captureSnapshot()">
+                        📸 Snapshot
+                    </button>
+                    <button class="action-btn" onclick="window.location.href='/roi-mapper'">
+                        🎯 ROI Mapper
+                    </button>
+                    <button class="action-btn" onclick="refreshStatus()">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <h2>📊 System Information</h2>
+                <div class="info-grid" id="systemInfo">
+                    <span class="info-label">Site ID:</span>
+                    <span class="info-value">Loading...</span>
+                    <span class="info-label">Status:</span>
+                    <span class="info-value">Loading...</span>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <h2>📍 Regions of Interest</h2>
+                <div id="roiInfo">
+                    <p style="color: #666;">Loading ROI configurations...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusUpdateInterval;
+
+        async function refreshStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                // Update status indicators
+                updateStatusIndicator('thermalStatus', data.thermal_data !== null);
+                updateStatusIndicator('visualStatus', data.camera_stats !== null);
+
+                // Update timestamp
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+
+                // Update temperature range
+                if (data.thermal_data && data.thermal_data.ambient_temp) {
+                    const temp = data.thermal_data.ambient_temp;
+                    document.getElementById('tempRange').textContent = `${temp.toFixed(1)} °C`;
+                }
+
+                // Update system info
+                updateSystemInfo(data);
+
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        }
+
+        function updateStatusIndicator(elementId, isOnline) {
+            const element = document.getElementById(elementId);
+            const statusClass = isOnline ? 'status-online' : 'status-offline';
+            const statusText = isOnline ? 'Online' : 'Offline';
+
+            element.innerHTML = `${statusText} <span class="status-indicator ${statusClass}"></span>`;
+        }
+
+        function updateSystemInfo(data) {
+            const infoDiv = document.getElementById('systemInfo');
+            let html = `
+                <span class="info-label">Site ID:</span>
+                <span class="info-value">${data.site_id || 'Unknown'}</span>
+
+                <span class="info-label">Timestamp:</span>
+                <span class="info-value">${new Date(data.timestamp).toLocaleString()}</span>
+            `;
+
+            if (data.camera_stats) {
+                html += `
+                    <span class="info-label">Video Recordings:</span>
+                    <span class="info-value">${data.camera_stats.recordings_count || 0}</span>
+
+                    <span class="info-label">Snapshots Taken:</span>
+                    <span class="info-value">${data.camera_stats.snapshots_count || 0}</span>
+                `;
+            }
+
+            infoDiv.innerHTML = html;
+        }
+
+        async function loadROIs() {
+            try {
+                const response = await fetch('/api/rois');
+                const data = await response.json();
+
+                const roiDiv = document.getElementById('roiInfo');
+
+                if (data.rois && data.rois.length > 0) {
+                    let html = '<div style="display: grid; gap: 1rem;">';
+
+                    data.rois.forEach((roi, index) => {
+                        const enabled = roi.enabled ? '✅' : '❌';
+                        html += `
+                            <div style="padding: 1rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <strong style="color: #667eea;">${enabled} ${roi.name}</strong>
+                                    <span style="font-size: 0.85rem; color: #666;">
+                                        Weight: ${roi.weight || 1.0} | Emissivity: ${roi.emissivity || 0.95}
+                                    </span>
+                                </div>
+                                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+                                    Thresholds:
+                                    <span style="color: #ffc107;">⚠️ ${roi.thresholds?.warning || '--'}°C</span> |
+                                    <span style="color: #ff9800;">🔥 ${roi.thresholds?.critical || '--'}°C</span> |
+                                    <span style="color: #f44336;">🚨 ${roi.thresholds?.emergency || '--'}°C</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    roiDiv.innerHTML = html;
+                } else {
+                    roiDiv.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <p>No ROIs configured yet.</p>
+                            <button class="action-btn" style="margin-top: 1rem;" onclick="window.location.href='/roi-mapper'">
+                                Configure ROIs
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load ROIs:', error);
+            }
+        }
+
+        async function captureSnapshot() {
+            try {
+                const response = await fetch('/api/snapshot');
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Snapshot captured successfully!\n\nFile: ' + data.filepath);
+                } else {
+                    alert('❌ Failed to capture snapshot: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshStatus();
+            loadROIs();
+
+            // Update status every 5 seconds
+            statusUpdateInterval = setInterval(refreshStatus, 5000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (statusUpdateInterval) {
+                clearInterval(statusUpdateInterval);
+            }
+        });
+    </script>
+</body>
+</html>
