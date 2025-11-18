@@ -45,6 +45,11 @@ class CameraWebInterface:
         self.thermal_frame_buffer = deque(maxlen=30)
         self.video_frame_buffer = deque(maxlen=30)
 
+        # Temperature history for metrics (store up to 7 days at 10-second intervals)
+        # 7 days * 24 hours * 6 readings per minute = ~60,480 readings max
+        self.temperature_history = deque(maxlen=60480)
+        self.last_temp_record = 0
+
         # Setup routes
         self._setup_routes()
 
@@ -182,6 +187,51 @@ class CameraWebInterface:
                 'camera_stats': self.smart_camera.get_stats() if self.smart_camera else None,
             }
             return jsonify(status)
+
+        @self.app.route('/api/temperature-history')
+        def get_temperature_history():
+            """Get temperature history for metrics dashboard"""
+            try:
+                time_range = request.args.get('range', '1h')
+
+                # Convert time range to seconds
+                range_seconds = {
+                    '1h': 3600,
+                    '6h': 21600,
+                    '24h': 86400,
+                    '7d': 604800
+                }.get(time_range, 3600)
+
+                # Get current time
+                now = time.time()
+                cutoff_time = now - range_seconds
+
+                # Filter history based on time range
+                filtered_history = [
+                    {
+                        'timestamp': entry['timestamp'],
+                        'temperature': entry['temperature']
+                    }
+                    for entry in self.temperature_history
+                    if entry['timestamp'] >= cutoff_time
+                ]
+
+                # If we have data, downsample for better performance
+                # Target: ~100 data points regardless of time range
+                if len(filtered_history) > 100:
+                    step = len(filtered_history) // 100
+                    filtered_history = filtered_history[::step]
+
+                return jsonify({
+                    'success': True,
+                    'history': filtered_history,
+                    'range': time_range,
+                    'count': len(filtered_history)
+                })
+
+            except Exception as e:
+                self.logger.error(f"Failed to get temperature history: {e}")
+                return jsonify({'success': False, 'error': str(e)})
 
         @self.app.route('/api/rois')
         def get_rois():
@@ -537,6 +587,16 @@ class CameraWebInterface:
         with self.thermal_frame_lock:
             self.latest_thermal_frame = frame
             self.latest_thermal_data = processed_data
+
+            # Record temperature for metrics (every 10 seconds)
+            current_time = time.time()
+            if current_time - self.last_temp_record >= 10:
+                if processed_data and 'ambient_temp' in processed_data:
+                    self.temperature_history.append({
+                        'timestamp': current_time,
+                        'temperature': processed_data['ambient_temp']
+                    })
+                    self.last_temp_record = current_time
 
     def start(self):
         """Start web server"""

@@ -499,7 +499,146 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Temperature Metrics Section */
+        .metrics-section {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metrics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .metrics-header h2 {
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
+        }
+
+        .time-range-selector {
+            display: flex;
+            gap: 0.5rem;
+            background: #15202b;
+            padding: 0.25rem;
+            border-radius: 12px;
+        }
+
+        .time-range-btn {
+            background: transparent;
+            border: none;
+            color: #8b98a5;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .time-range-btn:hover {
+            color: #e7e9ea;
+        }
+
+        .time-range-btn.active {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .metrics-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr) 2fr;
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .metric-card:hover {
+            border-color: #1d9bf0;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #8b98a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #e7e9ea;
+            font-variant-numeric: tabular-nums;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+        }
+
+        .metric-trend {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .metric-trend.up { color: #f4212e; }
+        .metric-trend.down { color: #00ba7c; }
+        .metric-trend.stable { color: #8b98a5; }
+
+        .metric-value.cold { color: #1d9bf0; }
+        .metric-value.warm { color: #ff9900; }
+        .metric-value.hot { color: #f4212e; }
+
+        .chart-container {
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+            height: 200px;
+        }
+
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        @media (max-width: 1200px) {
+            .metrics-content {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .chart-container {
+                grid-column: 1 / -1;
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .metrics-content {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -587,6 +726,45 @@
             </div>
         </div>
 
+        <!-- Temperature Metrics Dashboard -->
+        <div class="metrics-section">
+            <div class="metrics-header">
+                <h2>Temperature Metrics</h2>
+                <div class="time-range-selector">
+                    <button class="time-range-btn active" onclick="setTimeRange('1h')" id="btn-1h">1h</button>
+                    <button class="time-range-btn" onclick="setTimeRange('6h')" id="btn-6h">6h</button>
+                    <button class="time-range-btn" onclick="setTimeRange('24h')" id="btn-24h">24h</button>
+                    <button class="time-range-btn" onclick="setTimeRange('7d')" id="btn-7d">7d</button>
+                </div>
+            </div>
+            <div class="metrics-content">
+                <div class="metric-card">
+                    <div class="metric-label">Minimum</div>
+                    <div class="metric-value cold" id="metricMin">
+                        <span id="metricMinValue">--</span>
+                        <span class="metric-trend stable" id="metricMinTrend">→</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Maximum</div>
+                    <div class="metric-value hot" id="metricMax">
+                        <span id="metricMaxValue">--</span>
+                        <span class="metric-trend stable" id="metricMaxTrend">→</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Average</div>
+                    <div class="metric-value warm" id="metricAvg">
+                        <span id="metricAvgValue">--</span>
+                        <span class="metric-trend stable" id="metricAvgTrend">→</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tempChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content: Hero + Sidebar -->
         <div class="main-layout">
             <div class="hero-section">
@@ -654,7 +832,11 @@
     <script>
         let statusUpdateInterval;
         let roiUpdateInterval;
+        let metricsUpdateInterval;
         let startTime = Date.now();
+        let tempChart = null;
+        let currentTimeRange = '1h';
+        let temperatureHistory = [];
 
         async function refreshStatus() {
             try {
@@ -780,6 +962,167 @@
         function refreshAll() {
             refreshStatus();
             loadROIs();
+            refreshMetrics();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#1d9bf0',
+                        backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#1d9bf0',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e2732',
+                            titleColor: '#e7e9ea',
+                            bodyColor: '#e7e9ea',
+                            borderColor: '#38444d',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(1) + '°C';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                display: false,
+                                color: '#38444d'
+                            },
+                            ticks: {
+                                color: '#8b98a5',
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            display: true,
+                            grid: {
+                                color: '#38444d',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#8b98a5',
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        async function refreshMetrics() {
+            try {
+                const response = await fetch(`/api/temperature-history?range=${currentTimeRange}`);
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    // Update chart
+                    const labels = data.history.map(point => {
+                        const date = new Date(point.timestamp);
+                        if (currentTimeRange === '1h') {
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else if (currentTimeRange === '6h') {
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else if (currentTimeRange === '24h') {
+                            return date.toLocaleTimeString([], { hour: '2-digit' });
+                        } else {
+                            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                        }
+                    });
+                    const temps = data.history.map(point => point.temperature);
+
+                    tempChart.data.labels = labels;
+                    tempChart.data.datasets[0].data = temps;
+                    tempChart.update('none');
+
+                    // Calculate metrics
+                    const min = Math.min(...temps);
+                    const max = Math.max(...temps);
+                    const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+
+                    // Update metric cards
+                    document.getElementById('metricMinValue').textContent = min.toFixed(1) + '°C';
+                    document.getElementById('metricMaxValue').textContent = max.toFixed(1) + '°C';
+                    document.getElementById('metricAvgValue').textContent = avg.toFixed(1) + '°C';
+
+                    // Calculate trends (comparing first half to second half)
+                    const midpoint = Math.floor(temps.length / 2);
+                    const firstHalf = temps.slice(0, midpoint);
+                    const secondHalf = temps.slice(midpoint);
+                    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+                    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+                    const diff = secondAvg - firstAvg;
+
+                    // Update trend indicators
+                    const updateTrend = (elementId, diff) => {
+                        const element = document.getElementById(elementId);
+                        if (Math.abs(diff) < 0.5) {
+                            element.textContent = '→';
+                            element.className = 'metric-trend stable';
+                        } else if (diff > 0) {
+                            element.textContent = '↑';
+                            element.className = 'metric-trend up';
+                        } else {
+                            element.textContent = '↓';
+                            element.className = 'metric-trend down';
+                        }
+                    };
+
+                    updateTrend('metricMinTrend', diff);
+                    updateTrend('metricMaxTrend', diff);
+                    updateTrend('metricAvgTrend', diff);
+                }
+            } catch (error) {
+                console.error('Failed to fetch temperature metrics:', error);
+            }
+        }
+
+        function setTimeRange(range) {
+            currentTimeRange = range;
+
+            // Update button states
+            document.querySelectorAll('.time-range-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${range}`).classList.add('active');
+
+            // Refresh metrics with new time range
+            refreshMetrics();
         }
 
         // Initialize
@@ -787,17 +1130,25 @@
             refreshStatus();
             loadROIs();
 
+            // Initialize chart
+            initChart();
+            refreshMetrics();
+
             // Update status every 5 seconds
             statusUpdateInterval = setInterval(refreshStatus, 5000);
 
             // Update ROIs every 10 seconds
             roiUpdateInterval = setInterval(loadROIs, 10000);
+
+            // Update metrics every 30 seconds
+            metricsUpdateInterval = setInterval(refreshMetrics, 30000);
         });
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             if (statusUpdateInterval) clearInterval(statusUpdateInterval);
             if (roiUpdateInterval) clearInterval(roiUpdateInterval);
+            if (metricsUpdateInterval) clearInterval(metricsUpdateInterval);
         });
     </script>
 </body>
