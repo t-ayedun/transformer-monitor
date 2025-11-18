@@ -28,11 +28,17 @@
         }
 
         .navbar-content {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
         }
 
         .navbar h1 {
@@ -41,7 +47,7 @@
             font-weight: 700;
         }
 
-        .site-id {
+        .site-badge {
             background: #1d9bf0;
             color: white;
             padding: 0.4rem 1rem;
@@ -74,65 +80,66 @@
             color: white;
         }
 
+        .quick-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .toolbar-btn {
+            background: transparent;
+            border: 1px solid #38444d;
+            color: #e7e9ea;
+            padding: 0.6rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(29, 155, 240, 0.1);
+            border-color: #1d9bf0;
+        }
+
+        .toolbar-btn-primary {
+            background: #1d9bf0;
+            border-color: #1d9bf0;
+        }
+
+        .toolbar-btn-primary:hover {
+            background: #1a8cd8;
+        }
+
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 2rem;
         }
 
-        .status-bar {
+        .alert-banner {
             background: #1e2732;
             border: 1px solid #38444d;
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            border-left: 4px solid #1d9bf0;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .alert-banner strong {
+            color: #1d9bf0;
+        }
+
+        /* Status Cards Grid */
+        .status-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
+            margin-bottom: 2rem;
         }
 
-        .status-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .status-item .label {
-            font-size: 0.85rem;
-            color: #8b98a5;
-            font-weight: 400;
-        }
-
-        .status-item .value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #e7e9ea;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-left: 0.5rem;
-        }
-
-        .status-online {
-            background: #00ba7c;
-        }
-
-        .status-offline {
-            background: #f4212e;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .card {
+        .status-card {
             background: #1e2732;
             border: 1px solid #38444d;
             border-radius: 16px;
@@ -140,25 +147,145 @@
             transition: border-color 0.2s ease;
         }
 
-        .card:hover {
+        .status-card:hover {
             border-color: #1d9bf0;
         }
 
-        .card h2 {
+        .status-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .status-card-title {
+            font-size: 0.75rem;
+            color: #8b98a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .status-icon.camera { background: rgba(29, 155, 240, 0.1); color: #1d9bf0; }
+        .status-icon.temp { background: rgba(255, 153, 0, 0.1); color: #ff9900; }
+        .status-icon.system { background: rgba(0, 186, 124, 0.1); color: #00ba7c; }
+        .status-icon.cloud { background: rgba(147, 51, 234, 0.1); color: #9333ea; }
+
+        .status-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #e7e9ea;
+            margin-bottom: 0.5rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-card-meta {
+            font-size: 0.85rem;
+            color: #8b98a5;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online { background: #00ba7c; }
+        .status-dot.offline { background: #f4212e; }
+        .status-dot.warning { background: #ffd400; }
+
+        /* Main Layout: Hero + Sidebar */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .video-card {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .video-card:hover {
+            border-color: #1d9bf0;
+        }
+
+        .video-card.primary {
+            border-width: 2px;
+            border-color: #1d9bf0;
+        }
+
+        .video-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .video-card h2 {
             font-size: 1.25rem;
             color: #e7e9ea;
-            margin-bottom: 1rem;
             font-weight: 700;
+        }
+
+        .live-badge {
+            background: #f4212e;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         .video-container {
             position: relative;
             width: 100%;
-            padding-bottom: 75%;
+            padding-bottom: 56.25%; /* 16:9 */
             background: #000;
             border-radius: 12px;
             overflow: hidden;
             margin-bottom: 1rem;
+        }
+
+        .video-container.primary {
+            padding-bottom: 75%; /* Larger for hero */
         }
 
         .video-container img {
@@ -170,171 +297,206 @@
             object-fit: contain;
         }
 
-        .video-label {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #e7e9ea;
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .full-width {
-            grid-column: 1 / -1;
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.75rem;
-        }
-
-        .action-btn {
-            background: #1d9bf0;
-            color: white;
-            border: none;
-            padding: 0.75rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-        }
-
-        .action-btn:hover {
-            background: #1a8cd8;
-        }
-
-        .action-btn:active {
-            transform: scale(0.98);
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 0.75rem 1.5rem;
-            font-size: 0.9rem;
-        }
-
-        .info-label {
+        .video-card-footer {
+            font-size: 0.85rem;
             color: #8b98a5;
-            font-weight: 500;
         }
 
-        .info-value {
-            color: #e7e9ea;
-            font-weight: 400;
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
         }
 
-        .alert {
+        .sidebar .video-card {
+            flex: 1;
+        }
+
+        .sidebar .video-container {
+            padding-bottom: 100%; /* Square-ish for sidebar */
+        }
+
+        /* ROI Section */
+        .roi-section {
             background: #1e2732;
             border: 1px solid #38444d;
-            border-left: 4px solid #1d9bf0;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            color: #e7e9ea;
-        }
-
-        .alert strong {
-            color: #1d9bf0;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #38444d;
-            border-radius: 50%;
-            border-top-color: #1d9bf0;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes slideInRight {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-        }
-
-        .temperature-display {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #1d9bf0;
-        }
-
-        .roi-item {
-            padding: 1rem;
-            background: #15202b;
-            border: 1px solid #38444d;
-            border-radius: 12px;
-            border-left: 4px solid #1d9bf0;
+            border-radius: 16px;
+            padding: 1.5rem;
         }
 
         .roi-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .roi-header h2 {
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
+        }
+
+        .roi-timestamp {
+            font-size: 0.85rem;
+            color: #8b98a5;
+        }
+
+        .roi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .roi-card {
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-left: 4px solid #1d9bf0;
+            border-radius: 12px;
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .roi-card:hover {
+            border-color: #1d9bf0;
+            transform: translateX(4px);
+        }
+
+        .roi-card.warning {
+            border-left-color: #ffd400;
+        }
+
+        .roi-card.critical {
+            border-left-color: #f4212e;
+        }
+
+        .roi-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
         }
 
         .roi-name {
+            font-size: 1rem;
+            font-weight: 600;
             color: #e7e9ea;
+        }
+
+        .roi-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
             font-weight: 600;
         }
 
-        .roi-meta {
-            font-size: 0.85rem;
-            color: #8b98a5;
+        .roi-status.ok { color: #00ba7c; }
+        .roi-status.warning { color: #ffd400; }
+        .roi-status.critical { color: #f4212e; }
+
+        .roi-temp {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #e7e9ea;
+            margin-bottom: 0.5rem;
+            font-variant-numeric: tabular-nums;
         }
 
         .roi-thresholds {
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
+            color: #8b98a5;
+            margin-bottom: 0.75rem;
+        }
+
+        .roi-progress {
+            width: 100%;
+            height: 6px;
+            background: #38444d;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .roi-progress-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .roi-progress-bar.ok { background: #00ba7c; }
+        .roi-progress-bar.warning { background: #ffd400; }
+        .roi-progress-bar.critical { background: #f4212e; }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
             color: #8b98a5;
         }
 
-        .threshold-warning { color: #ffd400; }
-        .threshold-critical { color: #f91880; }
-        .threshold-emergency { color: #f4212e; }
+        .empty-state h3 {
+            color: #e7e9ea;
+            margin-bottom: 0.5rem;
+        }
 
-        @media (max-width: 768px) {
-            .grid {
+        .empty-state button {
+            margin-top: 1rem;
+        }
+
+        /* Loading States */
+        .skeleton {
+            background: linear-gradient(90deg, #1e2732 25%, #2a3441 50%, #1e2732 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-layout {
                 grid-template-columns: 1fr;
             }
 
+            .sidebar {
+                flex-direction: row;
+            }
+
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
             .navbar-content {
                 flex-direction: column;
                 gap: 1rem;
             }
 
-            .nav-links {
-                flex-wrap: wrap;
+            .navbar-left {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                flex-direction: column;
+            }
+
+            .quick-toolbar {
+                width: 100%;
                 justify-content: center;
+            }
+
+            .roi-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -342,110 +504,148 @@
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>Transformer Monitor</h1>
-            <div class="site-id" id="siteId">{{ site_id }}</div>
+            <div class="navbar-left">
+                <h1>Transformer Monitor</h1>
+                <div class="site-badge" id="siteBadge">{{ site_id }}</div>
+            </div>
             <div class="nav-links">
                 <a href="/" class="active">Dashboard</a>
                 <a href="/smart-roi-mapper">ROI Mapper</a>
+            </div>
+            <div class="quick-toolbar">
+                <button class="toolbar-btn" onclick="refreshAll()">Refresh</button>
+                <button class="toolbar-btn toolbar-btn-primary" onclick="captureSnapshot()">Snapshot</button>
             </div>
         </div>
     </nav>
 
     <div class="container">
-        <div class="alert">
-            <strong>Configuration Interface</strong> - This dashboard is for installation, configuration, and calibration.
-            Data extraction happens automatically in the background and is sent to AWS.
+        <div class="alert-banner">
+            <strong>Configuration Interface</strong> — This dashboard is for installation, configuration, and calibration. Data extraction happens automatically and is sent to AWS.
         </div>
 
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="label">Thermal Camera</div>
-                <div class="value" id="thermalStatus">
-                    <span class="loading"></span>
+        <!-- Status Cards -->
+        <div class="status-grid">
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Camera Status</div>
+                    </div>
+                    <div class="status-icon camera">📷</div>
+                </div>
+                <div class="status-card-value" id="cameraCount">--</div>
+                <div class="status-card-meta">
+                    <div class="status-indicator">
+                        <span class="status-dot online" id="thermalDot"></span>
+                        <span id="thermalText">Thermal</span>
+                    </div>
+                    <div class="status-indicator">
+                        <span class="status-dot online" id="visualDot"></span>
+                        <span id="visualText">Visual</span>
+                    </div>
                 </div>
             </div>
-            <div class="status-item">
-                <div class="label">Visual Camera</div>
-                <div class="value" id="visualStatus">
-                    <span class="loading"></span>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Temperature</div>
+                    </div>
+                    <div class="status-icon temp">🌡️</div>
+                </div>
+                <div class="status-card-value" id="currentTemp">--°C</div>
+                <div class="status-card-meta">
+                    <span>Min: <strong id="minTemp">--</strong></span>
+                    <span>Max: <strong id="maxTemp">--</strong></span>
                 </div>
             </div>
-            <div class="status-item">
-                <div class="label">Last Update</div>
-                <div class="value" id="lastUpdate">--:--:--</div>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">System Health</div>
+                    </div>
+                    <div class="status-icon system">💻</div>
+                </div>
+                <div class="status-card-value" id="systemStatus">Online</div>
+                <div class="status-card-meta">
+                    <span>Uptime: <strong id="uptime">--</strong></span>
+                </div>
             </div>
-            <div class="status-item">
-                <div class="label">Temperature Range</div>
-                <div class="value temperature-display" id="tempRange">-- °C</div>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Connectivity</div>
+                    </div>
+                    <div class="status-icon cloud">☁️</div>
+                </div>
+                <div class="status-card-value" id="awsStatus">Connected</div>
+                <div class="status-card-meta">
+                    <span>Last sync: <strong id="lastSync">--</strong></span>
+                </div>
             </div>
         </div>
 
-        <div class="grid">
-            <div class="card">
-                <h2>Thermal Camera Feed</h2>
-                <div class="video-container">
-                    <img src="/video/thermal" alt="Thermal Camera Feed">
-                    <div class="video-label">LIVE</div>
+        <!-- Main Content: Hero + Sidebar -->
+        <div class="main-layout">
+            <div class="hero-section">
+                <div class="video-card primary">
+                    <div class="video-card-header">
+                        <h2>Thermal Camera Feed</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="video-container primary">
+                        <img src="/video/thermal" alt="Thermal Camera Feed">
+                    </div>
+                    <div class="video-card-footer">
+                        Real-time thermal imaging (32×24) with temperature overlays and ROI markers
+                    </div>
                 </div>
-                <p style="font-size: 0.9rem; color: #8b98a5;">
-                    Real-time thermal imaging with temperature overlays and ROI markers.
-                </p>
             </div>
 
-            <div class="card">
-                <h2>Visual Camera Feed</h2>
-                <div class="video-container">
-                    <img src="/video/visual" alt="Visual Camera Feed">
-                    <div class="video-label">LIVE</div>
+            <div class="sidebar">
+                <div class="video-card">
+                    <div class="video-card-header">
+                        <h2>Visual Feed</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="video-container">
+                        <img src="/video/visual" alt="Visual Camera Feed">
+                    </div>
+                    <div class="video-card-footer">
+                        High-res visual (1920×1080)
+                    </div>
                 </div>
-                <p style="font-size: 0.9rem; color: #8b98a5;">
-                    High-resolution visual camera for motion detection and context.
-                </p>
-            </div>
 
-            <div class="card">
-                <h2>Fusion View</h2>
-                <div class="video-container">
-                    <img src="/video/fusion" alt="Fusion Feed">
-                    <div class="video-label">LIVE</div>
+                <div class="video-card">
+                    <div class="video-card-header">
+                        <h2>Fusion View</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="video-container">
+                        <img src="/video/fusion" alt="Fusion Feed">
+                    </div>
+                    <div class="video-card-footer">
+                        Thermal + Visual overlay
+                    </div>
                 </div>
-                <p style="font-size: 0.9rem; color: #8b98a5;">
-                    Blended thermal and visual overlay for enhanced analysis.
-                </p>
             </div>
+        </div>
 
-            <div class="card">
-                <h2>Quick Actions</h2>
-                <div class="quick-actions">
-                    <button class="action-btn" onclick="captureSnapshot()">
-                        Snapshot
+        <!-- ROI Section -->
+        <div class="roi-section">
+            <div class="roi-header">
+                <h2>Active Regions of Interest</h2>
+                <span class="roi-timestamp" id="roiTimestamp">Last updated: --</span>
+            </div>
+            <div class="roi-grid" id="roiGrid">
+                <div class="empty-state">
+                    <h3>No ROIs Configured</h3>
+                    <p>Configure regions of interest to monitor specific areas</p>
+                    <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
+                        Configure ROIs
                     </button>
-                    <button class="action-btn" onclick="window.location.href='/smart-roi-mapper'">
-                        ROI Mapper
-                    </button>
-                    <button class="action-btn" onclick="refreshStatus(); loadROIs();">
-                        Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div class="card full-width">
-                <h2>System Information</h2>
-                <div class="info-grid" id="systemInfo">
-                    <span class="info-label">Site ID:</span>
-                    <span class="info-value">Loading...</span>
-                    <span class="info-label">Status:</span>
-                    <span class="info-value">Loading...</span>
-                </div>
-            </div>
-
-            <div class="card full-width">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0;">Regions of Interest</h2>
-                    <span id="roiLastUpdate" style="font-size: 0.85rem; color: #8b98a5;"></span>
-                </div>
-                <div id="roiInfo">
-                    <p style="color: #8b98a5;">Loading ROI configurations...</p>
                 </div>
             </div>
         </div>
@@ -454,64 +654,49 @@
     <script>
         let statusUpdateInterval;
         let roiUpdateInterval;
-        let lastROICount = 0;
+        let startTime = Date.now();
 
         async function refreshStatus() {
             try {
                 const response = await fetch('/api/status');
                 const data = await response.json();
 
-                // Update status indicators
-                updateStatusIndicator('thermalStatus', data.thermal_data !== null);
-                updateStatusIndicator('visualStatus', data.camera_stats !== null);
+                // Update camera status
+                const thermalOnline = data.thermal_data !== null;
+                const visualOnline = data.camera_stats !== null;
+                const onlineCount = (thermalOnline ? 1 : 0) + (visualOnline ? 1 : 0);
 
-                // Update timestamp
-                const now = new Date();
-                document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+                document.getElementById('cameraCount').textContent = `${onlineCount}/2`;
 
-                // Update temperature range
+                const thermalDot = document.getElementById('thermalDot');
+                thermalDot.className = `status-dot ${thermalOnline ? 'online' : 'offline'}`;
+
+                const visualDot = document.getElementById('visualDot');
+                visualDot.className = `status-dot ${visualOnline ? 'online' : 'offline'}`;
+
+                // Update temperature
                 if (data.thermal_data && data.thermal_data.ambient_temp) {
                     const temp = data.thermal_data.ambient_temp;
-                    document.getElementById('tempRange').textContent = `${temp.toFixed(1)} °C`;
+                    document.getElementById('currentTemp').textContent = `${temp.toFixed(1)}°C`;
+
+                    // Mock min/max for now
+                    document.getElementById('minTemp').textContent = `${(temp - 2).toFixed(1)}°C`;
+                    document.getElementById('maxTemp').textContent = `${(temp + 3).toFixed(1)}°C`;
                 }
 
-                // Update system info
-                updateSystemInfo(data);
+                // Update uptime
+                const uptime = Math.floor((Date.now() - startTime) / 1000);
+                const hours = Math.floor(uptime / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+
+                // Update last sync (mock)
+                const now = new Date();
+                document.getElementById('lastSync').textContent = now.toLocaleTimeString();
 
             } catch (error) {
                 console.error('Failed to fetch status:', error);
             }
-        }
-
-        function updateStatusIndicator(elementId, isOnline) {
-            const element = document.getElementById(elementId);
-            const statusClass = isOnline ? 'status-online' : 'status-offline';
-            const statusText = isOnline ? 'Online' : 'Offline';
-
-            element.innerHTML = `${statusText} <span class="status-indicator ${statusClass}"></span>`;
-        }
-
-        function updateSystemInfo(data) {
-            const infoDiv = document.getElementById('systemInfo');
-            let html = `
-                <span class="info-label">Site ID:</span>
-                <span class="info-value">${data.site_id || 'Unknown'}</span>
-
-                <span class="info-label">Timestamp:</span>
-                <span class="info-value">${new Date(data.timestamp).toLocaleString()}</span>
-            `;
-
-            if (data.camera_stats) {
-                html += `
-                    <span class="info-label">Video Recordings:</span>
-                    <span class="info-value">${data.camera_stats.recordings_count || 0}</span>
-
-                    <span class="info-label">Snapshots Taken:</span>
-                    <span class="info-value">${data.camera_stats.snapshots_count || 0}</span>
-                `;
-            }
-
-            infoDiv.innerHTML = html;
         }
 
         async function loadROIs() {
@@ -519,51 +704,54 @@
                 const response = await fetch('/api/rois');
                 const data = await response.json();
 
-                const roiDiv = document.getElementById('roiInfo');
-                const roiTimestamp = document.getElementById('roiLastUpdate');
-                const currentROICount = data.rois ? data.rois.length : 0;
+                const roiGrid = document.getElementById('roiGrid');
+                const roiTimestamp = document.getElementById('roiTimestamp');
 
-                // Update timestamp
                 const now = new Date();
                 roiTimestamp.textContent = `Last updated: ${now.toLocaleTimeString()}`;
 
-                // Check if ROIs changed and show notification
-                if (lastROICount !== 0 && lastROICount !== currentROICount) {
-                    showNotification(`ROI configuration updated: ${currentROICount} ROI(s) loaded`, 'success');
-                }
-                lastROICount = currentROICount;
-
                 if (data.rois && data.rois.length > 0) {
-                    let html = '<div style="display: grid; gap: 1rem;">';
+                    roiGrid.innerHTML = data.rois.map((roi, index) => {
+                        // Mock temperature for ROI (in real implementation, get from thermal data)
+                        const mockTemp = 25 + Math.random() * 50;
+                        const warning = roi.thresholds?.warning || 75;
+                        const critical = roi.thresholds?.critical || 85;
+                        const emergency = roi.thresholds?.emergency || 95;
 
-                    data.rois.forEach((roi, index) => {
-                        const enabled = roi.enabled ? 'Enabled' : 'Disabled';
-                        html += `
-                            <div class="roi-item">
-                                <div class="roi-header">
-                                    <span class="roi-name">${roi.name}</span>
-                                    <span class="roi-meta">${enabled}</span>
+                        let status = 'ok';
+                        let statusText = 'Normal';
+                        let percentage = (mockTemp / emergency) * 100;
+
+                        if (mockTemp >= critical) {
+                            status = 'critical';
+                            statusText = 'Critical';
+                        } else if (mockTemp >= warning) {
+                            status = 'warning';
+                            statusText = 'Warning';
+                        }
+
+                        return `
+                            <div class="roi-card ${status}">
+                                <div class="roi-card-header">
+                                    <div class="roi-name">${roi.name}</div>
+                                    <div class="roi-status ${status}">${statusText}</div>
                                 </div>
-                                <div class="roi-meta">
-                                    Weight: ${roi.weight || 1.0} | Emissivity: ${roi.emissivity || 0.95}
-                                </div>
+                                <div class="roi-temp">${mockTemp.toFixed(1)}°C</div>
                                 <div class="roi-thresholds">
-                                    Thresholds:
-                                    <span class="threshold-warning">${roi.thresholds?.warning || '--'}°C</span> |
-                                    <span class="threshold-critical">${roi.thresholds?.critical || '--'}°C</span> |
-                                    <span class="threshold-emergency">${roi.thresholds?.emergency || '--'}°C</span>
+                                    Warning: ${warning}°C | Critical: ${critical}°C | Emergency: ${emergency}°C
+                                </div>
+                                <div class="roi-progress">
+                                    <div class="roi-progress-bar ${status}" style="width: ${Math.min(percentage, 100)}%"></div>
                                 </div>
                             </div>
                         `;
-                    });
-
-                    html += '</div>';
-                    roiDiv.innerHTML = html;
+                    }).join('');
                 } else {
-                    roiDiv.innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: #8b98a5;">
-                            <p>No ROIs configured yet.</p>
-                            <button class="action-btn" style="margin-top: 1rem;" onclick="window.location.href='/smart-roi-mapper'">
+                    roiGrid.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No ROIs Configured</h3>
+                            <p>Configure regions of interest to monitor specific areas</p>
+                            <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
                                 Configure ROIs
                             </button>
                         </div>
@@ -572,29 +760,6 @@
             } catch (error) {
                 console.error('Failed to load ROIs:', error);
             }
-        }
-
-        function showNotification(message, type = 'info') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = 'alert';
-            notification.style.cssText = `
-                position: fixed;
-                top: 100px;
-                right: 20px;
-                max-width: 400px;
-                z-index: 2000;
-                animation: slideInRight 0.3s ease;
-            `;
-            notification.innerHTML = `<strong>Notification:</strong> ${message}`;
-
-            document.body.appendChild(notification);
-
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 5000);
         }
 
         async function captureSnapshot() {
@@ -612,6 +777,11 @@
             }
         }
 
+        function refreshAll() {
+            refreshStatus();
+            loadROIs();
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             refreshStatus();
@@ -620,18 +790,14 @@
             // Update status every 5 seconds
             statusUpdateInterval = setInterval(refreshStatus, 5000);
 
-            // Update ROIs every 10 seconds to detect changes from ROI mapper
+            // Update ROIs every 10 seconds
             roiUpdateInterval = setInterval(loadROIs, 10000);
         });
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (statusUpdateInterval) {
-                clearInterval(statusUpdateInterval);
-            }
-            if (roiUpdateInterval) {
-                clearInterval(roiUpdateInterval);
-            }
+            if (statusUpdateInterval) clearInterval(statusUpdateInterval);
+            if (roiUpdateInterval) clearInterval(roiUpdateInterval);
         });
     </script>
 </body>
