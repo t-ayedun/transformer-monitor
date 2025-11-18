@@ -13,9 +13,10 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #15202b;
             min-height: 100vh;
             padding: 2rem;
+            color: #e7e9ea;
         }
 
         .container {
@@ -24,24 +25,26 @@
         }
 
         .header {
-            background: white;
+            background: #1e2732;
+            border: 1px solid #38444d;
             padding: 1.5rem;
-            border-radius: 12px;
+            border-radius: 16px;
             margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 0.5rem;
         }
 
         .instructions {
-            background: #f0f7ff;
+            background: #15202b;
+            border: 1px solid #38444d;
             padding: 1rem;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #1d9bf0;
             margin-top: 1rem;
+            color: #8b98a5;
         }
 
         .split-view {
@@ -52,14 +55,14 @@
         }
 
         .camera-panel {
-            background: white;
+            background: #1e2732;
+            border: 1px solid #38444d;
             padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
         }
 
         .camera-panel h2 {
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 1rem;
         }
 
@@ -117,10 +120,10 @@
         }
 
         .controls {
-            background: white;
+            background: #1e2732;
+            border: 1px solid #38444d;
             padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
             margin-bottom: 2rem;
         }
 
@@ -132,7 +135,7 @@
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #333;
+            color: #e7e9ea;
         }
 
         input[type="range"] {
@@ -154,20 +157,19 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1d9bf0;
             color: white;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            background: #1a8cd8;
         }
 
         .alignment-info {
-            background: white;
+            background: #1e2732;
+            border: 1px solid #38444d;
             padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
         }
 
         .info-grid {
@@ -179,30 +181,31 @@
 
         .info-item {
             padding: 1rem;
-            background: #f9f9f9;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+            border-left: 4px solid #1d9bf0;
         }
 
         .info-label {
             font-size: 0.85rem;
-            color: #666;
+            color: #8b98a5;
             margin-bottom: 0.5rem;
         }
 
         .info-value {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #667eea;
+            color: #1d9bf0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📐 Camera Alignment & Calibration Tool</h1>
+            <h1>Camera Alignment & Calibration Tool</h1>
             <div class="instructions">
-                <strong>🎯 Calibration Steps:</strong><br>
+                <strong>Calibration Steps:</strong><br>
                 1. Place a hot object (coffee mug, laptop) in center of frame<br>
                 2. Align both cameras so crosshairs point to the same object<br>
                 3. Toggle grid overlay to verify alignment<br>
@@ -213,7 +216,7 @@
 
         <div class="split-view">
             <div class="camera-panel">
-                <h2>📷 Visual Camera (1920×1080)</h2>
+                <h2>Visual Camera (1920×1080)</h2>
                 <div class="view-container" id="visualView">
                     <img src="/video/visual" alt="Visual Camera">
                     <div class="overlay-grid">
@@ -227,7 +230,7 @@
             </div>
 
             <div class="camera-panel">
-                <h2>🌡️ Thermal Camera (32×24)</h2>
+                <h2>Thermal Camera (32×24)</h2>
                 <div class="view-container" id="thermalView">
                     <img src="/video/thermal" alt="Thermal Camera">
                     <div class="overlay-grid">
@@ -254,13 +257,13 @@
                 </label>
             </div>
             <div>
-                <button class="btn btn-primary" onclick="captureAlignment()">📸 Capture Alignment Check</button>
-                <button class="btn btn-primary" onclick="window.location.href='/roi-mapper'">→ Go to ROI Mapper</button>
+                <button class="btn btn-primary" onclick="captureAlignment()">Capture Alignment Check</button>
+                <button class="btn btn-primary" onclick="window.location.href='/smart-roi-mapper'">Go to ROI Mapper</button>
             </div>
         </div>
 
         <div class="alignment-info">
-            <h2 style="color: #667eea; margin-bottom: 1rem;">📊 Alignment Information</h2>
+            <h2 style="color: #e7e9ea; margin-bottom: 1rem;">Alignment Information</h2>
             <div class="info-grid">
                 <div class="info-item">
                     <div class="info-label">Visual Resolution</div>
@@ -280,9 +283,9 @@
                 </div>
             </div>
 
-            <div style="margin-top: 1.5rem; padding: 1rem; background: #fff9e6; border-radius: 8px; border-left: 4px solid #ffc107;">
-                <strong>⚠️ Important Notes:</strong>
-                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #15202b; border: 1px solid #38444d; border-radius: 12px; border-left: 4px solid #ffd400;">
+                <strong style="color: #e7e9ea;">Important Notes:</strong>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem; color: #8b98a5;">
                     <li>Cameras should be mounted as close together as possible</li>
                     <li>Both should point at exactly the same target</li>
                     <li>Thermal camera has much wider pixels (60× larger than visual)</li>

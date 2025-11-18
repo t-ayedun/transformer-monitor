@@ -13,16 +13,15 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #15202b;
             min-height: 100vh;
-            color: #333;
+            color: #e7e9ea;
         }
 
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #1e2732;
+            border-bottom: 1px solid #38444d;
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -37,51 +36,56 @@
         }
 
         .navbar h1 {
-            font-size: 1.5rem;
-            color: #667eea;
-            font-weight: 600;
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
         }
 
         .site-id {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1d9bf0;
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 1rem;
             border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
         .nav-links {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
         }
 
         .nav-links a {
-            color: #667eea;
+            color: #e7e9ea;
             text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
             font-weight: 500;
+            font-size: 0.9rem;
         }
 
         .nav-links a:hover {
-            background: #667eea;
+            background: rgba(29, 155, 240, 0.1);
+        }
+
+        .nav-links a.active {
+            background: #1d9bf0;
             color: white;
         }
 
         .container {
             max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
+            margin: 0 auto;
+            padding: 2rem;
         }
 
         .status-bar {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
@@ -90,69 +94,61 @@
         .status-item {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            text-align: center;
+            gap: 0.5rem;
         }
 
         .status-item .label {
             font-size: 0.85rem;
-            color: #666;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #8b98a5;
+            font-weight: 400;
         }
 
         .status-item .value {
             font-size: 1.5rem;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            color: #e7e9ea;
         }
 
         .status-indicator {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             margin-left: 0.5rem;
         }
 
         .status-online {
-            background: #4CAF50;
-            box-shadow: 0 0 10px #4CAF50;
+            background: #00ba7c;
         }
 
         .status-offline {
-            background: #f44336;
-            box-shadow: 0 0 10px #f44336;
+            background: #f4212e;
         }
 
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
         .card {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: border-color 0.2s ease;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            border-color: #1d9bf0;
         }
 
         .card h2 {
             font-size: 1.25rem;
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            font-weight: 700;
         }
 
         .video-container {
@@ -160,7 +156,7 @@
             width: 100%;
             padding-bottom: 75%;
             background: #000;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             margin-bottom: 1rem;
         }
@@ -176,14 +172,15 @@
 
         .video-label {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 0.5rem 1rem;
+            top: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #e7e9ea;
+            padding: 0.4rem 0.8rem;
             border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .full-width {
@@ -193,74 +190,69 @@
         .quick-actions {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
         .action-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1d9bf0;
             color: white;
             border: none;
-            padding: 1rem;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 500;
+            padding: 0.75rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             text-align: center;
         }
 
         .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            background: #1a8cd8;
         }
 
         .action-btn:active {
-            transform: translateY(0);
+            transform: scale(0.98);
         }
 
         .info-grid {
             display: grid;
             grid-template-columns: auto 1fr;
-            gap: 0.75rem;
+            gap: 0.75rem 1.5rem;
             font-size: 0.9rem;
         }
 
         .info-label {
-            color: #666;
+            color: #8b98a5;
             font-weight: 500;
         }
 
         .info-value {
-            color: #333;
+            color: #e7e9ea;
             font-weight: 400;
         }
 
         .alert {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-left: 4px solid #1d9bf0;
             padding: 1rem;
             border-radius: 8px;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            color: #e7e9ea;
         }
 
-        .alert-info {
-            background: #d1ecf1;
-            border-left-color: #0dcaf0;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            border-left-color: #4CAF50;
+        .alert strong {
+            color: #1d9bf0;
         }
 
         .loading {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(102, 126, 234, 0.3);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #38444d;
             border-radius: 50%;
-            border-top-color: #667eea;
-            animation: spin 1s ease-in-out infinite;
+            border-top-color: #1d9bf0;
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
@@ -292,11 +284,43 @@
         .temperature-display {
             font-size: 2rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #1d9bf0;
         }
+
+        .roi-item {
+            padding: 1rem;
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+            border-left: 4px solid #1d9bf0;
+        }
+
+        .roi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .roi-name {
+            color: #e7e9ea;
+            font-weight: 600;
+        }
+
+        .roi-meta {
+            font-size: 0.85rem;
+            color: #8b98a5;
+        }
+
+        .roi-thresholds {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #8b98a5;
+        }
+
+        .threshold-warning { color: #ffd400; }
+        .threshold-critical { color: #f91880; }
+        .threshold-emergency { color: #f4212e; }
 
         @media (max-width: 768px) {
             .grid {
@@ -318,19 +342,19 @@
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>🔥 Transformer Monitor</h1>
+            <h1>Transformer Monitor</h1>
             <div class="site-id" id="siteId">{{ site_id }}</div>
             <div class="nav-links">
-                <a href="/">Dashboard</a>
-                <a href="/roi-mapper">ROI Mapper</a>
+                <a href="/" class="active">Dashboard</a>
+                <a href="/smart-roi-mapper">ROI Mapper</a>
                 <a href="/thermal-heatmap">Heatmap</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
-        <div class="alert alert-info">
-            <strong>ℹ️ Configuration Interface</strong> - This dashboard is for installation, configuration, and calibration.
+        <div class="alert">
+            <strong>Configuration Interface</strong> - This dashboard is for installation, configuration, and calibration.
             Data extraction happens automatically in the background and is sent to AWS.
         </div>
 
@@ -359,55 +383,55 @@
 
         <div class="grid">
             <div class="card">
-                <h2>🌡️ Thermal Camera Feed</h2>
+                <h2>Thermal Camera Feed</h2>
                 <div class="video-container">
                     <img src="/video/thermal" alt="Thermal Camera Feed">
-                    <div class="video-label">LIVE - Thermal with ROI</div>
+                    <div class="video-label">LIVE</div>
                 </div>
-                <p style="font-size: 0.9rem; color: #666;">
+                <p style="font-size: 0.9rem; color: #8b98a5;">
                     Real-time thermal imaging with temperature overlays and ROI markers.
                 </p>
             </div>
 
             <div class="card">
-                <h2>📷 Visual Camera Feed</h2>
+                <h2>Visual Camera Feed</h2>
                 <div class="video-container">
                     <img src="/video/visual" alt="Visual Camera Feed">
-                    <div class="video-label">LIVE - Visual</div>
+                    <div class="video-label">LIVE</div>
                 </div>
-                <p style="font-size: 0.9rem; color: #666;">
+                <p style="font-size: 0.9rem; color: #8b98a5;">
                     High-resolution visual camera for motion detection and context.
                 </p>
             </div>
 
             <div class="card">
-                <h2>🔀 Fusion View</h2>
+                <h2>Fusion View</h2>
                 <div class="video-container">
                     <img src="/video/fusion" alt="Fusion Feed">
-                    <div class="video-label">LIVE - Fusion</div>
+                    <div class="video-label">LIVE</div>
                 </div>
-                <p style="font-size: 0.9rem; color: #666;">
+                <p style="font-size: 0.9rem; color: #8b98a5;">
                     Blended thermal and visual overlay for enhanced analysis.
                 </p>
             </div>
 
             <div class="card">
-                <h2>⚡ Quick Actions</h2>
+                <h2>Quick Actions</h2>
                 <div class="quick-actions">
                     <button class="action-btn" onclick="captureSnapshot()">
-                        📸 Snapshot
+                        Snapshot
                     </button>
-                    <button class="action-btn" onclick="window.location.href='/roi-mapper'">
-                        🎯 ROI Mapper
+                    <button class="action-btn" onclick="window.location.href='/smart-roi-mapper'">
+                        ROI Mapper
                     </button>
                     <button class="action-btn" onclick="refreshStatus(); loadROIs();">
-                        🔄 Refresh
+                        Refresh
                     </button>
                 </div>
             </div>
 
             <div class="card full-width">
-                <h2>📊 System Information</h2>
+                <h2>System Information</h2>
                 <div class="info-grid" id="systemInfo">
                     <span class="info-label">Site ID:</span>
                     <span class="info-value">Loading...</span>
@@ -418,11 +442,11 @@
 
             <div class="card full-width">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0;">📍 Regions of Interest</h2>
-                    <span id="roiLastUpdate" style="font-size: 0.85rem; color: #666;"></span>
+                    <h2 style="margin: 0;">Regions of Interest</h2>
+                    <span id="roiLastUpdate" style="font-size: 0.85rem; color: #8b98a5;"></span>
                 </div>
                 <div id="roiInfo">
-                    <p style="color: #666;">Loading ROI configurations...</p>
+                    <p style="color: #8b98a5;">Loading ROI configurations...</p>
                 </div>
             </div>
         </div>
@@ -514,20 +538,21 @@
                     let html = '<div style="display: grid; gap: 1rem;">';
 
                     data.rois.forEach((roi, index) => {
-                        const enabled = roi.enabled ? '✅' : '❌';
+                        const enabled = roi.enabled ? 'Enabled' : 'Disabled';
                         html += `
-                            <div style="padding: 1rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #667eea;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <strong style="color: #667eea;">${enabled} ${roi.name}</strong>
-                                    <span style="font-size: 0.85rem; color: #666;">
-                                        Weight: ${roi.weight || 1.0} | Emissivity: ${roi.emissivity || 0.95}
-                                    </span>
+                            <div class="roi-item">
+                                <div class="roi-header">
+                                    <span class="roi-name">${roi.name}</span>
+                                    <span class="roi-meta">${enabled}</span>
                                 </div>
-                                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+                                <div class="roi-meta">
+                                    Weight: ${roi.weight || 1.0} | Emissivity: ${roi.emissivity || 0.95}
+                                </div>
+                                <div class="roi-thresholds">
                                     Thresholds:
-                                    <span style="color: #ffc107;">⚠️ ${roi.thresholds?.warning || '--'}°C</span> |
-                                    <span style="color: #ff9800;">🔥 ${roi.thresholds?.critical || '--'}°C</span> |
-                                    <span style="color: #f44336;">🚨 ${roi.thresholds?.emergency || '--'}°C</span>
+                                    <span class="threshold-warning">${roi.thresholds?.warning || '--'}°C</span> |
+                                    <span class="threshold-critical">${roi.thresholds?.critical || '--'}°C</span> |
+                                    <span class="threshold-emergency">${roi.thresholds?.emergency || '--'}°C</span>
                                 </div>
                             </div>
                         `;
@@ -537,9 +562,9 @@
                     roiDiv.innerHTML = html;
                 } else {
                     roiDiv.innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="text-align: center; padding: 2rem; color: #8b98a5;">
                             <p>No ROIs configured yet.</p>
-                            <button class="action-btn" style="margin-top: 1rem;" onclick="window.location.href='/roi-mapper'">
+                            <button class="action-btn" style="margin-top: 1rem;" onclick="window.location.href='/smart-roi-mapper'">
                                 Configure ROIs
                             </button>
                         </div>
@@ -553,7 +578,7 @@
         function showNotification(message, type = 'info') {
             // Create notification element
             const notification = document.createElement('div');
-            notification.className = `alert alert-${type}`;
+            notification.className = 'alert';
             notification.style.cssText = `
                 position: fixed;
                 top: 100px;
@@ -561,9 +586,8 @@
                 max-width: 400px;
                 z-index: 2000;
                 animation: slideInRight 0.3s ease;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
             `;
-            notification.innerHTML = `<strong>${type === 'success' ? '✅' : 'ℹ️'}</strong> ${message}`;
+            notification.innerHTML = `<strong>Notification:</strong> ${message}`;
 
             document.body.appendChild(notification);
 
@@ -580,12 +604,12 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('✅ Snapshot captured successfully!\n\nFile: ' + data.filepath);
+                    alert('Snapshot captured successfully!\n\nFile: ' + data.filepath);
                 } else {
-                    alert('❌ Failed to capture snapshot: ' + data.error);
+                    alert('Failed to capture snapshot: ' + data.error);
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                alert('Error: ' + error.message);
             }
         }
 

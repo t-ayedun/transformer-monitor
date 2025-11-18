@@ -12,17 +12,19 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #15202b;
             min-height: 100vh;
-            color: #333;
+            color: #e7e9ea;
         }
 
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #1e2732;
+            border-bottom: 1px solid #38444d;
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .navbar-content {
@@ -34,120 +36,128 @@
         }
 
         .navbar h1 {
-            font-size: 1.5rem;
-            color: #667eea;
-            font-weight: 600;
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
         }
 
         .nav-links a {
-            color: #667eea;
+            color: #e7e9ea;
             text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
             font-weight: 500;
-            margin: 0 0.25rem;
+            font-size: 0.9rem;
         }
 
         .nav-links a:hover {
-            background: #667eea;
+            background: rgba(29, 155, 240, 0.1);
+        }
+
+        .nav-links a.active {
+            background: #1d9bf0;
             color: white;
         }
 
         .container {
             max-width: 1800px;
-            margin: 2rem auto;
-            padding: 0 2rem;
+            margin: 0 auto;
+            padding: 2rem;
         }
 
         .info-banner {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
         }
 
         .info-banner h2 {
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 0.5rem;
+            font-weight: 700;
         }
 
         .info-banner p {
-            color: #666;
+            color: #8b98a5;
             line-height: 1.6;
         }
 
         .main-layout {
             display: grid;
             grid-template-columns: 1fr 400px;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
         .heatmap-section {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
         .controls-bar {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.2rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             font-size: 0.9rem;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1d9bf0;
             color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a8cd8;
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: #00ba7c;
             color: white;
+        }
+
+        .btn-success:hover {
+            background: #00a86b;
         }
 
         .btn-secondary {
-            background: #757575;
+            background: #536471;
             color: white;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        .btn-secondary:hover {
+            background: #3f4d59;
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
         .mode-indicator {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
             font-weight: 600;
-            text-align: center;
-        }
-
-        .mode-select {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .mode-auto {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            font-size: 0.9rem;
+            background: #1d9bf0;
             color: white;
         }
 
@@ -155,7 +165,7 @@
             display: grid;
             gap: 1px;
             background: #000;
-            border: 3px solid #667eea;
+            border: 3px solid #1d9bf0;
             margin: 0 auto;
             width: fit-content;
             user-select: none;
@@ -179,27 +189,28 @@
         .heatmap-cell:hover {
             transform: scale(1.05);
             z-index: 10;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 0 10px rgba(29, 155, 240, 0.5);
         }
 
         .heatmap-cell.selected {
-            border: 3px solid #ff0;
-            box-shadow: inset 0 0 10px rgba(255, 255, 0, 0.5);
+            border: 3px solid #ffd400;
+            box-shadow: inset 0 0 10px rgba(255, 212, 0, 0.5);
         }
 
         .heatmap-cell.suggested {
-            border: 3px solid #4CAF50;
+            border: 3px solid #00ba7c;
             animation: pulse 1s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 10px rgba(76, 175, 80, 0.8); }
-            50% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.4); }
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 186, 124, 0.8); }
+            50% { box-shadow: 0 0 20px rgba(0, 186, 124, 0.4); }
         }
 
         .cell-temp {
             font-size: 11px;
             font-weight: 700;
+            color: #000;
         }
 
         .cell-coords {
@@ -214,16 +225,17 @@
         }
 
         .panel {
-            background: white;
+            background: #1e2732;
+            border: 1px solid #38444d;
             padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
         }
 
         .panel h3 {
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 1rem;
             font-size: 1.1rem;
+            font-weight: 700;
         }
 
         .form-group {
@@ -234,22 +246,24 @@
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #555;
+            color: #8b98a5;
             font-size: 0.9rem;
         }
 
         .form-group input {
             width: 100%;
             padding: 0.75rem;
-            border: 2px solid #e0e0e0;
+            border: 1px solid #38444d;
             border-radius: 8px;
             font-size: 0.9rem;
-            transition: border-color 0.3s ease;
+            transition: border-color 0.2s ease;
+            background: #15202b;
+            color: #e7e9ea;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1d9bf0;
         }
 
         .roi-list {
@@ -258,33 +272,33 @@
         }
 
         .roi-item {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            background: #15202b;
             padding: 1rem;
             margin-bottom: 1rem;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            transition: all 0.3s ease;
+            border-radius: 12px;
+            border-left: 4px solid #1d9bf0;
+            border: 1px solid #38444d;
+            transition: all 0.2s ease;
         }
 
         .roi-item.suggested-roi {
-            border-left-color: #4CAF50;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(69, 160, 73, 0.05) 100%);
+            border-left: 4px solid #00ba7c;
         }
 
         .roi-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.2);
+            border-color: #1d9bf0;
         }
 
         .roi-item h4 {
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 0.5rem;
             font-size: 1rem;
+            font-weight: 600;
         }
 
         .roi-item p {
             font-size: 0.85rem;
-            color: #666;
+            color: #8b98a5;
             margin: 0.25rem 0;
         }
 
@@ -301,11 +315,12 @@
 
         .status-message {
             padding: 1rem;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 1.5rem;
             font-weight: 500;
             display: none;
             animation: slideIn 0.3s ease;
+            border: 1px solid #38444d;
         }
 
         @keyframes slideIn {
@@ -320,31 +335,56 @@
         }
 
         .status-success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #4CAF50;
+            background: #1e2732;
+            color: #00ba7c;
+            border-left: 4px solid #00ba7c;
         }
 
         .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #f44336;
+            background: #1e2732;
+            color: #f4212e;
+            border-left: 4px solid #f4212e;
         }
 
         .status-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
+            background: #1e2732;
+            color: #1d9bf0;
+            border-left: 4px solid #1d9bf0;
+        }
+
+        .tips-box {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+        }
+
+        .tips-box strong {
+            color: #e7e9ea;
+        }
+
+        .tips-box ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            line-height: 1.8;
+            color: #8b98a5;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>🎯 Smart ROI Mapper (Thermal Native)</h1>
+            <h1>Smart ROI Mapper</h1>
             <div class="nav-links">
                 <a href="/">Dashboard</a>
-                <a href="/smart-roi-mapper">Smart ROI Mapper</a>
+                <a href="/smart-roi-mapper" class="active">ROI Mapper</a>
                 <a href="/thermal-heatmap">Heatmap</a>
             </div>
         </div>
@@ -352,7 +392,7 @@
 
     <div class="container">
         <div class="info-banner">
-            <h2>💡 How This Works</h2>
+            <h2>How This Works</h2>
             <p>
                 <strong>No camera alignment needed!</strong> This tool works directly with your 32×24 thermal camera data.
                 <br><br>
@@ -368,21 +408,21 @@
                 <div class="controls-bar">
                     <div class="mode-indicator" id="modeIndicator">Manual Selection Mode</div>
                     <button class="btn btn-primary" id="autoDetectBtn" onclick="autoDetectHotspots()">
-                        🤖 Auto-Detect Hotspots
+                        Auto-Detect Hotspots
                     </button>
                     <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
-                    <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+                    <button class="btn btn-secondary" onclick="refreshData()">Refresh</button>
                 </div>
 
                 <div id="heatmapGrid" class="heatmap-grid">
-                    <div style="padding: 2rem; text-align: center; color: #666;">
+                    <div style="padding: 2rem; text-align: center; color: #8b98a5;">
                         Loading thermal data...
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px;">
-                    <strong>💡 Tips:</strong>
-                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 1.8;">
+                <div class="tips-box">
+                    <strong>Tips:</strong>
+                    <ul>
                         <li><strong>Manual:</strong> Click cells to start, drag to select area, release to finish</li>
                         <li><strong>Auto:</strong> Click "Auto-Detect" to let AI find hotspots above threshold</li>
                         <li>Selected cells turn yellow, suggested ROIs turn green</li>
@@ -393,7 +433,7 @@
 
             <div class="sidebar">
                 <div class="panel">
-                    <h3>⚙️ Current ROI Configuration</h3>
+                    <h3>Current ROI Configuration</h3>
                     <div class="form-group">
                         <label for="roiName">ROI Name</label>
                         <input type="text" id="roiName" placeholder="e.g., Top Coil, Bottom Winding">
@@ -419,17 +459,17 @@
                         <input type="number" id="roiEmergency" value="95" step="1">
                     </div>
                     <button class="btn btn-success" onclick="saveCurrentROI()" style="width: 100%;">
-                        💾 Save ROI
+                        Save ROI
                     </button>
                 </div>
 
                 <div class="panel">
-                    <h3>📋 Defined ROIs</h3>
+                    <h3>Defined ROIs</h3>
                     <div id="roiList" class="roi-list">
-                        <p style="text-align: center; color: #999; padding: 2rem;">No ROIs defined yet</p>
+                        <p style="text-align: center; color: #8b98a5; padding: 2rem;">No ROIs defined yet</p>
                     </div>
                     <button class="btn btn-success" onclick="saveAllROIs()" style="width: 100%; margin-top: 1rem;">
-                        💾 Save All to System
+                        Save All to System
                     </button>
                 </div>
             </div>
@@ -527,7 +567,7 @@
         async function autoDetectHotspots() {
             const btn = document.getElementById('autoDetectBtn');
             btn.disabled = true;
-            btn.textContent = '🔄 Detecting...';
+            btn.textContent = 'Detecting...';
 
             try {
                 const response = await fetch('/api/detect-hotspots');
@@ -536,7 +576,7 @@
                 if (data.success && data.hotspots && data.hotspots.length > 0) {
                     suggestedROIs = data.suggested_rois;
 
-                    showStatus(`✅ Found ${data.hotspots.length} hotspot(s)! Review suggested ROIs below.`, 'success');
+                    showStatus(`Found ${data.hotspots.length} hotspot(s)! Review suggested ROIs below.`, 'success');
 
                     // Add suggested ROIs to list
                     suggestedROIs.forEach((roi, index) => {
@@ -563,19 +603,19 @@
                 showStatus(`Error: ${error.message}`, 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = '🤖 Auto-Detect Hotspots';
+                btn.textContent = 'Auto-Detect Hotspots';
             }
         }
 
         function saveCurrentROI() {
             if (selectedCells.size === 0) {
-                showStatus('⚠️ Please select cells first by clicking/dragging on the heatmap', 'error');
+                showStatus('Please select cells first by clicking/dragging on the heatmap', 'error');
                 return;
             }
 
             const name = document.getElementById('roiName').value;
             if (!name) {
-                showStatus('⚠️ Please enter an ROI name', 'error');
+                showStatus('Please enter an ROI name', 'error');
                 return;
             }
 
@@ -608,7 +648,7 @@
             selectedCells.clear();
             renderHeatmap();
             updateROIList();
-            showStatus(`✅ ROI "${name}" saved!`, 'success');
+            showStatus(`ROI "${name}" saved!`, 'success');
 
             document.getElementById('roiName').value = '';
         }
@@ -617,17 +657,17 @@
             const listDiv = document.getElementById('roiList');
 
             if (rois.length === 0) {
-                listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">No ROIs defined yet</p>';
+                listDiv.innerHTML = '<p style="text-align: center; color: #8b98a5; padding: 2rem;">No ROIs defined yet</p>';
                 return;
             }
 
             listDiv.innerHTML = rois.map((roi, index) => `
                 <div class="roi-item ${roi.suggested ? 'suggested-roi' : ''}">
-                    <h4>${roi.suggested ? '🤖 ' : ''}${roi.name}</h4>
+                    <h4>${roi.suggested ? 'AI: ' : ''}${roi.name}</h4>
                     <p>Thermal: [${roi.coordinates[0].join(', ')}] to [${roi.coordinates[1].join(', ')}]</p>
                     <p>Weight: ${roi.weight} | Emissivity: ${roi.emissivity}</p>
-                    <p>Thresholds: ⚠️${roi.thresholds.warning}°C 🔥${roi.thresholds.critical}°C 🚨${roi.thresholds.emergency}°C</p>
-                    ${roi.suggested ? '<p style="color: #4CAF50; font-weight: 600;">✨ AI Suggested</p>' : ''}
+                    <p>Thresholds: ${roi.thresholds.warning}°C / ${roi.thresholds.critical}°C / ${roi.thresholds.emergency}°C</p>
+                    ${roi.suggested ? '<p style="color: #00ba7c; font-weight: 600;">AI Suggested</p>' : ''}
                     <div class="roi-actions">
                         <button class="btn btn-secondary" onclick="deleteROI(${index})">Delete</button>
                     </div>
@@ -637,17 +677,17 @@
 
         function deleteROI(index) {
             const roi = rois[index];
-            if (confirm(`🗑️ Delete ROI "${roi.name}"?`)) {
+            if (confirm(`Delete ROI "${roi.name}"?`)) {
                 rois.splice(index, 1);
                 renderHeatmap();
                 updateROIList();
-                showStatus(`✅ ROI "${roi.name}" deleted`, 'success');
+                showStatus(`ROI "${roi.name}" deleted`, 'success');
             }
         }
 
         async function saveAllROIs() {
             if (rois.length === 0) {
-                showStatus('⚠️ No ROIs to save', 'error');
+                showStatus('No ROIs to save', 'error');
                 return;
             }
 
@@ -661,12 +701,12 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showStatus(`✅ ${rois.length} ROI(s) saved to system! Dashboard will update automatically.`, 'success');
+                    showStatus(`${rois.length} ROI(s) saved to system! Dashboard will update automatically.`, 'success');
                 } else {
-                    showStatus(`❌ Error: ${data.error}`, 'error');
+                    showStatus(`Error: ${data.error}`, 'error');
                 }
             } catch (error) {
-                showStatus(`❌ Network error: ${error.message}`, 'error');
+                showStatus(`Network error: ${error.message}`, 'error');
             }
         }
 

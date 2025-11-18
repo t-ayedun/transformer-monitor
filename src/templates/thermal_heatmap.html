@@ -13,16 +13,18 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #15202b;
             min-height: 100vh;
-            color: #333;
+            color: #e7e9ea;
         }
 
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #1e2732;
+            border-bottom: 1px solid #38444d;
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .navbar-content {
@@ -34,42 +36,47 @@
         }
 
         .navbar h1 {
-            font-size: 1.5rem;
-            color: #667eea;
-            font-weight: 600;
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
         }
 
         .nav-links {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
         }
 
         .nav-links a {
-            color: #667eea;
+            color: #e7e9ea;
             text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
             font-weight: 500;
+            font-size: 0.9rem;
         }
 
         .nav-links a:hover {
-            background: #667eea;
+            background: rgba(29, 155, 240, 0.1);
+        }
+
+        .nav-links a.active {
+            background: #1d9bf0;
             color: white;
         }
 
         .container {
             max-width: 1800px;
-            margin: 2rem auto;
-            padding: 0 2rem;
+            margin: 0 auto;
+            padding: 2rem;
         }
 
         .controls {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
         }
 
         .control-row {
@@ -81,43 +88,57 @@
 
         .control-group {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: center;
         }
 
+        .control-group strong {
+            color: #8b98a5;
+            font-weight: 600;
+        }
+
         .zoom-btn {
-            padding: 0.75rem 1.5rem;
-            border: 2px solid #667eea;
-            background: white;
-            color: #667eea;
-            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            border: 1px solid #38444d;
+            background: #15202b;
+            color: #e7e9ea;
+            border-radius: 20px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
         }
 
         .zoom-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1d9bf0;
             color: white;
+            border-color: #1d9bf0;
         }
 
         .zoom-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            background: #1d9bf0;
+            color: white;
         }
 
         .heatmap-container {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .heatmap-title {
+            text-align: center;
+            color: #e7e9ea;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
         }
 
         .heatmap-grid {
             display: grid;
             gap: 2px;
             background: #000;
-            border: 3px solid #667eea;
+            border: 3px solid #1d9bf0;
             margin: 0 auto;
             width: fit-content;
         }
@@ -140,7 +161,7 @@
         .heatmap-cell:hover {
             transform: scale(1.1);
             z-index: 10;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(29, 155, 240, 0.5);
         }
 
         .cell-temp {
@@ -155,11 +176,17 @@
         }
 
         .stats-panel {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
-            margin-top: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-top: 1.5rem;
+        }
+
+        .stats-title {
+            color: #e7e9ea;
+            margin-bottom: 1rem;
+            font-weight: 700;
         }
 
         .stats-grid {
@@ -171,22 +198,24 @@
 
         .stat-item {
             text-align: center;
+            padding: 1rem;
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
         }
 
         .stat-label {
             font-size: 0.85rem;
-            color: #666;
+            color: #8b98a5;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #1d9bf0;
             margin-top: 0.5rem;
         }
 
@@ -202,6 +231,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            color: #8b98a5;
         }
 
         .legend-color {
@@ -214,18 +244,25 @@
             text-align: center;
             padding: 3rem;
             font-size: 1.2rem;
-            color: #667eea;
+            color: #8b98a5;
+        }
+
+        @media (max-width: 768px) {
+            .control-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>🌡️ Thermal Heatmap Validation</h1>
+            <h1>Thermal Heatmap Validation</h1>
             <div class="nav-links">
-                <a href="/">← Dashboard</a>
-                <a href="/roi-mapper">ROI Mapper</a>
-                <a href="/thermal-heatmap">Heatmap</a>
+                <a href="/">Dashboard</a>
+                <a href="/smart-roi-mapper">ROI Mapper</a>
+                <a href="/thermal-heatmap" class="active">Heatmap</a>
             </div>
         </div>
     </nav>
@@ -241,13 +278,13 @@
                     <button class="zoom-btn active" onclick="setResolution(32, 24)">32×24 (Full)</button>
                 </div>
                 <div class="control-group">
-                    <button class="zoom-btn" onclick="refreshData()">🔄 Refresh</button>
+                    <button class="zoom-btn" onclick="refreshData()">Refresh</button>
                 </div>
             </div>
         </div>
 
         <div class="heatmap-container">
-            <h2 style="text-align: center; color: #667eea; margin-bottom: 1.5rem;">
+            <h2 class="heatmap-title">
                 Temperature Heatmap (<span id="currentResolution">32×24</span>)
             </h2>
             <div id="heatmapGrid" class="heatmap-grid">
@@ -256,7 +293,7 @@
         </div>
 
         <div class="stats-panel">
-            <h2 style="color: #667eea; margin-bottom: 1rem;">Thermal Statistics</h2>
+            <h2 class="stats-title">Thermal Statistics</h2>
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-label">Minimum</div>

@@ -13,16 +13,15 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #15202b;
             min-height: 100vh;
-            color: #333;
+            color: #e7e9ea;
         }
 
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #1e2732;
+            border-bottom: 1px solid #38444d;
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -37,27 +36,32 @@
         }
 
         .navbar h1 {
-            font-size: 1.5rem;
-            color: #667eea;
-            font-weight: 600;
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
         }
 
         .nav-links {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
         }
 
         .nav-links a {
-            color: #667eea;
+            color: #e7e9ea;
             text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
             font-weight: 500;
+            font-size: 0.9rem;
         }
 
         .nav-links a:hover {
-            background: #667eea;
+            background: rgba(29, 155, 240, 0.1);
+        }
+
+        .nav-links a.active {
+            background: #1d9bf0;
             color: white;
         }
 
@@ -68,25 +72,27 @@
         }
 
         .page-header {
-            background: white;
-            border-radius: 12px;
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
             padding: 1.5rem;
             margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
         .page-header h1 {
-            color: #667eea;
+            color: #e7e9ea;
             margin-bottom: 0.5rem;
             font-size: 1.75rem;
         }
 
         .info {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            background: #15202b;
+            border: 1px solid #38444d;
             padding: 1rem;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-radius: 12px;
+            border-left: 4px solid #1d9bf0;
             font-size: 0.95rem;
+            color: #8b98a5;
         }
 
         .main-content {
