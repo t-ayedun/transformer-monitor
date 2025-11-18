@@ -152,6 +152,16 @@
             cursor: not-allowed;
         }
 
+        .btn-small {
+            padding: 0.5rem 0.9rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-small.active {
+            background: #1d9bf0;
+            color: white;
+        }
+
         .mode-indicator {
             padding: 0.6rem 1.2rem;
             border-radius: 20px;
@@ -184,6 +194,16 @@
             cursor: crosshair;
             transition: all 0.1s ease;
             position: relative;
+        }
+
+        .heatmap-mode .heatmap-cell {
+            min-width: 60px;
+            min-height: 45px;
+        }
+
+        .heatmap-mode .cell-temp,
+        .heatmap-mode .cell-coords {
+            display: none;
         }
 
         .heatmap-cell:hover {
@@ -385,7 +405,6 @@
             <div class="nav-links">
                 <a href="/">Dashboard</a>
                 <a href="/smart-roi-mapper" class="active">ROI Mapper</a>
-                <a href="/thermal-heatmap">Heatmap</a>
             </div>
         </div>
     </nav>
@@ -410,8 +429,19 @@
                     <button class="btn btn-primary" id="autoDetectBtn" onclick="autoDetectHotspots()">
                         Auto-Detect Hotspots
                     </button>
+                    <button class="btn btn-secondary" onclick="toggleViewMode()">
+                        <span id="viewToggleText">Heatmap View</span>
+                    </button>
                     <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
                     <button class="btn btn-secondary" onclick="refreshData()">Refresh</button>
+                </div>
+
+                <div class="controls-bar" style="margin-top: 0.75rem;">
+                    <strong style="color: #8b98a5;">Resolution:</strong>
+                    <button class="btn btn-secondary btn-small" onclick="setResolution(4, 3)">4×3</button>
+                    <button class="btn btn-secondary btn-small" onclick="setResolution(8, 6)">8×6</button>
+                    <button class="btn btn-secondary btn-small" onclick="setResolution(16, 12)">16×12</button>
+                    <button class="btn btn-secondary btn-small active" onclick="setResolution(32, 24)">32×24</button>
                 </div>
 
                 <div id="heatmapGrid" class="heatmap-grid">
@@ -428,6 +458,28 @@
                         <li>Selected cells turn yellow, suggested ROIs turn green</li>
                         <li>Name and configure each ROI in the sidebar</li>
                     </ul>
+                </div>
+
+                <div class="panel" style="margin-top: 1.5rem;">
+                    <h3>Thermal Statistics</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                        <div style="text-align: center; padding: 0.75rem; background: #15202b; border: 1px solid #38444d; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: #8b98a5; text-transform: uppercase;">Minimum</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #1d9bf0; margin-top: 0.25rem;" id="minTemp">--°C</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: #15202b; border: 1px solid #38444d; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: #8b98a5; text-transform: uppercase;">Maximum</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #1d9bf0; margin-top: 0.25rem;" id="maxTemp">--°C</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: #15202b; border: 1px solid #38444d; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: #8b98a5; text-transform: uppercase;">Average</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #1d9bf0; margin-top: 0.25rem;" id="avgTemp">--°C</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: #15202b; border: 1px solid #38444d; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: #8b98a5; text-transform: uppercase;">Range</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #1d9bf0; margin-top: 0.25rem;" id="rangeTemp">--°C</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -482,9 +534,56 @@
         let rois = [];
         let isDragging = false;
         let suggestedROIs = [];
+        let isHeatmapMode = false;
+        let currentWidth = 32;
+        let currentHeight = 24;
 
         const THERMAL_WIDTH = 32;
         const THERMAL_HEIGHT = 24;
+
+        function toggleViewMode() {
+            isHeatmapMode = !isHeatmapMode;
+            const grid = document.getElementById('heatmapGrid');
+            const toggleText = document.getElementById('viewToggleText');
+
+            if (isHeatmapMode) {
+                grid.classList.add('heatmap-mode');
+                toggleText.textContent = 'Grid View';
+            } else {
+                grid.classList.remove('heatmap-mode');
+                toggleText.textContent = 'Heatmap View';
+            }
+
+            renderHeatmap();
+        }
+
+        function setResolution(width, height) {
+            currentWidth = width;
+            currentHeight = height;
+
+            // Update active button
+            document.querySelectorAll('.btn-small').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            renderHeatmap();
+        }
+
+        function updateStats() {
+            if (!thermalData || !thermalData.frame) return;
+
+            // Flatten the 2D array
+            const allTemps = thermalData.frame.flat();
+
+            const min = Math.min(...allTemps);
+            const max = Math.max(...allTemps);
+            const avg = allTemps.reduce((a, b) => a + b, 0) / allTemps.length;
+            const range = max - min;
+
+            document.getElementById('minTemp').textContent = `${min.toFixed(1)}°C`;
+            document.getElementById('maxTemp').textContent = `${max.toFixed(1)}°C`;
+            document.getElementById('avgTemp').textContent = `${avg.toFixed(1)}°C`;
+            document.getElementById('rangeTemp').textContent = `${range.toFixed(1)}°C`;
+        }
 
         function getTemperatureColor(temp) {
             if (temp < 20) return `rgb(0, 0, ${Math.round(255 * (temp / 20))})`;
@@ -500,12 +599,31 @@
 
             const grid = document.getElementById('heatmapGrid');
             grid.innerHTML = '';
-            grid.style.gridTemplateColumns = `repeat(${THERMAL_WIDTH}, 1fr)`;
+            grid.style.gridTemplateColumns = `repeat(${currentWidth}, 1fr)`;
 
-            for (let row = 0; row < THERMAL_HEIGHT; row++) {
-                for (let col = 0; col < THERMAL_WIDTH; col++) {
-                    const temp = thermalData.frame[row][col];
-                    const color = getTemperatureColor(temp);
+            // Calculate block sizes for averaging
+            const blockWidth = Math.floor(THERMAL_WIDTH / currentWidth);
+            const blockHeight = Math.floor(THERMAL_HEIGHT / currentHeight);
+
+            for (let row = 0; row < currentHeight; row++) {
+                for (let col = 0; col < currentWidth; col++) {
+                    // Calculate average temperature for this block
+                    let sum = 0;
+                    let count = 0;
+
+                    for (let by = 0; by < blockHeight; by++) {
+                        for (let bx = 0; bx < blockWidth; bx++) {
+                            const fullRow = row * blockHeight + by;
+                            const fullCol = col * blockWidth + bx;
+                            if (fullRow < THERMAL_HEIGHT && fullCol < THERMAL_WIDTH) {
+                                sum += thermalData.frame[fullRow][fullCol];
+                                count++;
+                            }
+                        }
+                    }
+
+                    const avgTemp = count > 0 ? sum / count : 0;
+                    const color = getTemperatureColor(avgTemp);
                     const cellId = `${col},${row}`;
 
                     const cell = document.createElement('div');
@@ -514,10 +632,10 @@
                     cell.style.background = color;
                     cell.dataset.col = col;
                     cell.dataset.row = row;
-                    cell.dataset.temp = temp;
+                    cell.dataset.temp = avgTemp;
 
                     cell.innerHTML = `
-                        <div class="cell-temp">${temp.toFixed(1)}°</div>
+                        <div class="cell-temp">${avgTemp.toFixed(1)}°</div>
                         <div class="cell-coords">[${col},${row}]</div>
                     `;
 
@@ -532,6 +650,8 @@
                     grid.appendChild(cell);
                 }
             }
+
+            updateStats();
         }
 
         function startSelection(e) {

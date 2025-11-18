@@ -293,26 +293,38 @@ class CameraWebInterface:
         @self.app.route('/video/thermal')
         def thermal_stream():
             """MJPEG stream of thermal camera with ROI overlay"""
-            return Response(
+            response = Response(
                 self._generate_thermal_stream(),
                 mimetype='multipart/x-mixed-replace; boundary=frame'
             )
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
         @self.app.route('/video/visual')
         def visual_stream():
             """MJPEG stream of Pi camera"""
-            return Response(
+            response = Response(
                 self._generate_visual_stream(),
                 mimetype='multipart/x-mixed-replace; boundary=frame'
             )
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
         @self.app.route('/video/fusion')
         def fusion_stream():
             """MJPEG stream of thermal+visual fusion"""
-            return Response(
+            response = Response(
                 self._generate_fusion_stream(),
                 mimetype='multipart/x-mixed-replace; boundary=frame'
             )
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
     def _generate_thermal_stream(self):
         """Generate thermal camera stream with ROI overlays"""
