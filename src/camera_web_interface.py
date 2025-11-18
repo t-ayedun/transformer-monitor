@@ -71,6 +71,11 @@ class CameraWebInterface:
             """Camera alignment and calibration tool"""
             return render_template('camera_alignment.html')
 
+        @self.app.route('/smart-roi-mapper')
+        def smart_roi_mapper():
+            """Smart ROI mapper - thermal native with auto-detection"""
+            return render_template('smart_roi_mapper.html')
+
         @self.app.route('/api/thermal-data')
         def get_thermal_data():
             """Get current thermal frame data with actual temperature values"""
@@ -91,6 +96,69 @@ class CameraWebInterface:
                 })
             except Exception as e:
                 self.logger.error(f"Failed to get thermal data: {e}")
+                return jsonify({'success': False, 'error': str(e)})
+
+        @self.app.route('/api/detect-hotspots')
+        def detect_hotspots_api():
+            """Auto-detect hotspots and suggest ROIs"""
+            try:
+                if self.latest_thermal_frame is None:
+                    return jsonify({'success': False, 'error': 'No thermal data available'})
+
+                if self.thermal_capture is None:
+                    return jsonify({'success': False, 'error': 'Thermal capture not initialized'})
+
+                with self.thermal_frame_lock:
+                    frame = self.latest_thermal_frame.copy()
+
+                # Get threshold from request or use default
+                threshold = request.args.get('threshold', type=float, default=50.0)
+
+                # Detect hotspots using thermal_capture's built-in method
+                hotspots = self.thermal_capture.detect_hotspots(frame, threshold=threshold)
+
+                # Generate suggested ROIs from hotspots
+                suggested_rois = []
+                for i, hotspot in enumerate(hotspots):
+                    # Create bounding box around hotspot (with padding)
+                    center_x, center_y = hotspot['center']
+                    area = hotspot['area']
+
+                    # Calculate ROI size based on hotspot area
+                    size = max(2, int(np.sqrt(area) * 1.5))  # 1.5x padding
+                    x1 = max(0, center_x - size)
+                    y1 = max(0, center_y - size)
+                    x2 = min(32, center_x + size)
+                    y2 = min(24, center_y + size)
+
+                    suggested_roi = {
+                        'name': f'Hotspot_{i+1}',
+                        'enabled': True,
+                        'coordinates': [[x1, y1], [x2, y2]],
+                        'weight': 1.0,
+                        'emissivity': 0.95,
+                        'thresholds': {
+                            'warning': min(75.0, hotspot['max_temp'] - 10),
+                            'critical': min(85.0, hotspot['max_temp'] - 5),
+                            'emergency': min(95.0, hotspot['max_temp'])
+                        },
+                        'detected_max_temp': hotspot['max_temp'],
+                        'detected_avg_temp': hotspot['avg_temp']
+                    }
+                    suggested_rois.append(suggested_roi)
+
+                self.logger.info(f"Auto-detected {len(hotspots)} hotspots with threshold {threshold}°C")
+
+                return jsonify({
+                    'success': True,
+                    'hotspots': hotspots,
+                    'suggested_rois': suggested_rois,
+                    'threshold_used': threshold,
+                    'timestamp': datetime.now().isoformat()
+                })
+
+            except Exception as e:
+                self.logger.error(f"Failed to detect hotspots: {e}")
                 return jsonify({'success': False, 'error': str(e)})
 
         @self.app.route('/health')
