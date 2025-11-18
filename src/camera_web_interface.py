@@ -66,6 +66,11 @@ class CameraWebInterface:
             """Thermal heatmap validation view"""
             return render_template('thermal_heatmap.html')
 
+        @self.app.route('/camera-alignment')
+        def camera_alignment():
+            """Camera alignment and calibration tool"""
+            return render_template('camera_alignment.html')
+
         @self.app.route('/api/thermal-data')
         def get_thermal_data():
             """Get current thermal frame data with actual temperature values"""
