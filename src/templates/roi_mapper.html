@@ -698,9 +698,11 @@
         }
 
         function saveAllROIs() {
+            // Allow saving empty ROI list (to delete all ROIs)
             if (rois.length === 0) {
-                showStatus('⚠️ No ROIs to save', 'error');
-                return;
+                if (!confirm('This will delete all ROIs from the system. Are you sure?')) {
+                    return;
+                }
             }
 
             fetch('/api/rois', {
@@ -713,13 +715,17 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showStatus('✅ ROIs saved to system successfully! Dashboard will update automatically within 10 seconds.', 'success');
+                    if (rois.length === 0) {
+                        showStatus('All ROIs deleted from system! Dashboard will update automatically.', 'success');
+                    } else {
+                        showStatus('ROIs saved to system successfully! Dashboard will update automatically within 10 seconds.', 'success');
+                    }
                 } else {
-                    showStatus('❌ Error: ' + data.error, 'error');
+                    showStatus('Error: ' + data.error, 'error');
                 }
             })
             .catch(error => {
-                showStatus('❌ Network error: ' + error, 'error');
+                showStatus('Network error: ' + error, 'error');
             });
         }
 

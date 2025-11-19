@@ -806,9 +806,11 @@
         }
 
         async function saveAllROIs() {
+            // Allow saving empty ROI list (to delete all ROIs)
             if (rois.length === 0) {
-                showStatus('No ROIs to save', 'error');
-                return;
+                if (!confirm('This will delete all ROIs from the system. Are you sure?')) {
+                    return;
+                }
             }
 
             try {
@@ -821,7 +823,11 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showStatus(`${rois.length} ROI(s) saved to system! Dashboard will update automatically.`, 'success');
+                    if (rois.length === 0) {
+                        showStatus('All ROIs deleted from system! Dashboard will update automatically.', 'success');
+                    } else {
+                        showStatus(`${rois.length} ROI(s) saved to system! Dashboard will update automatically.`, 'success');
+                    }
                 } else {
                     showStatus(`Error: ${data.error}`, 'error');
                 }
