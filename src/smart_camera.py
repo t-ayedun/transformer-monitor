@@ -44,6 +44,7 @@ import cv2
 
 from .event_classifier import EventClassifier
 from .event_logger import EventLogger
+from .camera_snapshot import CameraSnapshot
 
 
 class SmartCamera:
@@ -110,13 +111,21 @@ class SmartCamera:
         self.current_event_classification = None
         self.current_event_contours = []
 
-        # Event snapshots (start, middle, end)
+        # Event snapshots (start, peak, end)
         self.event_snapshots = []  # List of snapshot paths for current event
+        self.event_snapshots_raw = []  # Raw snapshot paths before processing
         self.snapshot_start_captured = False
-        self.snapshot_middle_captured = False
+        self.snapshot_peak_captured = False
 
         # Event logging
         self.event_logger = EventLogger()
+
+        # Snapshot manager (no camera, used for processing only)
+        self.snapshot_manager = CameraSnapshot(
+            resolution=[1920, 1080],  # Not used, but required
+            quality=85
+        )
+        self.snapshot_manager.camera = None  # Don't initialize camera in snapshot manager
 
         # Stats
         self.stats = {
@@ -210,6 +219,9 @@ class SmartCamera:
 
         # Start night mode updater
         Thread(target=self._night_mode_updater, daemon=True).start()
+
+        # Start image cleanup thread
+        Thread(target=self._image_cleanup_loop, daemon=True).start()
 
     def stop_monitoring(self):
         """Stop camera monitoring"""
@@ -313,18 +325,18 @@ class SmartCamera:
                             frame.shape[:2]  # (height, width)
                         )
 
-                    # Capture MIDDLE snapshot (after 30 seconds of motion, if not already captured)
-                    if (motion_detected and not self.snapshot_middle_captured and
+                    # Capture PEAK snapshot (after 30 seconds of motion, if not already captured)
+                    if (motion_detected and not self.snapshot_peak_captured and
                         self.recording_start_time and
                         (time.time() - self.recording_start_time) > 30):
                         try:
-                            middle_snapshot = self.capture_snapshot(custom_name="event_middle")
-                            if middle_snapshot:
-                                self.event_snapshots.append(middle_snapshot)
-                                self.snapshot_middle_captured = True
-                                self.logger.debug("Event middle snapshot captured")
+                            peak_snapshot_raw = self.capture_snapshot(custom_name="event_peak_raw")
+                            if peak_snapshot_raw:
+                                self.event_snapshots_raw.append(peak_snapshot_raw)
+                                self.snapshot_peak_captured = True
+                                self.logger.debug("Event peak snapshot captured (raw)")
                         except Exception as e:
-                            self.logger.warning(f"Failed to capture middle snapshot: {e}")
+                            self.logger.warning(f"Failed to capture peak snapshot: {e}")
 
                     # Trigger recording after consecutive motion frames
                     if not motion_detected and consecutive_frames_with_motion >= motion_trigger_threshold:
@@ -353,19 +365,20 @@ class SmartCamera:
 
                             # Reset event snapshots for new event
                             self.event_snapshots = []
+                            self.event_snapshots_raw = []
                             self.snapshot_start_captured = False
-                            self.snapshot_middle_captured = False
+                            self.snapshot_peak_captured = False
 
                             # Start recording (includes pre-buffer)
                             self._start_recording("motion")
 
-                            # Capture START snapshot
+                            # Capture START snapshot (raw)
                             try:
-                                start_snapshot = self.capture_snapshot(custom_name="event_start")
-                                if start_snapshot:
-                                    self.event_snapshots.append(start_snapshot)
+                                start_snapshot_raw = self.capture_snapshot(custom_name="event_start_raw")
+                                if start_snapshot_raw:
+                                    self.event_snapshots_raw.append(start_snapshot_raw)
                                     self.snapshot_start_captured = True
-                                    self.logger.debug("Event start snapshot captured")
+                                    self.logger.debug("Event start snapshot captured (raw)")
                             except Exception as e:
                                 self.logger.warning(f"Failed to capture start snapshot: {e}")
                 else:
@@ -378,16 +391,64 @@ class SmartCamera:
                     motion_detected = False
                     consecutive_frames_with_motion = 0
 
-                    # Capture END snapshot
+                    # Capture END snapshot (raw)
                     try:
-                        end_snapshot = self.capture_snapshot(custom_name="event_end")
-                        if end_snapshot:
-                            self.event_snapshots.append(end_snapshot)
-                            self.logger.debug("Event end snapshot captured")
+                        end_snapshot_raw = self.capture_snapshot(custom_name="event_end_raw")
+                        if end_snapshot_raw:
+                            self.event_snapshots_raw.append(end_snapshot_raw)
+                            self.logger.debug("Event end snapshot captured (raw)")
                     except Exception as e:
                         self.logger.warning(f"Failed to capture end snapshot: {e}")
 
-                    # Use first snapshot as primary image, or end snapshot if that's all we have
+                    # Process all raw snapshots through event snapshot manager
+                    if self.current_event_classification and self.event_snapshots_raw:
+                        try:
+                            site_id = self.config.get('site.id', 'UNKNOWN')
+                            event_type = self.current_event_classification['event_type']
+                            confidence = self.current_event_classification['confidence_score']
+                            timestamp = self.current_event_classification.get('timestamp')
+
+                            snapshot_types = ['start', 'peak', 'end']
+                            for i, raw_path in enumerate(self.event_snapshots_raw):
+                                snapshot_type = snapshot_types[i] if i < len(snapshot_types) else 'extra'
+
+                                processed_path = self.snapshot_manager.process_event_snapshot(
+                                    source_image_path=raw_path,
+                                    event_type=event_type,
+                                    snapshot_type=snapshot_type,
+                                    confidence=confidence,
+                                    site_id=site_id,
+                                    timestamp=timestamp
+                                )
+
+                                if processed_path:
+                                    self.event_snapshots.append(processed_path)
+
+                                # Clean up raw file
+                                try:
+                                    Path(raw_path).unlink()
+                                except:
+                                    pass
+
+                            self.logger.info(f"Processed {len(self.event_snapshots)} event snapshots")
+
+                            # Create summary image if we have all 3 snapshots
+                            if len(self.event_snapshots) == 3:
+                                try:
+                                    summary_path = self.snapshot_manager.create_summary_image(
+                                        snapshot_paths=self.event_snapshots,
+                                        event_type=event_type,
+                                        timestamp=timestamp
+                                    )
+                                    if summary_path:
+                                        self.logger.info(f"Created summary image: {summary_path}")
+                                except Exception as e:
+                                    self.logger.warning(f"Failed to create summary image: {e}")
+
+                        except Exception as e:
+                            self.logger.error(f"Failed to process event snapshots: {e}")
+
+                    # Use first processed snapshot as primary image
                     primary_snapshot = self.event_snapshots[0] if self.event_snapshots else None
 
                     # Store classified event in database
@@ -402,7 +463,7 @@ class SmartCamera:
                             self.stats['classified_events'] += 1
 
                             # Build notes with snapshot info
-                            snapshot_info = f"Snapshots: {len(self.event_snapshots)} (start/middle/end)"
+                            snapshot_info = f"Snapshots: {len(self.event_snapshots)} (start/peak/end)"
                             area_info = f"Area: {self.current_event_classification.get('motion_area', 0):.0f}px²"
 
                             self.logger.info(
@@ -412,12 +473,19 @@ class SmartCamera:
 
                             # Also log in event_logger for surveillance logs
                             duration = int(time.time() - self.recording_start_time) if self.recording_start_time else None
+
+                            # Include paths of all snapshots in notes
+                            if self.event_snapshots:
+                                snapshot_paths_str = ', '.join([Path(p).name for p in self.event_snapshots])
+                            else:
+                                snapshot_paths_str = 'None'
+
                             self.event_logger.log_event(
                                 event_type=self.current_event_classification['event_type'],
                                 confidence=self.current_event_classification['confidence_score'],
                                 image_path=primary_snapshot,
                                 duration_seconds=duration,
-                                notes=f"{area_info}. {snapshot_info}. Paths: {', '.join(self.event_snapshots)}",
+                                notes=f"{area_info}. {snapshot_info}. Files: {snapshot_paths_str}",
                                 timestamp=self.current_event_classification.get('timestamp')
                             )
                         except Exception as e:
@@ -454,16 +522,20 @@ class SmartCamera:
 
                                 # Also log in event_logger
                                 duration = int(recording_duration)
-                                snapshot_info = f"Snapshots: {len(self.event_snapshots)}"
+                                snapshot_info = f"Snapshots: {len(self.event_snapshots)} (start/peak/end)"
                                 area_info = f"Area: {self.current_event_classification.get('motion_area', 0):.0f}px²"
-                                snapshot_paths = ', '.join(self.event_snapshots) if self.event_snapshots else 'None'
+
+                                if self.event_snapshots:
+                                    snapshot_paths_str = ', '.join([Path(p).name for p in self.event_snapshots])
+                                else:
+                                    snapshot_paths_str = 'None'
 
                                 self.event_logger.log_event(
                                     event_type=self.current_event_classification['event_type'],
                                     confidence=self.current_event_classification['confidence_score'],
                                     image_path=primary_snapshot,
                                     duration_seconds=duration,
-                                    notes=f"Max duration reached. {area_info}. {snapshot_info}. Paths: {snapshot_paths}",
+                                    notes=f"Max duration reached. {area_info}. {snapshot_info}. Files: {snapshot_paths_str}",
                                     timestamp=self.current_event_classification.get('timestamp')
                                 )
                             except Exception as e:
@@ -707,6 +779,26 @@ class SmartCamera:
             except Exception as e:
                 self.logger.error(f"Night mode update error: {e}")
                 time.sleep(1800)
+
+    def _image_cleanup_loop(self):
+        """Periodically cleanup old event images"""
+        while True:
+            try:
+                # Run cleanup daily at 3 AM
+                time.sleep(3600)  # Check every hour
+
+                current_hour = datetime.now().hour
+                if current_hour == 3:
+                    deleted = self.snapshot_manager.cleanup_old_images(days_to_keep=30)
+                    if deleted > 0:
+                        self.logger.info(f"Cleaned up {deleted} old event images")
+
+                    # Sleep for an hour to avoid running multiple times at 3 AM
+                    time.sleep(3600)
+
+            except Exception as e:
+                self.logger.error(f"Image cleanup error: {e}")
+                time.sleep(3600)
 
     def get_stats(self):
         """Get camera statistics"""
