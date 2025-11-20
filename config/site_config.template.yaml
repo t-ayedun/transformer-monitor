@@ -62,7 +62,8 @@ pi_camera:
     
   storage:
     max_local_storage_gb: 10
-    auto_cleanup_days: 7
+    video_retention_days: 3  # Keep videos for 3 days (large files)
+    snapshot_retention_days: 7  # Keep periodic snapshots for 7 days
     
   live_view:
     enabled: true
@@ -92,8 +93,9 @@ event_detection:
     max_object_size_percent: 20
 
   storage:
-    keep_days: 30
+    keep_days: 14  # Keep event images for 14 days (reduced from 30)
     max_events_per_day: 100
+    video_retention_days: 3  # Keep videos for 3 days only (large files)
 
   performance:
     frame_skip: 3  # Process every Nth frame (1=all frames, 3=every 3rd)
@@ -115,14 +117,14 @@ event_detection:
     # Per-event type publishing settings
     maintenance_visit:
       publish_telemetry: true  # Publish event metadata to IoT Core
-      upload_images: true      # Upload event images to S3
+      upload_images: false     # Don't upload images (save bandwidth, telemetry sufficient)
 
     security_breach:
-      publish_telemetry: true  # Always publish security events
-      upload_images: true      # Always upload security images
+      publish_telemetry: true  # ALWAYS publish security events (HIGH PRIORITY)
+      upload_images: true      # ALWAYS upload security images (evidence)
 
     animal:
-      publish_telemetry: false  # Don't publish animal events (too frequent)
+      publish_telemetry: false  # Don't publish animal events (too frequent, low value)
       upload_images: false      # Don't upload animal images
 
 # Data Capture
@@ -131,12 +133,31 @@ data_capture:
   save_full_frame_interval: 10
   buffer_size: 100
 
-# Local Storage (NO AWS/FTP/MQTT YET)
+# Thermal Data Publishing to AWS
+thermal_publishing:
+  enabled: true  # Enable publishing thermal data to AWS IoT Core
+
+  telemetry:
+    publish_interval: 60  # Publish every 60 seconds (aligns with capture_interval)
+    include_roi_details: true  # Include individual ROI temperatures
+    include_frame_stats: false  # Don't send full frame stats (reduce bandwidth)
+
+  alerts:
+    publish_immediately: true  # Publish immediately when alert threshold exceeded
+    alert_levels: ["warning", "critical", "emergency"]  # Which levels to publish
+
+  thermal_images:
+    upload_to_s3: true  # Upload thermal frames to S3
+    upload_on_alert: true  # Upload when temperature alert occurs
+    upload_periodic: false  # Don't upload periodic frames (saves bandwidth)
+    alert_levels: ["critical", "emergency"]  # Only upload for these levels
+
+# Local Storage
 local_storage:
   enabled: true
   database_path: "/data/buffer/readings.db"
   max_size_mb: 500
-  retention_days: 7
+  retention_days: 7  # Keep 7 days of thermal data locally
 
 # Network (for testing)
 network:
