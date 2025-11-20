@@ -95,6 +95,18 @@ event_detection:
     keep_days: 30
     max_events_per_day: 100
 
+  performance:
+    frame_skip: 3  # Process every Nth frame (1=all frames, 3=every 3rd)
+    motion_detection_resolution: [640, 480]  # Lower resolution for motion detection
+    sleep_between_checks: 0.1  # Seconds to sleep between motion checks
+    low_risk_hours:
+      enabled: false  # Disable detection during low-risk hours
+      start_hour: 2  # Start of low-risk period (2 AM)
+      end_hour: 5    # End of low-risk period (5 AM)
+    cpu_monitoring:
+      enabled: true
+      log_interval: 300  # Log CPU/memory every 5 minutes
+
 # Data Capture
 data_capture:
   interval: 60  # 1 minute

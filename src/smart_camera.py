@@ -35,6 +35,7 @@ from pathlib import Path
 from threading import Thread, Lock, Event
 from collections import deque
 import numpy as np
+import psutil
 
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder, Quality
@@ -86,6 +87,23 @@ class SmartCamera:
         self.night_mode_enabled = config.get('pi_camera.night_mode.enabled', True)
         self.night_mode_start = config.get('pi_camera.night_mode.start_hour', 18)
         self.night_mode_end = config.get('pi_camera.night_mode.end_hour', 6)
+
+        # Performance optimization settings
+        self.frame_skip = config.get('event_detection.performance.frame_skip', 3)
+        self.motion_detection_resolution = tuple(
+            config.get('event_detection.performance.motion_detection_resolution', [640, 480])
+        )
+        self.sleep_between_checks = config.get('event_detection.performance.sleep_between_checks', 0.1)
+
+        # Low-risk hours (disable detection to save CPU)
+        self.low_risk_enabled = config.get('event_detection.performance.low_risk_hours.enabled', False)
+        self.low_risk_start = config.get('event_detection.performance.low_risk_hours.start_hour', 2)
+        self.low_risk_end = config.get('event_detection.performance.low_risk_hours.end_hour', 5)
+
+        # CPU monitoring
+        self.cpu_monitoring_enabled = config.get('event_detection.performance.cpu_monitoring.enabled', True)
+        self.cpu_log_interval = config.get('event_detection.performance.cpu_monitoring.log_interval', 300)
+        self.process = psutil.Process(os.getpid())
 
         # Camera objects
         self.camera = None
@@ -223,6 +241,10 @@ class SmartCamera:
         # Start image cleanup thread
         Thread(target=self._image_cleanup_loop, daemon=True).start()
 
+        # Start CPU monitoring thread
+        if self.cpu_monitoring_enabled:
+            Thread(target=self._cpu_monitoring_loop, daemon=True).start()
+
     def stop_monitoring(self):
         """Stop camera monitoring"""
         self.logger.info("Stopping camera monitoring...")
@@ -258,13 +280,23 @@ class SmartCamera:
         - Learns background model over time
         - Detects foreground objects (moving things)
         - Adaptive to lighting changes
-        - Handles shadows (when enabled)
-        """
-        self.logger.info("Motion detection started")
+        - Optimized for low CPU usage on Raspberry Pi
 
-        # Initialize background subtractor
+        Performance Optimizations:
+        - Frame skipping (process every Nth frame)
+        - Lower resolution for motion detection
+        - Faster background subtraction parameters
+        - Sleep between checks to reduce CPU load
+        - Optional low-risk hours (disabled detection)
+        """
+        self.logger.info(
+            f"Motion detection started (frame_skip={self.frame_skip}, "
+            f"resolution={self.motion_detection_resolution})"
+        )
+
+        # Initialize background subtractor with optimized parameters for speed
         self.background_subtractor = cv2.createBackgroundSubtractorMOG2(
-            history=500,  # Number of frames for background learning
+            history=200,  # Reduced from 500 - faster learning, less memory
             varThreshold=self.motion_threshold,  # Sensitivity
             detectShadows=False  # Disable shadow detection for speed
         )
@@ -273,17 +305,40 @@ class SmartCamera:
         consecutive_frames_with_motion = 0
         motion_detected = False
         motion_trigger_threshold = 3  # Require 3 consecutive frames to trigger
+        frame_counter = 0  # For frame skipping
 
         while not self.motion_stop_event.is_set():
             try:
+                # Check if we're in low-risk hours (optional CPU saving)
+                if self.low_risk_enabled and self._is_low_risk_hour():
+                    if frame_counter % 300 == 0:  # Log every 5 minutes (at 1 fps)
+                        self.logger.debug("Low-risk hours: motion detection paused")
+                    time.sleep(1)  # Sleep longer during low-risk hours
+                    frame_counter += 1
+                    continue
+
+                # Frame skipping for CPU optimization
+                frame_counter += 1
+                if frame_counter % self.frame_skip != 0:
+                    time.sleep(self.sleep_between_checks)
+                    continue
+
                 # Capture low-res frame for motion detection
                 frame = self.camera.capture_array("lores")
+
+                # Downscale frame if configured (further CPU optimization)
+                if frame.shape[:2] != self.motion_detection_resolution[::-1]:
+                    frame = cv2.resize(
+                        frame,
+                        self.motion_detection_resolution,
+                        interpolation=cv2.INTER_LINEAR  # Fast interpolation
+                    )
 
                 # Convert YUV420 to grayscale for processing
                 gray = cv2.cvtColor(frame, cv2.COLOR_YUV420p2GRAY)
 
-                # Apply Gaussian blur to reduce noise
-                blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+                # Apply Gaussian blur to reduce noise (smaller kernel for speed)
+                blurred = cv2.GaussianBlur(gray, (3, 3), 0)
 
                 # Apply background subtraction
                 fg_mask = self.background_subtractor.apply(blurred)
@@ -547,8 +602,8 @@ class SmartCamera:
                         self.event_snapshots = []
                         self.event_classifier.reset_motion_tracking()
 
-                # Small delay (~30 FPS motion detection)
-                time.sleep(0.033)
+                # Configurable sleep between checks (CPU optimization)
+                time.sleep(self.sleep_between_checks)
 
             except Exception as e:
                 self.logger.error(f"Motion detection error: {e}")
@@ -801,6 +856,65 @@ class SmartCamera:
             except Exception as e:
                 self.logger.error(f"Image cleanup error: {e}")
                 time.sleep(3600)
+
+    def _is_low_risk_hour(self):
+        """
+        Check if current hour is within low-risk period
+
+        Returns:
+            bool: True if current time is in low-risk hours
+        """
+        current_hour = datetime.now().hour
+
+        if self.low_risk_start < self.low_risk_end:
+            # Normal range (e.g., 2 AM to 5 AM)
+            return self.low_risk_start <= current_hour < self.low_risk_end
+        else:
+            # Wraps around midnight (e.g., 23:00 to 02:00)
+            return current_hour >= self.low_risk_start or current_hour < self.low_risk_end
+
+    def _cpu_monitoring_loop(self):
+        """
+        Monitor CPU and memory usage, log periodically
+
+        Target: < 25% average CPU, < 40% peak during events
+        """
+        if not self.cpu_monitoring_enabled:
+            return
+
+        self.logger.info(f"CPU monitoring started (interval: {self.cpu_log_interval}s)")
+
+        while True:
+            try:
+                # Get CPU and memory usage
+                cpu_percent = self.process.cpu_percent(interval=1)
+                memory_info = self.process.memory_info()
+                memory_mb = memory_info.rss / 1024 / 1024
+
+                # Get system-wide CPU
+                system_cpu = psutil.cpu_percent(interval=0)
+
+                # Log performance metrics
+                self.logger.info(
+                    f"Performance: CPU={cpu_percent:.1f}% (system={system_cpu:.1f}%), "
+                    f"Memory={memory_mb:.1f}MB, "
+                    f"Recording={self.is_recording}, "
+                    f"Events={self.stats['motion_events']}"
+                )
+
+                # Warn if CPU usage is too high
+                if cpu_percent > 40:
+                    self.logger.warning(
+                        f"High CPU usage detected: {cpu_percent:.1f}% "
+                        f"(target: <25% avg, <40% peak)"
+                    )
+
+                # Sleep until next check
+                time.sleep(self.cpu_log_interval)
+
+            except Exception as e:
+                self.logger.error(f"CPU monitoring error: {e}")
+                time.sleep(self.cpu_log_interval)
 
     def get_stats(self):
         """Get camera statistics"""
