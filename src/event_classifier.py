@@ -72,8 +72,94 @@ class EventClassifier:
         self.frame_height = 480  # Low-res frame height
         self.frame_area = self.frame_width * self.frame_height
 
+        # Load configuration overrides
+        self._load_config()
+
         # Initialize database
         self._init_database()
+
+    def _load_config(self):
+        """Load configuration values and override defaults"""
+        # Check if event detection is configured
+        if not self.config.get('event_detection.enabled', True):
+            self.logger.warning("Event detection is disabled in configuration")
+            return
+
+        # Parse business hours from config
+        detection_hours = self.config.get('event_detection.maintenance_visit.detection_hours', '08:00-17:00')
+        try:
+            start_str, end_str = detection_hours.split('-')
+            self.BUSINESS_START_HOUR = int(start_str.split(':')[0])
+            self.BUSINESS_END_HOUR = int(end_str.split(':')[0])
+        except Exception as e:
+            self.logger.warning(f"Failed to parse detection_hours: {e}, using defaults")
+
+        # Parse business days from config
+        day_names = self.config.get('event_detection.maintenance_visit.detection_days', [])
+        if day_names:
+            day_map = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2,
+                'thursday': 3, 'friday': 4, 'saturday': 5, 'sunday': 6
+            }
+            try:
+                self.BUSINESS_DAYS = [day_map[day.lower()] for day in day_names]
+            except Exception as e:
+                self.logger.warning(f"Failed to parse detection_days: {e}, using defaults")
+
+        # Duration thresholds
+        self.MAINTENANCE_DURATION_THRESHOLD = self.config.get(
+            'event_detection.maintenance_visit.min_duration_seconds',
+            self.MAINTENANCE_DURATION_THRESHOLD
+        )
+        self.ANIMAL_DURATION_THRESHOLD = self.config.get(
+            'event_detection.animal.max_duration_seconds',
+            self.ANIMAL_DURATION_THRESHOLD
+        )
+
+        # Size thresholds (convert percent to decimal)
+        maintenance_size_percent = self.config.get(
+            'event_detection.maintenance_visit.min_object_size_percent',
+            self.MAINTENANCE_SIZE_THRESHOLD * 100
+        )
+        self.MAINTENANCE_SIZE_THRESHOLD = maintenance_size_percent / 100.0
+
+        animal_size_percent = self.config.get(
+            'event_detection.animal.max_object_size_percent',
+            self.ANIMAL_SIZE_THRESHOLD * 100
+        )
+        self.ANIMAL_SIZE_THRESHOLD = animal_size_percent / 100.0
+
+        # Apply sensitivity adjustments
+        sensitivity = self.config.get('event_detection.sensitivity', 'medium')
+        self._apply_sensitivity(sensitivity)
+
+        self.logger.info(
+            f"Event detection config loaded: "
+            f"business_hours={self.BUSINESS_START_HOUR}-{self.BUSINESS_END_HOUR}, "
+            f"business_days={self.BUSINESS_DAYS}, "
+            f"sensitivity={sensitivity}"
+        )
+
+    def _apply_sensitivity(self, sensitivity):
+        """
+        Adjust detection thresholds based on sensitivity level
+
+        Args:
+            sensitivity: 'low', 'medium', or 'high'
+        """
+        if sensitivity == 'low':
+            # More strict - require stronger signals
+            self.MAINTENANCE_DURATION_THRESHOLD = int(self.MAINTENANCE_DURATION_THRESHOLD * 1.5)
+            self.ANIMAL_DURATION_THRESHOLD = int(self.ANIMAL_DURATION_THRESHOLD * 0.7)
+            self.MAINTENANCE_SIZE_THRESHOLD *= 1.2
+            self.ANIMAL_SIZE_THRESHOLD *= 0.8
+        elif sensitivity == 'high':
+            # More sensitive - detect with weaker signals
+            self.MAINTENANCE_DURATION_THRESHOLD = int(self.MAINTENANCE_DURATION_THRESHOLD * 0.7)
+            self.ANIMAL_DURATION_THRESHOLD = int(self.ANIMAL_DURATION_THRESHOLD * 1.3)
+            self.MAINTENANCE_SIZE_THRESHOLD *= 0.8
+            self.ANIMAL_SIZE_THRESHOLD *= 1.2
+        # 'medium' keeps the defaults
 
     def _init_database(self):
         """Initialize SQLite database for event storage"""

@@ -789,9 +789,11 @@ class SmartCamera:
 
                 current_hour = datetime.now().hour
                 if current_hour == 3:
-                    deleted = self.snapshot_manager.cleanup_old_images(days_to_keep=30)
+                    # Get retention days from config
+                    days_to_keep = self.config.get('event_detection.storage.keep_days', 30)
+                    deleted = self.snapshot_manager.cleanup_old_images(days_to_keep=days_to_keep)
                     if deleted > 0:
-                        self.logger.info(f"Cleaned up {deleted} old event images")
+                        self.logger.info(f"Cleaned up {deleted} old event images (retention: {days_to_keep} days)")
 
                     # Sleep for an hour to avoid running multiple times at 3 AM
                     time.sleep(3600)

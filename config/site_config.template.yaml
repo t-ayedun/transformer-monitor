@@ -71,6 +71,30 @@ pi_camera:
     username: "admin"
     password: "admin"
 
+# Event Detection & Classification
+event_detection:
+  enabled: true
+  sensitivity: "medium"  # low, medium, high
+
+  maintenance_visit:
+    detection_hours: "08:00-17:00"
+    detection_days: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    min_duration_seconds: 120
+    min_object_size_percent: 30
+
+  security_breach:
+    alert_enabled: true
+    alert_hours: "18:00-07:00"  # Alert only during these hours
+    alert_days: ["saturday", "sunday"]
+
+  animal:
+    max_duration_seconds: 30
+    max_object_size_percent: 20
+
+  storage:
+    keep_days: 30
+    max_events_per_day: 100
+
 # Data Capture
 data_capture:
   interval: 60  # 1 minute
