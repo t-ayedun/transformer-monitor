@@ -42,6 +42,8 @@ from picamera2.outputs import CircularOutput, FileOutput
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 
+from .event_classifier import EventClassifier
+
 
 class SmartCamera:
     """
@@ -102,13 +104,19 @@ class SmartCamera:
         self.motion_stop_event = Event()
         self.background_subtractor = None
 
+        # Event classification
+        self.event_classifier = EventClassifier(config)
+        self.current_event_classification = None
+        self.current_event_contours = []
+
         # Stats
         self.stats = {
             'motion_events': 0,
             'recordings_saved': 0,
             'snapshots_taken': 0,
             'total_recording_seconds': 0,
-            'buffer_size_mb': 0
+            'buffer_size_mb': 0,
+            'classified_events': 0
         }
 
         self._initialize_camera()
@@ -274,17 +282,27 @@ class SmartCamera:
                 # Check for significant motion
                 motion_in_frame = False
                 total_motion_area = 0
+                significant_contours = []
 
                 for contour in contours:
                     area = cv2.contourArea(contour)
                     if area > self.motion_min_area:
                         motion_in_frame = True
                         total_motion_area += area
+                        significant_contours.append(contour)
 
                 # Motion detection logic with debouncing
                 if motion_in_frame:
                     consecutive_frames_with_motion += 1
                     consecutive_frames_without_motion = 0
+
+                    # Classify motion event (updates continuously during motion)
+                    if significant_contours:
+                        self.current_event_contours = significant_contours
+                        self.current_event_classification = self.event_classifier.classify_event(
+                            significant_contours,
+                            frame.shape[:2]  # (height, width)
+                        )
 
                     # Trigger recording after consecutive motion frames
                     if not motion_detected and consecutive_frames_with_motion >= motion_trigger_threshold:
@@ -292,8 +310,20 @@ class SmartCamera:
                         time_since_last_recording = time.time() - self.last_recording_end_time
 
                         if time_since_last_recording >= self.motion_cooldown:
+                            event_type = (
+                                self.current_event_classification['event_type']
+                                if self.current_event_classification
+                                else 'unknown'
+                            )
+                            confidence = (
+                                self.current_event_classification['confidence_score']
+                                if self.current_event_classification
+                                else 0.0
+                            )
+
                             self.logger.info(
-                                f"Motion detected! Area: {total_motion_area:.0f} px²"
+                                f"Motion detected! Area: {total_motion_area:.0f} px², "
+                                f"Type: {event_type} (confidence: {confidence:.2f})"
                             )
                             motion_detected = True
                             self.last_motion_time = datetime.now()
@@ -310,7 +340,32 @@ class SmartCamera:
                     self.logger.info("Motion ended, stopping recording")
                     motion_detected = False
                     consecutive_frames_with_motion = 0
+
+                    # Capture snapshot before stopping recording
+                    snapshot_path = None
+                    try:
+                        snapshot_path = self.capture_snapshot(custom_name="event")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to capture event snapshot: {e}")
+
+                    # Store classified event in database
+                    if self.current_event_classification:
+                        try:
+                            event_id = self.event_classifier.store_event(
+                                self.current_event_classification,
+                                image_path=snapshot_path,
+                                video_path=self.current_recording_path
+                            )
+                            self.stats['classified_events'] += 1
+                            self.logger.info(f"Event classified and stored: ID={event_id}")
+                        except Exception as e:
+                            self.logger.error(f"Failed to store classified event: {e}")
+
+                    # Stop recording and reset classification
                     self._stop_recording()
+                    self.current_event_classification = None
+                    self.current_event_contours = []
+                    self.event_classifier.reset_motion_tracking()
 
                 # Safety: Stop recording if max duration reached
                 if self.is_recording and self.recording_start_time:
@@ -320,7 +375,23 @@ class SmartCamera:
                             f"Max recording duration ({self.max_record_duration}s) reached, stopping"
                         )
                         motion_detected = False
+
+                        # Store event even if max duration reached
+                        if self.current_event_classification:
+                            try:
+                                event_id = self.event_classifier.store_event(
+                                    self.current_event_classification,
+                                    image_path=None,
+                                    video_path=self.current_recording_path
+                                )
+                                self.stats['classified_events'] += 1
+                            except Exception as e:
+                                self.logger.error(f"Failed to store classified event: {e}")
+
                         self._stop_recording()
+                        self.current_event_classification = None
+                        self.current_event_contours = []
+                        self.event_classifier.reset_motion_tracking()
 
                 # Small delay (~30 FPS motion detection)
                 time.sleep(0.033)
@@ -557,12 +628,34 @@ class SmartCamera:
 
     def get_stats(self):
         """Get camera statistics"""
-        return {
+        stats = {
             **self.stats,
             'is_recording': self.is_recording,
             'last_motion': self.last_motion_time.isoformat() if self.last_motion_time else None,
             'recording_duration': int(time.time() - self.recording_start_time) if self.is_recording and self.recording_start_time else 0
         }
+
+        # Add event classification stats
+        try:
+            event_stats = self.event_classifier.get_event_stats()
+            stats['event_classification'] = event_stats
+        except Exception as e:
+            self.logger.debug(f"Failed to get event stats: {e}")
+
+        # Add current event type if motion is active
+        if self.current_event_classification:
+            stats['current_event_type'] = self.current_event_classification['event_type']
+            stats['current_event_confidence'] = self.current_event_classification['confidence_score']
+
+        return stats
+
+    def get_recent_events(self, limit=10):
+        """Get recent classified events"""
+        try:
+            return self.event_classifier.get_recent_events(limit)
+        except Exception as e:
+            self.logger.error(f"Failed to get recent events: {e}")
+            return []
 
     def close(self):
         """Cleanup camera resources"""
