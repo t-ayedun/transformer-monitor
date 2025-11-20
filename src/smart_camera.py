@@ -110,6 +110,11 @@ class SmartCamera:
         self.current_event_classification = None
         self.current_event_contours = []
 
+        # Event snapshots (start, middle, end)
+        self.event_snapshots = []  # List of snapshot paths for current event
+        self.snapshot_start_captured = False
+        self.snapshot_middle_captured = False
+
         # Event logging
         self.event_logger = EventLogger()
 
@@ -308,6 +313,19 @@ class SmartCamera:
                             frame.shape[:2]  # (height, width)
                         )
 
+                    # Capture MIDDLE snapshot (after 30 seconds of motion, if not already captured)
+                    if (motion_detected and not self.snapshot_middle_captured and
+                        self.recording_start_time and
+                        (time.time() - self.recording_start_time) > 30):
+                        try:
+                            middle_snapshot = self.capture_snapshot(custom_name="event_middle")
+                            if middle_snapshot:
+                                self.event_snapshots.append(middle_snapshot)
+                                self.snapshot_middle_captured = True
+                                self.logger.debug("Event middle snapshot captured")
+                        except Exception as e:
+                            self.logger.warning(f"Failed to capture middle snapshot: {e}")
+
                     # Trigger recording after consecutive motion frames
                     if not motion_detected and consecutive_frames_with_motion >= motion_trigger_threshold:
                         # Check cooldown period (don't trigger too frequently)
@@ -333,8 +351,23 @@ class SmartCamera:
                             self.last_motion_time = datetime.now()
                             self.stats['motion_events'] += 1
 
+                            # Reset event snapshots for new event
+                            self.event_snapshots = []
+                            self.snapshot_start_captured = False
+                            self.snapshot_middle_captured = False
+
                             # Start recording (includes pre-buffer)
                             self._start_recording("motion")
+
+                            # Capture START snapshot
+                            try:
+                                start_snapshot = self.capture_snapshot(custom_name="event_start")
+                                if start_snapshot:
+                                    self.event_snapshots.append(start_snapshot)
+                                    self.snapshot_start_captured = True
+                                    self.logger.debug("Event start snapshot captured")
+                            except Exception as e:
+                                self.logger.warning(f"Failed to capture start snapshot: {e}")
                 else:
                     consecutive_frames_with_motion = 0
                     consecutive_frames_without_motion += 1
@@ -345,12 +378,17 @@ class SmartCamera:
                     motion_detected = False
                     consecutive_frames_with_motion = 0
 
-                    # Capture snapshot before stopping recording
-                    snapshot_path = None
+                    # Capture END snapshot
                     try:
-                        snapshot_path = self.capture_snapshot(custom_name="event")
+                        end_snapshot = self.capture_snapshot(custom_name="event_end")
+                        if end_snapshot:
+                            self.event_snapshots.append(end_snapshot)
+                            self.logger.debug("Event end snapshot captured")
                     except Exception as e:
-                        self.logger.warning(f"Failed to capture event snapshot: {e}")
+                        self.logger.warning(f"Failed to capture end snapshot: {e}")
+
+                    # Use first snapshot as primary image, or end snapshot if that's all we have
+                    primary_snapshot = self.event_snapshots[0] if self.event_snapshots else None
 
                     # Store classified event in database
                     if self.current_event_classification:
@@ -358,20 +396,28 @@ class SmartCamera:
                             # Store in event_classifier database
                             event_id = self.event_classifier.store_event(
                                 self.current_event_classification,
-                                image_path=snapshot_path,
+                                image_path=primary_snapshot,
                                 video_path=self.current_recording_path
                             )
                             self.stats['classified_events'] += 1
-                            self.logger.info(f"Event classified and stored: ID={event_id}")
+
+                            # Build notes with snapshot info
+                            snapshot_info = f"Snapshots: {len(self.event_snapshots)} (start/middle/end)"
+                            area_info = f"Area: {self.current_event_classification.get('motion_area', 0):.0f}px²"
+
+                            self.logger.info(
+                                f"Event classified and stored: ID={event_id}, "
+                                f"{snapshot_info}"
+                            )
 
                             # Also log in event_logger for surveillance logs
                             duration = int(time.time() - self.recording_start_time) if self.recording_start_time else None
                             self.event_logger.log_event(
                                 event_type=self.current_event_classification['event_type'],
                                 confidence=self.current_event_classification['confidence_score'],
-                                image_path=snapshot_path,
+                                image_path=primary_snapshot,
                                 duration_seconds=duration,
-                                notes=f"Area: {self.current_event_classification.get('motion_area', 0):.0f}px²",
+                                notes=f"{area_info}. {snapshot_info}. Paths: {', '.join(self.event_snapshots)}",
                                 timestamp=self.current_event_classification.get('timestamp')
                             )
                         except Exception as e:
@@ -381,6 +427,7 @@ class SmartCamera:
                     self._stop_recording()
                     self.current_event_classification = None
                     self.current_event_contours = []
+                    self.event_snapshots = []
                     self.event_classifier.reset_motion_tracking()
 
                 # Safety: Stop recording if max duration reached
@@ -395,21 +442,28 @@ class SmartCamera:
                         # Store event even if max duration reached
                         if self.current_event_classification:
                             try:
+                                # Use available snapshots
+                                primary_snapshot = self.event_snapshots[0] if self.event_snapshots else None
+
                                 event_id = self.event_classifier.store_event(
                                     self.current_event_classification,
-                                    image_path=None,
+                                    image_path=primary_snapshot,
                                     video_path=self.current_recording_path
                                 )
                                 self.stats['classified_events'] += 1
 
                                 # Also log in event_logger
                                 duration = int(recording_duration)
+                                snapshot_info = f"Snapshots: {len(self.event_snapshots)}"
+                                area_info = f"Area: {self.current_event_classification.get('motion_area', 0):.0f}px²"
+                                snapshot_paths = ', '.join(self.event_snapshots) if self.event_snapshots else 'None'
+
                                 self.event_logger.log_event(
                                     event_type=self.current_event_classification['event_type'],
                                     confidence=self.current_event_classification['confidence_score'],
-                                    image_path=None,
+                                    image_path=primary_snapshot,
                                     duration_seconds=duration,
-                                    notes=f"Max duration reached. Area: {self.current_event_classification.get('motion_area', 0):.0f}px²",
+                                    notes=f"Max duration reached. {area_info}. {snapshot_info}. Paths: {snapshot_paths}",
                                     timestamp=self.current_event_classification.get('timestamp')
                                 )
                             except Exception as e:
@@ -418,6 +472,7 @@ class SmartCamera:
                         self._stop_recording()
                         self.current_event_classification = None
                         self.current_event_contours = []
+                        self.event_snapshots = []
                         self.event_classifier.reset_motion_tracking()
 
                 # Small delay (~30 FPS motion detection)

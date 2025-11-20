@@ -40,12 +40,16 @@ class EventClassifier:
     BUSINESS_DAYS = [0, 1, 2, 3, 4]  # Monday-Friday
 
     # Size thresholds (percentage of frame)
-    ANIMAL_SIZE_THRESHOLD = 0.05  # < 5% of frame = animal
-    HUMAN_SIZE_THRESHOLD = 0.15   # > 15% of frame = human
+    ANIMAL_SIZE_THRESHOLD = 0.20  # < 20% of frame = animal
+    MAINTENANCE_SIZE_THRESHOLD = 0.30  # > 30% of frame = maintenance (human close to camera)
+
+    # Duration thresholds (seconds)
+    ANIMAL_DURATION_THRESHOLD = 30  # < 30 seconds = likely animal
+    MAINTENANCE_DURATION_THRESHOLD = 120  # > 2 minutes = likely maintenance
 
     # Motion pattern thresholds
     ERRATIC_MOTION_THRESHOLD = 0.6  # Direction changes per second
-    SUSTAINED_MOTION_DURATION = 3.0  # Seconds
+    SUSTAINED_MOTION_DURATION = 3.0  # Seconds for initial pattern detection
 
     def __init__(self, config, db_path="/data/events.db"):
         """
@@ -166,11 +170,17 @@ class EventClassifier:
             contours, timestamp
         )
 
-        # Combine classifications
+        # Calculate duration since motion started
+        duration_seconds = 0
+        if self.motion_start_time:
+            duration_seconds = (timestamp - self.motion_start_time).total_seconds()
+
+        # Combine classifications with duration
         event_type, confidence = self._combine_classifications(
             time_class, time_confidence,
             size_class, size_confidence,
-            pattern_class, pattern_confidence
+            pattern_class, pattern_confidence,
+            duration_seconds
         )
 
         result = {
@@ -233,18 +243,18 @@ class EventClassifier:
         largest_area = cv2.contourArea(largest_contour)
         largest_percentage = largest_area / self.frame_area
 
-        # Classify based on size
+        # Classify based on size with updated thresholds
         if largest_percentage < self.ANIMAL_SIZE_THRESHOLD:
-            # Small object: likely animal
-            confidence = min(0.9, 0.5 + (self.ANIMAL_SIZE_THRESHOLD - largest_percentage) * 8)
+            # Small object (< 20%): likely animal
+            confidence = min(0.9, 0.5 + (self.ANIMAL_SIZE_THRESHOLD - largest_percentage) * 4)
             return "small", confidence, total_area
-        elif largest_percentage > self.HUMAN_SIZE_THRESHOLD:
-            # Large object: likely human
-            confidence = min(0.9, 0.5 + (largest_percentage - self.HUMAN_SIZE_THRESHOLD) * 2)
+        elif largest_percentage > self.MAINTENANCE_SIZE_THRESHOLD:
+            # Very large object (> 30%): likely human/maintenance
+            confidence = min(0.95, 0.6 + (largest_percentage - self.MAINTENANCE_SIZE_THRESHOLD) * 2)
             return "large", confidence, total_area
         else:
-            # Medium size: uncertain
-            return "medium", 0.4, total_area
+            # Medium size (20-30%): uncertain
+            return "medium", 0.5, total_area
 
     def _classify_motion_pattern(
         self,
@@ -366,55 +376,79 @@ class EventClassifier:
         self,
         time_class: str, time_conf: float,
         size_class: str, size_conf: float,
-        pattern_class: str, pattern_conf: float
+        pattern_class: str, pattern_conf: float,
+        duration_seconds: float = 0
     ) -> Tuple[str, float]:
         """
-        Combine individual classifications into final event type
+        Combine individual classifications into final event type with duration-based rules
 
-        Decision tree:
-        1. Business hours + large size + sustained = maintenance_visit
-        2. Off-hours + any size = security_breach
-        3. Small size + erratic = animal
-        4. Otherwise: use highest confidence classification
+        Specific classification rules:
+        1. Business hours + large size (>30%) + duration >2min = maintenance_visit (HIGH confidence)
+        2. Off-hours (night/weekend) + any motion = security_breach (HIGH confidence)
+        3. Small size (<20%) + duration <30sec = animal (HIGH confidence)
+        4. Fallback rules for ambiguous cases
+
+        Args:
+            duration_seconds: Time elapsed since motion started (in seconds)
 
         Returns:
             Tuple of (event_type, confidence_score)
         """
-        # Rule 1: Business hours + large/medium + sustained = Maintenance
+        # RULE 1: Clear maintenance visit
+        # Weekday AND 8am-5pm AND duration >2min AND object size >30%
         if (time_class == "business_hours" and
-            size_class in ["large", "medium"] and
-            pattern_class == "sustained"):
-            confidence = (time_conf * 0.4 + size_conf * 0.3 + pattern_conf * 0.3)
-            return self.EVENT_MAINTENANCE, min(0.95, confidence)
+            size_class == "large" and
+            duration_seconds > self.MAINTENANCE_DURATION_THRESHOLD):
+            # High confidence maintenance visit
+            confidence = min(0.95, (time_conf * 0.3 + size_conf * 0.4 + 0.3))
+            return self.EVENT_MAINTENANCE, confidence
 
-        # Rule 2: Small + erratic = Animal (regardless of time)
-        if size_class == "small" and pattern_class == "erratic":
-            confidence = (size_conf * 0.6 + pattern_conf * 0.4)
-            return self.EVENT_ANIMAL, min(0.90, confidence)
+        # RULE 2: Clear animal detection
+        # Small object (<20%) AND short duration (<30sec)
+        if (size_class == "small" and
+            duration_seconds < self.ANIMAL_DURATION_THRESHOLD):
+            # High confidence animal
+            confidence = min(0.92, (size_conf * 0.6 + 0.4))
+            return self.EVENT_ANIMAL, confidence
 
-        # Rule 3: Small + any pattern = Animal
+        # RULE 3: Any small object is likely animal (regardless of duration)
         if size_class == "small":
-            confidence = size_conf * 0.8
-            return self.EVENT_ANIMAL, min(0.85, confidence)
+            # Medium-high confidence animal
+            confidence = min(0.85, size_conf * 0.9)
+            return self.EVENT_ANIMAL, confidence
 
-        # Rule 4: Off-hours + large = Security breach
-        if time_class == "off_hours" and size_class == "large":
-            confidence = (time_conf * 0.5 + size_conf * 0.5)
-            return self.EVENT_SECURITY, min(0.90, confidence)
-
-        # Rule 5: Off-hours + medium/unknown = Security breach (lower confidence)
+        # RULE 4: Off-hours + any motion = security breach
+        # (night OR weekend) AND motion detected
         if time_class == "off_hours":
-            confidence = time_conf * 0.7
-            return self.EVENT_SECURITY, min(0.75, confidence)
+            # High confidence security breach
+            if size_class == "large":
+                confidence = min(0.90, (time_conf * 0.5 + size_conf * 0.5))
+            else:
+                confidence = min(0.75, time_conf * 0.85)
+            return self.EVENT_SECURITY, confidence
 
-        # Rule 6: Business hours + erratic = Animal (might be bird near camera)
+        # RULE 5: Business hours + large object + sustained motion = maintenance
+        # (Even if duration < 2min, still likely maintenance)
+        if (time_class == "business_hours" and
+            size_class == "large" and
+            pattern_class == "sustained"):
+            # Medium-high confidence maintenance
+            confidence = min(0.85, (time_conf * 0.4 + size_conf * 0.3 + pattern_conf * 0.3))
+            return self.EVENT_MAINTENANCE, confidence
+
+        # RULE 6: Business hours + erratic = Animal (bird/squirrel near camera)
         if time_class == "business_hours" and pattern_class == "erratic":
-            confidence = pattern_conf * 0.7
-            return self.EVENT_ANIMAL, min(0.70, confidence)
+            confidence = min(0.70, pattern_conf * 0.8)
+            return self.EVENT_ANIMAL, confidence
 
-        # Default: Business hours + unclear pattern = Maintenance (low confidence)
-        confidence = time_conf * 0.5
-        return self.EVENT_MAINTENANCE, min(0.60, confidence)
+        # Default fallback: Business hours with unclear signal = maintenance (low confidence)
+        if time_class == "business_hours":
+            confidence = min(0.55, time_conf * 0.65)
+            return self.EVENT_MAINTENANCE, confidence
+
+        # Final fallback: Off-hours with unclear signal = security breach (low confidence)
+        confidence = min(0.50, time_conf * 0.60)
+        return self.EVENT_SECURITY, confidence
 
     def store_event(
         self,
