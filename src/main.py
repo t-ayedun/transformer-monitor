@@ -42,6 +42,7 @@ class TransformerMonitor:
         self.data_processor = None
         self.local_buffer = None
         self.aws_publisher = None
+        self.ftp_cold_storage = None
         self.heartbeat = None
         self.watchdog = None
         self.network_monitor = None
@@ -151,7 +152,20 @@ class TransformerMonitor:
                     port=5000
                 )
                 self.camera_web.start()
-        
+
+        # Initialize FTP cold storage (optional - for SD card space management)
+        if self.config.get('ftp_storage.enabled', False):
+            try:
+                self.logger.info("Initializing FTP cold storage...")
+                self.ftp_cold_storage = FTPColdStorage(self.config)
+                self.ftp_cold_storage.start()
+                self.logger.info("FTP cold storage started - will upload old files to free SD card space")
+            except Exception as e:
+                self.logger.warning(f"FTP cold storage initialization failed: {e}. SD card may fill up.")
+                self.ftp_cold_storage = None
+        else:
+            self.logger.info("FTP cold storage disabled - all data stored locally only")
+
         # Initialize network monitor
         self.logger.info("Initializing network monitor...")
         self.network_monitor = NetworkMonitor(self.config)
@@ -466,6 +480,9 @@ class TransformerMonitor:
 
         if self.storage_manager:
             self.storage_manager.stop()
+
+        if self.ftp_cold_storage:
+            self.ftp_cold_storage.stop()
 
         if self.aws_publisher:
             self.aws_publisher.stop()

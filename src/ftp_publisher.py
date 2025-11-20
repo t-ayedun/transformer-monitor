@@ -139,40 +139,77 @@ class FTPPublisher:
             self.ftp = None  # Force reconnect on next attempt
             return False
     
-    def upload_file(self, filepath, remote_filename=None):
+    def upload_file(self, filepath, remote_path=None):
         """
         Upload a file to FTP server
-        
+
         Args:
             filepath: Local file path
-            remote_filename: Optional remote filename
+            remote_path: Optional remote path (can include subdirectories)
+                        e.g., "videos/file.h264" or "events/2024-01-20/security/image.jpg"
         """
         if not self._ensure_connection():
             self.stats['uploads_failed'] += 1
             return False
-        
+
         try:
             path = Path(filepath)
             if not path.exists():
                 self.logger.error(f"File not found: {filepath}")
                 return False
-            
-            if not remote_filename:
-                remote_filename = path.name
-            
-            with open(filepath, 'rb') as f:
+
+            if not remote_path:
+                remote_path = path.name
+
+            # Create subdirectories if remote_path contains /
+            if '/' in remote_path:
+                remote_dir = '/'.join(remote_path.split('/')[:-1])
+                remote_filename = remote_path.split('/')[-1]
+
+                # Create subdirectories
                 with self.connection_lock:
-                    self.ftp.storbinary(f'STOR {remote_filename}', f)
-            
+                    try:
+                        # Navigate to base directory
+                        self.ftp.cwd(self.remote_dir)
+
+                        # Create subdirectories
+                        for subdir in remote_dir.split('/'):
+                            if subdir:
+                                try:
+                                    self.ftp.mkd(subdir)
+                                except ftplib.error_perm:
+                                    pass  # Directory might exist
+                                self.ftp.cwd(subdir)
+
+                        # Upload file
+                        with open(filepath, 'rb') as f:
+                            self.ftp.storbinary(f'STOR {remote_filename}', f)
+
+                        # Return to base directory
+                        self.ftp.cwd(self.remote_dir)
+
+                    except Exception as e:
+                        # Return to base directory on error
+                        try:
+                            self.ftp.cwd(self.remote_dir)
+                        except:
+                            pass
+                        raise
+            else:
+                # Simple upload to base directory
+                with open(filepath, 'rb') as f:
+                    with self.connection_lock:
+                        self.ftp.storbinary(f'STOR {remote_path}', f)
+
             file_size = path.stat().st_size
             self.stats['uploads_success'] += 1
             self.stats['bytes_uploaded'] += file_size
-            
-            self.logger.info(f"Uploaded file to FTP: {remote_filename} ({file_size} bytes)")
+
+            self.logger.debug(f"Uploaded file to FTP: {remote_path} ({file_size} bytes)")
             return True
-            
+
         except Exception as e:
-            self.logger.error(f"FTP file upload failed: {e}")
+            self.logger.error(f"FTP file upload failed ({remote_path}): {e}")
             self.stats['uploads_failed'] += 1
             self.ftp = None
             return False

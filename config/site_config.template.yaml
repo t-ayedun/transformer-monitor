@@ -61,9 +61,9 @@ pi_camera:
     ir_leds_enabled: false
     
   storage:
-    max_local_storage_gb: 10
-    video_retention_days: 3  # Keep videos for 3 days (large files)
-    snapshot_retention_days: 7  # Keep periodic snapshots for 7 days
+    max_local_storage_gb: 5  # Reduced - using FTP for cold storage
+    video_retention_hours: 4  # Keep videos for 4 hours only (uploaded to FTP after 2 hours)
+    snapshot_retention_hours: 24  # Keep snapshots for 24 hours (uploaded to FTP after 12 hours)
     
   live_view:
     enabled: true
@@ -93,9 +93,9 @@ event_detection:
     max_object_size_percent: 20
 
   storage:
-    keep_days: 14  # Keep event images for 14 days (reduced from 30)
+    keep_hours: 48  # Keep event images locally for 48 hours (then upload to FTP)
     max_events_per_day: 100
-    video_retention_days: 3  # Keep videos for 3 days only (large files)
+    video_retention_hours: 4  # Keep videos for 4 hours (then upload to FTP)
 
   performance:
     frame_skip: 3  # Process every Nth frame (1=all frames, 3=every 3rd)
@@ -157,7 +157,55 @@ local_storage:
   enabled: true
   database_path: "/data/buffer/readings.db"
   max_size_mb: 500
-  retention_days: 7  # Keep 7 days of thermal data locally
+  retention_days: 2  # Keep only 2 days locally (rest goes to FTP)
+
+# FTP Cold Storage (for bulk data - videos, thermal frames, etc.)
+ftp_storage:
+  enabled: true  # Enable FTP for cold storage
+  host: "{{FTP_HOST}}"
+  port: 21
+  username: "{{FTP_USERNAME}}"
+  password: "{{FTP_PASSWORD}}"
+  remote_dir: "/transformer_data/{{SITE_ID}}"
+  passive: true
+
+  # What to upload and when
+  upload_rules:
+    videos:
+      enabled: true
+      upload_after_hours: 2  # Upload videos after 2 hours (free up SD card fast)
+      delete_after_upload: true  # Delete local copy after successful upload
+      retention_days: 30  # Keep on FTP for 30 days
+
+    thermal_frames:
+      enabled: true
+      upload_after_hours: 6  # Upload thermal frames after 6 hours
+      delete_after_upload: true
+      retention_days: 90  # Keep on FTP for 90 days
+
+    event_images:
+      enabled: true
+      upload_after_hours: 24  # Upload event images after 24 hours
+      delete_after_upload: true
+      retention_days: 90  # Keep on FTP for 90 days
+      skip_security_breach: true  # Don't upload security images to FTP (use AWS S3)
+
+    periodic_snapshots:
+      enabled: true
+      upload_after_hours: 12  # Upload snapshots after 12 hours
+      delete_after_upload: true
+      retention_days: 30  # Keep on FTP for 30 days
+
+    animal_events:
+      enabled: true
+      upload_immediately: true  # Upload animal events immediately (don't store locally)
+      delete_after_upload: true
+      retention_days: 14  # Keep on FTP for 14 days
+
+  # Upload scheduling
+  upload_interval: 300  # Check for files to upload every 5 minutes
+  max_upload_retries: 3
+  retry_delay: 60  # Retry after 60 seconds on failure
 
 # Network (for testing)
 network:
