@@ -60,9 +60,10 @@ class SmartCamera:
     - Real-time statistics
     """
 
-    def __init__(self, config):
+    def __init__(self, config, aws_publisher=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
+        self.aws_publisher = aws_publisher
 
         # Camera settings
         self.resolution = tuple(config.get('pi_camera.resolution', [1920, 1080]))
@@ -104,6 +105,24 @@ class SmartCamera:
         self.cpu_monitoring_enabled = config.get('event_detection.performance.cpu_monitoring.enabled', True)
         self.cpu_log_interval = config.get('event_detection.performance.cpu_monitoring.log_interval', 300)
         self.process = psutil.Process(os.getpid())
+
+        # Cloud publishing settings
+        self.cloud_publishing_enabled = config.get('event_detection.cloud_publishing.enabled', True)
+        self.publish_all_events = config.get('event_detection.cloud_publishing.publish_all_events', False)
+
+        # Per-event type publishing settings
+        self.publish_maintenance = {
+            'telemetry': config.get('event_detection.cloud_publishing.maintenance_visit.publish_telemetry', True),
+            'images': config.get('event_detection.cloud_publishing.maintenance_visit.upload_images', True)
+        }
+        self.publish_security = {
+            'telemetry': config.get('event_detection.cloud_publishing.security_breach.publish_telemetry', True),
+            'images': config.get('event_detection.cloud_publishing.security_breach.upload_images', True)
+        }
+        self.publish_animal = {
+            'telemetry': config.get('event_detection.cloud_publishing.animal.publish_telemetry', False),
+            'images': config.get('event_detection.cloud_publishing.animal.upload_images', False)
+        }
 
         # Camera objects
         self.camera = None
@@ -543,6 +562,13 @@ class SmartCamera:
                                 notes=f"{area_info}. {snapshot_info}. Files: {snapshot_paths_str}",
                                 timestamp=self.current_event_classification.get('timestamp')
                             )
+
+                            # Publish to AWS IoT Core and S3 (if configured)
+                            self._publish_event_to_cloud(
+                                self.current_event_classification,
+                                self.event_snapshots,
+                                self.current_recording_path
+                            )
                         except Exception as e:
                             self.logger.error(f"Failed to store classified event: {e}")
 
@@ -592,6 +618,13 @@ class SmartCamera:
                                     duration_seconds=duration,
                                     notes=f"Max duration reached. {area_info}. {snapshot_info}. Files: {snapshot_paths_str}",
                                     timestamp=self.current_event_classification.get('timestamp')
+                                )
+
+                                # Publish to AWS IoT Core and S3 (if configured)
+                                self._publish_event_to_cloud(
+                                    self.current_event_classification,
+                                    self.event_snapshots,
+                                    self.current_recording_path
                                 )
                             except Exception as e:
                                 self.logger.error(f"Failed to store classified event: {e}")
@@ -915,6 +948,121 @@ class SmartCamera:
             except Exception as e:
                 self.logger.error(f"CPU monitoring error: {e}")
                 time.sleep(self.cpu_log_interval)
+
+    def _should_publish_event(self, event_type):
+        """
+        Check if event should be published to cloud based on config
+
+        Args:
+            event_type: Type of event (maintenance_visit, security_breach, animal)
+
+        Returns:
+            Dict with 'telemetry' and 'images' boolean flags
+        """
+        if not self.cloud_publishing_enabled or not self.aws_publisher:
+            return {'telemetry': False, 'images': False}
+
+        # Publish all events if configured
+        if self.publish_all_events:
+            return {'telemetry': True, 'images': True}
+
+        # Check per-event type settings
+        if event_type == 'maintenance_visit':
+            return self.publish_maintenance
+        elif event_type == 'security_breach':
+            return self.publish_security
+        elif event_type == 'animal':
+            return self.publish_animal
+        else:
+            return {'telemetry': False, 'images': False}
+
+    def _publish_event_to_cloud(self, event_classification, snapshot_paths, video_path=None):
+        """
+        Publish event to AWS IoT Core and S3 (if configured)
+
+        Args:
+            event_classification: Event classification dict from event_classifier
+            snapshot_paths: List of paths to event snapshot images
+            video_path: Optional path to video recording
+
+        This method gracefully handles missing AWS credentials:
+        - Returns immediately if aws_publisher is None
+        - Logs warning but doesn't raise errors
+        - System continues working with local storage only
+        """
+        if not self.aws_publisher:
+            self.logger.debug("AWS publisher not configured, skipping cloud publish")
+            return
+
+        try:
+            event_type = event_classification['event_type']
+            should_publish = self._should_publish_event(event_type)
+
+            if not should_publish['telemetry'] and not should_publish['images']:
+                self.logger.debug(f"Cloud publishing disabled for {event_type}")
+                return
+
+            # Publish event telemetry to IoT Core
+            if should_publish['telemetry']:
+                telemetry_data = {
+                    'event_type': event_type,
+                    'confidence': event_classification['confidence_score'],
+                    'timestamp': event_classification.get('timestamp', datetime.now()).isoformat(),
+                    'site_id': self.config.get('site.id', 'UNKNOWN'),
+                    'motion_area': event_classification.get('motion_area', 0),
+                    'motion_pattern': event_classification.get('motion_pattern', 'unknown'),
+                    'time_classification': event_classification.get('time_classification', 'unknown'),
+                    'size_classification': event_classification.get('size_classification', 'unknown'),
+                    'video_path': Path(video_path).name if video_path else None,
+                    'snapshot_count': len(snapshot_paths),
+                    'snapshot_files': [Path(p).name for p in snapshot_paths] if snapshot_paths else []
+                }
+
+                success = self.aws_publisher.publish_telemetry(telemetry_data)
+                if success:
+                    self.logger.info(f"Published {event_type} event to AWS IoT Core")
+                else:
+                    self.logger.warning(f"Failed to publish {event_type} event (will retry)")
+
+            # Upload event images to S3
+            if should_publish['images'] and snapshot_paths:
+                for snapshot_path in snapshot_paths:
+                    if snapshot_path and Path(snapshot_path).exists():
+                        # Determine snapshot type from filename
+                        filename = Path(snapshot_path).name
+                        if 'start' in filename:
+                            image_type = 'event_start'
+                        elif 'peak' in filename:
+                            image_type = 'event_peak'
+                        elif 'end' in filename:
+                            image_type = 'event_end'
+                        elif 'summary' in filename:
+                            image_type = 'event_summary'
+                        else:
+                            image_type = 'event_snapshot'
+
+                        metadata = {
+                            'site_id': self.config.get('site.id', 'UNKNOWN'),
+                            'event_type': event_type,
+                            'confidence': str(event_classification['confidence_score']),
+                            'timestamp': event_classification.get('timestamp', datetime.now()).isoformat()
+                        }
+
+                        success = self.aws_publisher.upload_image(
+                            snapshot_path,
+                            image_type,
+                            metadata
+                        )
+
+                        if success:
+                            self.logger.info(f"Uploaded {image_type} to S3: {filename}")
+                        else:
+                            self.logger.warning(f"Failed to upload {image_type} (will retry)")
+
+        except Exception as e:
+            # Graceful error handling - log but don't crash
+            self.logger.error(f"Cloud publishing error: {e}", exc_info=True)
+            self.logger.info("Event saved locally, cloud publishing failed")
 
     def get_stats(self):
         """Get camera statistics"""

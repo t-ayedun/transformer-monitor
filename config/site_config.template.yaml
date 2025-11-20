@@ -107,6 +107,24 @@ event_detection:
       enabled: true
       log_interval: 300  # Log CPU/memory every 5 minutes
 
+  cloud_publishing:
+    enabled: true  # Enable publishing to AWS IoT Core (requires AWS config)
+    publish_all_events: false  # If false, only publish based on event type settings
+    event_topic: "transformers/{thing_name}/events"  # MQTT topic for events
+
+    # Per-event type publishing settings
+    maintenance_visit:
+      publish_telemetry: true  # Publish event metadata to IoT Core
+      upload_images: true      # Upload event images to S3
+
+    security_breach:
+      publish_telemetry: true  # Always publish security events
+      upload_images: true      # Always upload security images
+
+    animal:
+      publish_telemetry: false  # Don't publish animal events (too frequent)
+      upload_images: false      # Don't upload animal images
+
 # Data Capture
 data_capture:
   interval: 60  # 1 minute

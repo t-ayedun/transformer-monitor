@@ -22,6 +22,7 @@ from smart_camera import SmartCamera
 from camera_web_interface import CameraWebInterface
 from data_processor import DataProcessor
 from local_buffer import LocalBuffer
+from aws_publisher import AWSPublisher
 from heartbeat import HeartbeatMonitor
 from watchdog import WatchdogTimer
 from network_monitor import NetworkMonitor
@@ -40,6 +41,7 @@ class TransformerMonitor:
         self.camera_web = None
         self.data_processor = None
         self.local_buffer = None
+        self.aws_publisher = None
         self.heartbeat = None
         self.watchdog = None
         self.network_monitor = None
@@ -87,11 +89,55 @@ class TransformerMonitor:
             rois=self.config.get('regions_of_interest'),
             composite_config=self.config.get('composite_temperature')
         )
-        
+
+        # Initialize AWS publisher (optional - requires credentials)
+        if self.config.get('aws.iot.enabled', False):
+            try:
+                # Check if certificate files exist
+                ca_cert = self.config.get('aws.iot.certificates.ca_cert')
+                device_cert = self.config.get('aws.iot.certificates.device_cert')
+                private_key = self.config.get('aws.iot.certificates.private_key')
+
+                if ca_cert and device_cert and private_key:
+                    certs_exist = (
+                        Path(ca_cert).exists() and
+                        Path(device_cert).exists() and
+                        Path(private_key).exists()
+                    )
+
+                    if certs_exist:
+                        self.logger.info("Initializing AWS IoT publisher...")
+                        self.aws_publisher = AWSPublisher(
+                            endpoint=self.config.get('aws.iot.endpoint'),
+                            thing_name=self.config.get('aws.iot.thing_name'),
+                            certs={
+                                'ca_cert': ca_cert,
+                                'device_cert': device_cert,
+                                'private_key': private_key
+                            },
+                            topics=self.config.get('aws.iot.topics'),
+                            local_buffer=self.local_buffer,
+                            enable_compression=True
+                        )
+                        self.aws_publisher.connect()
+                        self.logger.info("AWS IoT publisher connected")
+                    else:
+                        self.logger.warning(
+                            "AWS IoT enabled but certificates not found. "
+                            "System will run in local-only mode."
+                        )
+                else:
+                    self.logger.warning("AWS IoT enabled but certificate paths not configured")
+            except Exception as e:
+                self.logger.warning(f"AWS IoT initialization failed: {e}. Running in local-only mode.")
+                self.aws_publisher = None
+        else:
+            self.logger.info("AWS IoT disabled - running in local-only mode")
+
         # Initialize smart camera (if enabled)
         if self.config.get('pi_camera.enabled', False):
             self.logger.info("Initializing smart camera...")
-            self.smart_camera = SmartCamera(self.config)
+            self.smart_camera = SmartCamera(self.config, aws_publisher=self.aws_publisher)
             self.smart_camera.start_monitoring()
             
             # Initialize web interface
@@ -120,7 +166,7 @@ class TransformerMonitor:
         self.logger.info("Initializing heartbeat monitor...")
         self.heartbeat = HeartbeatMonitor(
             interval=self.config.get('heartbeat.interval', 300),
-            aws_publisher=None,  # No AWS for now
+            aws_publisher=self.aws_publisher,  # Will be None if AWS not configured
             config=self.config
         )
         self.heartbeat.start()
@@ -270,25 +316,28 @@ class TransformerMonitor:
         
         if self.heartbeat:
             self.heartbeat.stop()
-        
+
         if self.watchdog:
             self.watchdog.stop()
-        
+
         if self.network_monitor:
             self.network_monitor.stop()
-        
+
         if self.storage_manager:
             self.storage_manager.stop()
-        
+
+        if self.aws_publisher:
+            self.aws_publisher.stop()
+
         if self.smart_camera:
             self.smart_camera.close()
-        
+
         if self.thermal_camera:
             self.thermal_camera.close()
-        
+
         if self.local_buffer:
             self.local_buffer.close()
-        
+
         self.logger.info("Shutdown complete")
 
 
