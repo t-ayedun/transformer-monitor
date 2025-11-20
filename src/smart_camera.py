@@ -43,6 +43,7 @@ from PIL import Image, ImageDraw, ImageFont
 import cv2
 
 from .event_classifier import EventClassifier
+from .event_logger import EventLogger
 
 
 class SmartCamera:
@@ -108,6 +109,9 @@ class SmartCamera:
         self.event_classifier = EventClassifier(config)
         self.current_event_classification = None
         self.current_event_contours = []
+
+        # Event logging
+        self.event_logger = EventLogger()
 
         # Stats
         self.stats = {
@@ -351,6 +355,7 @@ class SmartCamera:
                     # Store classified event in database
                     if self.current_event_classification:
                         try:
+                            # Store in event_classifier database
                             event_id = self.event_classifier.store_event(
                                 self.current_event_classification,
                                 image_path=snapshot_path,
@@ -358,6 +363,17 @@ class SmartCamera:
                             )
                             self.stats['classified_events'] += 1
                             self.logger.info(f"Event classified and stored: ID={event_id}")
+
+                            # Also log in event_logger for surveillance logs
+                            duration = int(time.time() - self.recording_start_time) if self.recording_start_time else None
+                            self.event_logger.log_event(
+                                event_type=self.current_event_classification['event_type'],
+                                confidence=self.current_event_classification['confidence_score'],
+                                image_path=snapshot_path,
+                                duration_seconds=duration,
+                                notes=f"Area: {self.current_event_classification.get('motion_area', 0):.0f}px²",
+                                timestamp=self.current_event_classification.get('timestamp')
+                            )
                         except Exception as e:
                             self.logger.error(f"Failed to store classified event: {e}")
 
@@ -385,6 +401,17 @@ class SmartCamera:
                                     video_path=self.current_recording_path
                                 )
                                 self.stats['classified_events'] += 1
+
+                                # Also log in event_logger
+                                duration = int(recording_duration)
+                                self.event_logger.log_event(
+                                    event_type=self.current_event_classification['event_type'],
+                                    confidence=self.current_event_classification['confidence_score'],
+                                    image_path=None,
+                                    duration_seconds=duration,
+                                    notes=f"Max duration reached. Area: {self.current_event_classification.get('motion_area', 0):.0f}px²",
+                                    timestamp=self.current_event_classification.get('timestamp')
+                                )
                             except Exception as e:
                                 self.logger.error(f"Failed to store classified event: {e}")
 
@@ -642,6 +669,13 @@ class SmartCamera:
         except Exception as e:
             self.logger.debug(f"Failed to get event stats: {e}")
 
+        # Add event logger stats
+        try:
+            log_stats = self.event_logger.get_event_stats()
+            stats['event_log'] = log_stats
+        except Exception as e:
+            self.logger.debug(f"Failed to get event log stats: {e}")
+
         # Add current event type if motion is active
         if self.current_event_classification:
             stats['current_event_type'] = self.current_event_classification['event_type']
@@ -656,6 +690,30 @@ class SmartCamera:
         except Exception as e:
             self.logger.error(f"Failed to get recent events: {e}")
             return []
+
+    def get_event_log(self, limit=50, event_type=None):
+        """Get recent surveillance event logs"""
+        try:
+            return self.event_logger.get_recent_events(limit, event_type)
+        except Exception as e:
+            self.logger.error(f"Failed to get event log: {e}")
+            return []
+
+    def get_maintenance_visits(self, days_back=30):
+        """Get maintenance visit logs for maintenance tracking"""
+        try:
+            return self.event_logger.get_maintenance_visits(days_back)
+        except Exception as e:
+            self.logger.error(f"Failed to get maintenance visits: {e}")
+            return []
+
+    def export_event_log(self, output_path, start_date=None, end_date=None, event_type=None):
+        """Export surveillance event log to CSV"""
+        try:
+            return self.event_logger.export_to_csv(output_path, start_date, end_date, event_type)
+        except Exception as e:
+            self.logger.error(f"Failed to export event log: {e}")
+            return False
 
     def close(self):
         """Cleanup camera resources"""
