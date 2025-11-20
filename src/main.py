@@ -23,6 +23,7 @@ from camera_web_interface import CameraWebInterface
 from data_processor import DataProcessor
 from local_buffer import LocalBuffer
 from aws_publisher import AWSPublisher
+from ftp_cold_storage import FTPColdStorage
 from heartbeat import HeartbeatMonitor
 from watchdog import WatchdogTimer
 from network_monitor import NetworkMonitor

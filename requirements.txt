@@ -1,5 +1,4 @@
 # Core dependencies
-python-dotenv
 PyYAML
 
 # Thermal camera
@@ -12,31 +11,16 @@ Pillow
 # Computer vision
 opencv-python
 numpy
-scipy
 
 # AWS
 AWSIoTPythonSDK
 boto3
 
-# MQTT
-paho-mqtt
-
 # Web interface
 Flask
-Werkzeug
-
-# Data handling
-pandas
 
 # System monitoring
 psutil
 
 # Networking
 requests
-
-# Time/Date
-pytz
-
-# GPIO
-gpiozero
-RPi.GPIO

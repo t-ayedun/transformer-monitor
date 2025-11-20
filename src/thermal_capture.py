@@ -20,7 +20,6 @@ import board
 import busio
 import adafruit_mlx90640
 import cv2
-from scipy import ndimage
 
 
 class ThermalCapture:
@@ -262,7 +261,7 @@ class ThermalCapture:
         hotspot_mask = frame > threshold
 
         # Label connected components (blobs)
-        labeled, num_features = ndimage.label(hotspot_mask)
+        num_features, labeled = cv2.connectedComponents(hotspot_mask.astype(np.uint8))
 
         hotspots = []
 
