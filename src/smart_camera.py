@@ -43,9 +43,9 @@ from picamera2.outputs import CircularOutput, FileOutput
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 
-from .event_classifier import EventClassifier
-from .event_logger import EventLogger
-from .camera_snapshot import CameraSnapshot
+from event_classifier import EventClassifier
+from event_logger import EventLogger
+from camera_snapshot import CameraSnapshot
 
 
 class SmartCamera:
