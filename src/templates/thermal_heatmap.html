@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Heatmap - Validation View</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #15202b;
+            min-height: 100vh;
+            color: #e7e9ea;
+        }
+
+        .navbar {
+            background: #1e2732;
+            border-bottom: 1px solid #38444d;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            font-size: 1.25rem;
+            color: #e7e9ea;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-links a {
+            color: #e7e9ea;
+            text-decoration: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover {
+            background: rgba(29, 155, 240, 0.1);
+        }
+
+        .nav-links a.active {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .controls {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .control-group strong {
+            color: #8b98a5;
+            font-weight: 600;
+        }
+
+        .zoom-btn {
+            padding: 0.6rem 1.2rem;
+            border: 1px solid #38444d;
+            background: #15202b;
+            color: #e7e9ea;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .zoom-btn.active {
+            background: #1d9bf0;
+            color: white;
+            border-color: #1d9bf0;
+        }
+
+        .zoom-btn:hover {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .heatmap-container {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .heatmap-title {
+            text-align: center;
+            color: #e7e9ea;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            gap: 2px;
+            background: #000;
+            border: 3px solid #1d9bf0;
+            margin: 0 auto;
+            width: fit-content;
+        }
+
+        .heatmap-cell {
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+            padding: 4px;
+            min-width: 80px;
+            min-height: 60px;
+            transition: all 0.2s ease;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(29, 155, 240, 0.5);
+        }
+
+        .cell-temp {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .cell-coords {
+            font-size: 9px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .stats-panel {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .stats-title {
+            color: #e7e9ea;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #8b98a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1d9bf0;
+            margin-top: 0.5rem;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #8b98a5;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: #8b98a5;
+        }
+
+        @media (max-width: 768px) {
+            .control-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <h1>Thermal Heatmap Validation</h1>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/smart-roi-mapper" class="active">ROI Mapper</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <strong>Resolution:</strong>
+                    <button class="zoom-btn" onclick="setResolution(4, 3)">4×3</button>
+                    <button class="zoom-btn" onclick="setResolution(8, 6)">8×6</button>
+                    <button class="zoom-btn" onclick="setResolution(16, 12)">16×12</button>
+                    <button class="zoom-btn active" onclick="setResolution(32, 24)">32×24 (Full)</button>
+                </div>
+                <div class="control-group">
+                    <button class="zoom-btn" onclick="refreshData()">Refresh</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="heatmap-container">
+            <h2 class="heatmap-title">
+                Temperature Heatmap (<span id="currentResolution">32×24</span>)
+            </h2>
+            <div id="heatmapGrid" class="heatmap-grid">
+                <div class="loading">Loading thermal data...</div>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <h2 class="stats-title">Thermal Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Minimum</div>
+                    <div class="stat-value" id="minTemp">--°C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Maximum</div>
+                    <div class="stat-value" id="maxTemp">--°C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Average</div>
+                    <div class="stat-value" id="avgTemp">--°C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Range</div>
+                    <div class="stat-value" id="rangeTemp">--°C</div>
+                </div>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(to right, #0000ff, #00ffff);"></div>
+                    <span>Cold (< 30°C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(to right, #00ff00, #ffff00);"></div>
+                    <span>Normal (30-50°C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(to right, #ff9900, #ff0000);"></div>
+                    <span>Hot (> 50°C)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentWidth = 32;
+        let currentHeight = 24;
+        let thermalData = null;
+        let updateInterval = null;
+
+        function setResolution(width, height) {
+            currentWidth = width;
+            currentHeight = height;
+
+            // Update active button
+            document.querySelectorAll('.zoom-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('currentResolution').textContent = `${width}×${height}`;
+            renderHeatmap();
+        }
+
+        function getTemperatureColor(temp) {
+            if (temp < 20) return `rgb(0, 0, ${Math.round(255 * (temp / 20))})`;
+            if (temp < 30) return `rgb(0, ${Math.round(255 * ((temp - 20) / 10))}, 255)`;
+            if (temp < 40) return `rgb(0, 255, ${Math.round(255 * (1 - (temp - 30) / 10))})`;
+            if (temp < 50) return `rgb(${Math.round(255 * ((temp - 40) / 10))}, 255, 0)`;
+            if (temp < 60) return `rgb(255, ${Math.round(255 * (1 - (temp - 50) / 10))}, 0)`;
+            return `rgb(255, 0, 0)`;
+        }
+
+        function renderHeatmap() {
+            if (!thermalData || !thermalData.frame) return;
+
+            const grid = document.getElementById('heatmapGrid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${currentWidth}, 1fr)`;
+
+            // Calculate block sizes for averaging
+            const blockWidth = Math.floor(32 / currentWidth);
+            const blockHeight = Math.floor(24 / currentHeight);
+
+            for (let row = 0; row < currentHeight; row++) {
+                for (let col = 0; col < currentWidth; col++) {
+                    // Calculate average temperature for this block
+                    let sum = 0;
+                    let count = 0;
+
+                    for (let by = 0; by < blockHeight; by++) {
+                        for (let bx = 0; bx < blockWidth; bx++) {
+                            const fullRow = row * blockHeight + by;
+                            const fullCol = col * blockWidth + bx;
+                            if (fullRow < 24 && fullCol < 32) {
+                                sum += thermalData.frame[fullRow][fullCol];
+                                count++;
+                            }
+                        }
+                    }
+
+                    const avgTemp = count > 0 ? sum / count : 0;
+                    const color = getTemperatureColor(avgTemp);
+
+                    const cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+                    cell.style.background = color;
+                    cell.innerHTML = `
+                        <div class="cell-temp">${avgTemp.toFixed(1)}°C</div>
+                        <div class="cell-coords">[${col},${row}]</div>
+                    `;
+                    cell.title = `Position: [${col}, ${row}]\nTemperature: ${avgTemp.toFixed(2)}°C`;
+
+                    grid.appendChild(cell);
+                }
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            if (!thermalData || !thermalData.frame) return;
+
+            // Flatten the 2D array
+            const allTemps = thermalData.frame.flat();
+
+            const min = Math.min(...allTemps);
+            const max = Math.max(...allTemps);
+            const avg = allTemps.reduce((a, b) => a + b, 0) / allTemps.length;
+            const range = max - min;
+
+            document.getElementById('minTemp').textContent = `${min.toFixed(1)}°C`;
+            document.getElementById('maxTemp').textContent = `${max.toFixed(1)}°C`;
+            document.getElementById('avgTemp').textContent = `${avg.toFixed(1)}°C`;
+            document.getElementById('rangeTemp').textContent = `${range.toFixed(1)}°C`;
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/thermal-data');
+                const data = await response.json();
+
+                if (data.success) {
+                    thermalData = data;
+                    renderHeatmap();
+                } else {
+                    console.error('Failed to fetch thermal data:', data.error);
+                }
+            } catch (error) {
+                console.error('Error fetching thermal data:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+            // Auto-refresh every 2 seconds
+            updateInterval = setInterval(refreshData, 2000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>

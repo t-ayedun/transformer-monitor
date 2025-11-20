@@ -12,6 +12,8 @@ Real-time thermal monitoring system for distribution transformers using MLX90640
 ## Documentation
 
 - [Deployment Guide](docs/DEPLOYMENT.md)
+- [Remote Access Setup](docs/REMOTE_ACCESS.md) - OpenVPN & Teltonika RMS
+- [Remote Access Checklist](docs/REMOTE_ACCESS_CHECKLIST.md)
 - [AWS Setup](docs/AWS_SETUP.md)
 - [Calibration](docs/CALIBRATION.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)

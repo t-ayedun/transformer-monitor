@@ -45,6 +45,11 @@ class CameraWebInterface:
         self.thermal_frame_buffer = deque(maxlen=30)
         self.video_frame_buffer = deque(maxlen=30)
 
+        # Temperature history for metrics (store up to 7 days at 10-second intervals)
+        # 7 days * 24 hours * 6 readings per minute = ~60,480 readings max
+        self.temperature_history = deque(maxlen=60480)
+        self.last_temp_record = 0
+
         # Setup routes
         self._setup_routes()
 
@@ -60,6 +65,106 @@ class CameraWebInterface:
         def roi_mapper():
             """ROI mapper interface"""
             return render_template('roi_mapper.html')
+
+        @self.app.route('/thermal-heatmap')
+        def thermal_heatmap():
+            """Thermal heatmap validation view"""
+            return render_template('thermal_heatmap.html')
+
+        @self.app.route('/camera-alignment')
+        def camera_alignment():
+            """Camera alignment and calibration tool"""
+            return render_template('camera_alignment.html')
+
+        @self.app.route('/smart-roi-mapper')
+        def smart_roi_mapper():
+            """Smart ROI mapper - thermal native with auto-detection"""
+            return render_template('smart_roi_mapper.html')
+
+        @self.app.route('/api/thermal-data')
+        def get_thermal_data():
+            """Get current thermal frame data with actual temperature values"""
+            try:
+                if self.latest_thermal_frame is None:
+                    return jsonify({'success': False, 'error': 'No thermal data available'})
+
+                with self.thermal_frame_lock:
+                    # Convert numpy array to list for JSON serialization
+                    frame_list = self.latest_thermal_frame.tolist()
+
+                return jsonify({
+                    'success': True,
+                    'frame': frame_list,
+                    'width': 32,
+                    'height': 24,
+                    'timestamp': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Failed to get thermal data: {e}")
+                return jsonify({'success': False, 'error': str(e)})
+
+        @self.app.route('/api/detect-hotspots')
+        def detect_hotspots_api():
+            """Auto-detect hotspots and suggest ROIs"""
+            try:
+                if self.latest_thermal_frame is None:
+                    return jsonify({'success': False, 'error': 'No thermal data available'})
+
+                if self.thermal_capture is None:
+                    return jsonify({'success': False, 'error': 'Thermal capture not initialized'})
+
+                with self.thermal_frame_lock:
+                    frame = self.latest_thermal_frame.copy()
+
+                # Get threshold from request or use default
+                threshold = request.args.get('threshold', type=float, default=50.0)
+
+                # Detect hotspots using thermal_capture's built-in method
+                hotspots = self.thermal_capture.detect_hotspots(frame, threshold=threshold)
+
+                # Generate suggested ROIs from hotspots
+                suggested_rois = []
+                for i, hotspot in enumerate(hotspots):
+                    # Create bounding box around hotspot (with padding)
+                    center_x, center_y = hotspot['center']
+                    area = hotspot['area']
+
+                    # Calculate ROI size based on hotspot area
+                    size = max(2, int(np.sqrt(area) * 1.5))  # 1.5x padding
+                    x1 = max(0, center_x - size)
+                    y1 = max(0, center_y - size)
+                    x2 = min(32, center_x + size)
+                    y2 = min(24, center_y + size)
+
+                    suggested_roi = {
+                        'name': f'Hotspot_{i+1}',
+                        'enabled': True,
+                        'coordinates': [[x1, y1], [x2, y2]],
+                        'weight': 1.0,
+                        'emissivity': 0.95,
+                        'thresholds': {
+                            'warning': min(75.0, hotspot['max_temp'] - 10),
+                            'critical': min(85.0, hotspot['max_temp'] - 5),
+                            'emergency': min(95.0, hotspot['max_temp'])
+                        },
+                        'detected_max_temp': hotspot['max_temp'],
+                        'detected_avg_temp': hotspot['avg_temp']
+                    }
+                    suggested_rois.append(suggested_roi)
+
+                self.logger.info(f"Auto-detected {len(hotspots)} hotspots with threshold {threshold}°C")
+
+                return jsonify({
+                    'success': True,
+                    'hotspots': hotspots,
+                    'suggested_rois': suggested_rois,
+                    'threshold_used': threshold,
+                    'timestamp': datetime.now().isoformat()
+                })
+
+            except Exception as e:
+                self.logger.error(f"Failed to detect hotspots: {e}")
+                return jsonify({'success': False, 'error': str(e)})
 
         @self.app.route('/health')
         def health():
@@ -83,6 +188,51 @@ class CameraWebInterface:
             }
             return jsonify(status)
 
+        @self.app.route('/api/temperature-history')
+        def get_temperature_history():
+            """Get temperature history for metrics dashboard"""
+            try:
+                time_range = request.args.get('range', '1h')
+
+                # Convert time range to seconds
+                range_seconds = {
+                    '1h': 3600,
+                    '6h': 21600,
+                    '24h': 86400,
+                    '7d': 604800
+                }.get(time_range, 3600)
+
+                # Get current time
+                now = time.time()
+                cutoff_time = now - range_seconds
+
+                # Filter history based on time range
+                filtered_history = [
+                    {
+                        'timestamp': entry['timestamp'],
+                        'temperature': entry['temperature']
+                    }
+                    for entry in self.temperature_history
+                    if entry['timestamp'] >= cutoff_time
+                ]
+
+                # If we have data, downsample for better performance
+                # Target: ~100 data points regardless of time range
+                if len(filtered_history) > 100:
+                    step = len(filtered_history) // 100
+                    filtered_history = filtered_history[::step]
+
+                return jsonify({
+                    'success': True,
+                    'history': filtered_history,
+                    'range': time_range,
+                    'count': len(filtered_history)
+                })
+
+            except Exception as e:
+                self.logger.error(f"Failed to get temperature history: {e}")
+                return jsonify({'success': False, 'error': str(e)})
+
         @self.app.route('/api/rois')
         def get_rois():
             """Get ROI configurations"""
@@ -103,11 +253,14 @@ class CameraWebInterface:
                 self.config.set('regions_of_interest', new_rois)
                 self.config.save_config('site')
 
+                # Force config reload to ensure fresh data
+                self.config.load_config('site')
+
                 # Reload data processor with new ROIs
                 if self.data_processor:
                     self.data_processor.rois = new_rois
 
-                self.logger.info(f"Updated {len(new_rois)} ROIs")
+                self.logger.info(f"Updated {len(new_rois)} ROIs - config reloaded")
                 return jsonify({'success': True, 'message': f'Updated {len(new_rois)} ROIs'})
 
             except Exception as e:
@@ -165,33 +318,63 @@ class CameraWebInterface:
 
             try:
                 filepath = self.smart_camera.capture_snapshot(custom_name='manual')
-                return jsonify({'success': True, 'filepath': filepath})
+                # Return relative path that can be served via /snapshots/ route
+                filename = Path(filepath).name
+                return jsonify({'success': True, 'filepath': f'/snapshots/{filename}'})
             except Exception as e:
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/snapshots/<filename>')
+        def serve_snapshot(filename):
+            """Serve captured snapshot images"""
+            try:
+                # Snapshots are stored in /data/images or local path
+                snapshot_dir = Path('/data/images') if Path('/data/images').exists() else Path('.')
+                filepath = snapshot_dir / filename
+
+                if filepath.exists():
+                    return send_file(str(filepath), mimetype='image/jpeg')
+                else:
+                    return jsonify({'error': 'Snapshot not found'}), 404
+            except Exception as e:
+                self.logger.error(f"Error serving snapshot: {e}")
                 return jsonify({'error': str(e)}), 500
 
         @self.app.route('/video/thermal')
         def thermal_stream():
             """MJPEG stream of thermal camera with ROI overlay"""
-            return Response(
+            response = Response(
                 self._generate_thermal_stream(),
                 mimetype='multipart/x-mixed-replace; boundary=frame'
             )
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
         @self.app.route('/video/visual')
         def visual_stream():
             """MJPEG stream of Pi camera"""
-            return Response(
+            response = Response(
                 self._generate_visual_stream(),
                 mimetype='multipart/x-mixed-replace; boundary=frame'
             )
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
         @self.app.route('/video/fusion')
         def fusion_stream():
             """MJPEG stream of thermal+visual fusion"""
-            return Response(
+            response = Response(
                 self._generate_fusion_stream(),
                 mimetype='multipart/x-mixed-replace; boundary=frame'
             )
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
     def _generate_thermal_stream(self):
         """Generate thermal camera stream with ROI overlays"""
@@ -404,6 +587,16 @@ class CameraWebInterface:
         with self.thermal_frame_lock:
             self.latest_thermal_frame = frame
             self.latest_thermal_data = processed_data
+
+            # Record temperature for metrics (every 10 seconds)
+            current_time = time.time()
+            if current_time - self.last_temp_record >= 10:
+                if processed_data and 'ambient_temp' in processed_data:
+                    self.temperature_history.append({
+                        'timestamp': current_time,
+                        'temperature': processed_data['ambient_temp']
+                    })
+                    self.last_temp_record = current_time
 
     def start(self):
         """Start web server"""

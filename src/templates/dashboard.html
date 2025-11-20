@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer Monitor - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #111111;
+            --border-primary: rgba(255, 255, 255, 0.1);
+            --border-glow: rgba(255, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-tertiary: #71717a;
+            --accent-primary: #0070f3;
+            --accent-secondary: #7928ca;
+            --accent-gradient: linear-gradient(135deg, #0070f3 0%, #7928ca 100%);
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff0080;
+            --glow-blue: rgba(0, 112, 243, 0.3);
+            --glow-purple: rgba(121, 40, 202, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Dot grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Gradient orbs */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -20%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, var(--glow-purple) 0%, transparent 70%);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-30px, -30px) scale(1.1); }
+        }
+
+        .navbar {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .navbar h1 {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .site-badge {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 24px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 0 20px var(--glow-blue);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px var(--glow-blue); }
+            50% { box-shadow: 0 0 30px var(--glow-purple); }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-links a.active {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links a.active::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 2px;
+            background: var(--accent-gradient);
+            box-shadow: 0 0 10px var(--glow-blue);
+        }
+
+        .quick-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .toolbar-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--border-glow);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .toolbar-btn-primary {
+            background: var(--accent-gradient);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 0 20px var(--glow-blue);
+        }
+
+        .toolbar-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px var(--glow-purple), 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .alert-banner {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-left: 3px solid var(--accent-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .alert-banner strong {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Status Cards Grid */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .status-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-glow);
+        }
+
+        .status-card:hover::before {
+            opacity: 1;
+        }
+
+        .status-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .status-card-title {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            position: relative;
+        }
+
+        .status-icon::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 12px;
+            padding: 2px;
+            background: var(--accent-gradient);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .status-card:hover .status-icon::before {
+            opacity: 1;
+        }
+
+        .status-icon.camera { background: rgba(0, 112, 243, 0.1); color: var(--accent-primary); }
+        .status-icon.temp { background: rgba(255, 170, 0, 0.1); color: var(--warning); }
+        .status-icon.system { background: rgba(0, 255, 136, 0.1); color: var(--success); }
+        .status-icon.cloud { background: rgba(121, 40, 202, 0.1); color: var(--accent-secondary); }
+
+        .status-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.03em;
+        }
+
+        .status-card-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 12px var(--success);
+            animation: pulse-online 2s ease-in-out infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--error);
+            box-shadow: 0 0 12px var(--error);
+        }
+
+        .status-dot.warning {
+            background: var(--warning);
+            box-shadow: 0 0 12px var(--warning);
+        }
+
+        @keyframes pulse-online {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Main Layout: Hero + Sidebar */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .video-card {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-card::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 18px;
+            padding: 2px;
+            background: var(--accent-gradient);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-card:hover::before {
+            opacity: 1;
+        }
+
+        .video-card.primary {
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 0 40px var(--glow-blue);
+        }
+
+        .video-card.primary::before {
+            opacity: 0.5;
+        }
+
+        .video-card.primary:hover::before {
+            opacity: 1;
+        }
+
+        .video-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .video-card h2 {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .live-badge {
+            background: var(--error);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            box-shadow: 0 0 20px var(--error);
+            animation: pulse-live 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-live {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 20px var(--error);
+            }
+            50% {
+                opacity: 0.8;
+                box-shadow: 0 0 30px var(--error);
+            }
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 */
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .video-container.primary {
+            padding-bottom: 75%; /* Larger for hero */
+        }
+
+        .video-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .video-card-footer {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar .video-card {
+            flex: 1;
+        }
+
+        .sidebar .video-container {
+            padding-bottom: 100%; /* Square-ish for sidebar */
+        }
+
+        /* ROI Section */
+        .roi-section {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .roi-section:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .roi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .roi-header h2 {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .roi-timestamp {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .roi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .roi-card {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border-primary);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 12px;
+            padding: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .roi-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .roi-card:hover {
+            border-color: var(--border-glow);
+            transform: translateX(4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .roi-card:hover::before {
+            opacity: 1;
+        }
+
+        .roi-card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .roi-card.critical {
+            border-left-color: var(--error);
+        }
+
+        .roi-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .roi-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .roi-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .roi-status.ok { color: var(--success); }
+        .roi-status.warning { color: var(--warning); }
+        .roi-status.critical { color: var(--error); }
+
+        .roi-temp {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        .roi-thresholds {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .roi-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .roi-progress-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .roi-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .roi-progress-bar.ok {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .roi-progress-bar.warning {
+            background: var(--warning);
+            box-shadow: 0 0 10px var(--warning);
+        }
+
+        .roi-progress-bar.critical {
+            background: var(--error);
+            box-shadow: 0 0 10px var(--error);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .empty-state button {
+            margin-top: 1rem;
+        }
+
+        /* Loading States */
+        .skeleton {
+            background: linear-gradient(90deg, #1e2732 25%, #2a3441 50%, #1e2732 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                flex-direction: row;
+            }
+
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .navbar-left {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                flex-direction: column;
+            }
+
+            .quick-toolbar {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .roi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Temperature Metrics Section */
+        .metrics-section {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .metrics-section:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .metrics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .metrics-header h2 {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .time-range-selector {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.25rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .time-range-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .time-range-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .time-range-btn.active {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 0 15px var(--glow-blue);
+        }
+
+        .metrics-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr) 2fr;
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .metric-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .metric-card:hover::before {
+            opacity: 1;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            letter-spacing: -0.03em;
+        }
+
+        .metric-trend {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .metric-trend.up { color: var(--error); }
+        .metric-trend.down { color: var(--success); }
+        .metric-trend.stable { color: var(--text-secondary); }
+
+        .metric-value.cold { color: var(--accent-primary); }
+        .metric-value.warm { color: var(--warning); }
+        .metric-value.hot { color: var(--error); }
+
+        .chart-container {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+            height: 200px;
+            transition: all 0.3s ease;
+        }
+
+        .chart-container:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        @media (max-width: 1200px) {
+            .metrics-content {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .chart-container {
+                grid-column: 1 / -1;
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .metrics-content {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-left">
+                <h1>Transformer Monitor</h1>
+                <div class="site-badge" id="siteBadge">{{ site_id }}</div>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="active">Dashboard</a>
+                <a href="/smart-roi-mapper">ROI Mapper</a>
+            </div>
+            <div class="quick-toolbar">
+                <button class="toolbar-btn" onclick="refreshAll()">Refresh</button>
+                <button class="toolbar-btn toolbar-btn-primary" onclick="captureSnapshot()">Snapshot</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="alert-banner">
+            <strong>Configuration Interface</strong> — This dashboard is for installation, configuration, and calibration. Data extraction happens automatically and is sent to AWS.
+        </div>
+
+        <!-- Status Cards -->
+        <div class="status-grid">
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Camera Status</div>
+                    </div>
+                    <div class="status-icon camera">📷</div>
+                </div>
+                <div class="status-card-value" id="cameraCount">--</div>
+                <div class="status-card-meta">
+                    <div class="status-indicator">
+                        <span class="status-dot online" id="thermalDot"></span>
+                        <span id="thermalText">Thermal</span>
+                    </div>
+                    <div class="status-indicator">
+                        <span class="status-dot online" id="visualDot"></span>
+                        <span id="visualText">Visual</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Temperature</div>
+                    </div>
+                    <div class="status-icon temp">🌡️</div>
+                </div>
+                <div class="status-card-value" id="currentTemp">--°C</div>
+                <div class="status-card-meta">
+                    <span>Min: <strong id="minTemp">--</strong></span>
+                    <span>Max: <strong id="maxTemp">--</strong></span>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">System Health</div>
+                    </div>
+                    <div class="status-icon system">💻</div>
+                </div>
+                <div class="status-card-value" id="systemStatus">Online</div>
+                <div class="status-card-meta">
+                    <span>Uptime: <strong id="uptime">--</strong></span>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Connectivity</div>
+                    </div>
+                    <div class="status-icon cloud">☁️</div>
+                </div>
+                <div class="status-card-value" id="awsStatus">Connected</div>
+                <div class="status-card-meta">
+                    <span>Last sync: <strong id="lastSync">--</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Temperature Metrics Dashboard -->
+        <div class="metrics-section">
+            <div class="metrics-header">
+                <h2>Temperature Metrics</h2>
+                <div class="time-range-selector">
+                    <button class="time-range-btn active" onclick="setTimeRange('1h')" id="btn-1h">1h</button>
+                    <button class="time-range-btn" onclick="setTimeRange('6h')" id="btn-6h">6h</button>
+                    <button class="time-range-btn" onclick="setTimeRange('24h')" id="btn-24h">24h</button>
+                    <button class="time-range-btn" onclick="setTimeRange('7d')" id="btn-7d">7d</button>
+                </div>
+            </div>
+            <div class="metrics-content">
+                <div class="metric-card">
+                    <div class="metric-label">Minimum</div>
+                    <div class="metric-value cold" id="metricMin">
+                        <span id="metricMinValue">--</span>
+                        <span class="metric-trend stable" id="metricMinTrend">→</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Maximum</div>
+                    <div class="metric-value hot" id="metricMax">
+                        <span id="metricMaxValue">--</span>
+                        <span class="metric-trend stable" id="metricMaxTrend">→</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Average</div>
+                    <div class="metric-value warm" id="metricAvg">
+                        <span id="metricAvgValue">--</span>
+                        <span class="metric-trend stable" id="metricAvgTrend">→</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tempChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content: Hero + Sidebar -->
+        <div class="main-layout">
+            <div class="hero-section">
+                <div class="video-card primary">
+                    <div class="video-card-header">
+                        <h2>Thermal Camera Feed</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="video-container primary">
+                        <img src="/video/thermal" alt="Thermal Camera Feed">
+                    </div>
+                    <div class="video-card-footer">
+                        Real-time thermal imaging (32×24) with temperature overlays and ROI markers
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="video-card">
+                    <div class="video-card-header">
+                        <h2>Visual Feed</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="video-container">
+                        <img src="/video/visual" alt="Visual Camera Feed">
+                    </div>
+                    <div class="video-card-footer">
+                        High-res visual (1920×1080)
+                    </div>
+                </div>
+
+                <div class="video-card">
+                    <div class="video-card-header">
+                        <h2>Fusion View</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="video-container">
+                        <img src="/video/fusion" alt="Fusion Feed">
+                    </div>
+                    <div class="video-card-footer">
+                        Thermal + Visual overlay
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROI Section -->
+        <div class="roi-section">
+            <div class="roi-header">
+                <h2>Active Regions of Interest</h2>
+                <span class="roi-timestamp" id="roiTimestamp">Last updated: --</span>
+            </div>
+            <div class="roi-grid" id="roiGrid">
+                <div class="empty-state">
+                    <h3>No ROIs Configured</h3>
+                    <p>Configure regions of interest to monitor specific areas</p>
+                    <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
+                        Configure ROIs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusUpdateInterval;
+        let roiUpdateInterval;
+        let metricsUpdateInterval;
+        let startTime = Date.now();
+        let tempChart = null;
+        let currentTimeRange = '1h';
+        let temperatureHistory = [];
+
+        async function refreshStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                // Update camera status
+                const thermalOnline = data.thermal_data !== null;
+                const visualOnline = data.camera_stats !== null;
+                const onlineCount = (thermalOnline ? 1 : 0) + (visualOnline ? 1 : 0);
+
+                document.getElementById('cameraCount').textContent = `${onlineCount}/2`;
+
+                const thermalDot = document.getElementById('thermalDot');
+                thermalDot.className = `status-dot ${thermalOnline ? 'online' : 'offline'}`;
+
+                const visualDot = document.getElementById('visualDot');
+                visualDot.className = `status-dot ${visualOnline ? 'online' : 'offline'}`;
+
+                // Update temperature
+                if (data.thermal_data && data.thermal_data.ambient_temp) {
+                    const temp = data.thermal_data.ambient_temp;
+                    document.getElementById('currentTemp').textContent = `${temp.toFixed(1)}°C`;
+
+                    // Mock min/max for now
+                    document.getElementById('minTemp').textContent = `${(temp - 2).toFixed(1)}°C`;
+                    document.getElementById('maxTemp').textContent = `${(temp + 3).toFixed(1)}°C`;
+                }
+
+                // Update uptime
+                const uptime = Math.floor((Date.now() - startTime) / 1000);
+                const hours = Math.floor(uptime / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+
+                // Update last sync (mock)
+                const now = new Date();
+                document.getElementById('lastSync').textContent = now.toLocaleTimeString();
+
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        }
+
+        async function loadROIs() {
+            try {
+                const response = await fetch('/api/rois');
+                const data = await response.json();
+
+                const roiGrid = document.getElementById('roiGrid');
+                const roiTimestamp = document.getElementById('roiTimestamp');
+
+                const now = new Date();
+                roiTimestamp.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+
+                if (data.rois && data.rois.length > 0) {
+                    roiGrid.innerHTML = data.rois.map((roi, index) => {
+                        // Mock temperature for ROI (in real implementation, get from thermal data)
+                        const mockTemp = 25 + Math.random() * 50;
+                        const warning = roi.thresholds?.warning || 75;
+                        const critical = roi.thresholds?.critical || 85;
+                        const emergency = roi.thresholds?.emergency || 95;
+
+                        let status = 'ok';
+                        let statusText = 'Normal';
+                        let percentage = (mockTemp / emergency) * 100;
+
+                        if (mockTemp >= critical) {
+                            status = 'critical';
+                            statusText = 'Critical';
+                        } else if (mockTemp >= warning) {
+                            status = 'warning';
+                            statusText = 'Warning';
+                        }
+
+                        return `
+                            <div class="roi-card ${status}">
+                                <div class="roi-card-header">
+                                    <div class="roi-name">${roi.name}</div>
+                                    <div class="roi-status ${status}">${statusText}</div>
+                                </div>
+                                <div class="roi-temp">${mockTemp.toFixed(1)}°C</div>
+                                <div class="roi-thresholds">
+                                    Warning: ${warning}°C | Critical: ${critical}°C | Emergency: ${emergency}°C
+                                </div>
+                                <div class="roi-progress">
+                                    <div class="roi-progress-bar ${status}" style="width: ${Math.min(percentage, 100)}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    roiGrid.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No ROIs Configured</h3>
+                            <p>Configure regions of interest to monitor specific areas</p>
+                            <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
+                                Configure ROIs
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load ROIs:', error);
+            }
+        }
+
+        async function captureSnapshot() {
+            try {
+                const response = await fetch('/api/snapshot');
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Snapshot captured successfully!\n\nFile: ' + data.filepath);
+                } else {
+                    alert('Failed to capture snapshot: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function refreshAll() {
+            refreshStatus();
+            loadROIs();
+            refreshMetrics();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#1d9bf0',
+                        backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#1d9bf0',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e2732',
+                            titleColor: '#e7e9ea',
+                            bodyColor: '#e7e9ea',
+                            borderColor: '#38444d',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(1) + '°C';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                display: false,
+                                color: '#38444d'
+                            },
+                            ticks: {
+                                color: '#8b98a5',
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            display: true,
+                            grid: {
+                                color: '#38444d',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#8b98a5',
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        async function refreshMetrics() {
+            try {
+                const response = await fetch(`/api/temperature-history?range=${currentTimeRange}`);
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    // Update chart
+                    const labels = data.history.map(point => {
+                        const date = new Date(point.timestamp);
+                        if (currentTimeRange === '1h') {
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else if (currentTimeRange === '6h') {
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else if (currentTimeRange === '24h') {
+                            return date.toLocaleTimeString([], { hour: '2-digit' });
+                        } else {
+                            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                        }
+                    });
+                    const temps = data.history.map(point => point.temperature);
+
+                    tempChart.data.labels = labels;
+                    tempChart.data.datasets[0].data = temps;
+                    tempChart.update('none');
+
+                    // Calculate metrics
+                    const min = Math.min(...temps);
+                    const max = Math.max(...temps);
+                    const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+
+                    // Update metric cards
+                    document.getElementById('metricMinValue').textContent = min.toFixed(1) + '°C';
+                    document.getElementById('metricMaxValue').textContent = max.toFixed(1) + '°C';
+                    document.getElementById('metricAvgValue').textContent = avg.toFixed(1) + '°C';
+
+                    // Calculate trends (comparing first half to second half)
+                    const midpoint = Math.floor(temps.length / 2);
+                    const firstHalf = temps.slice(0, midpoint);
+                    const secondHalf = temps.slice(midpoint);
+                    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+                    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+                    const diff = secondAvg - firstAvg;
+
+                    // Update trend indicators
+                    const updateTrend = (elementId, diff) => {
+                        const element = document.getElementById(elementId);
+                        if (Math.abs(diff) < 0.5) {
+                            element.textContent = '→';
+                            element.className = 'metric-trend stable';
+                        } else if (diff > 0) {
+                            element.textContent = '↑';
+                            element.className = 'metric-trend up';
+                        } else {
+                            element.textContent = '↓';
+                            element.className = 'metric-trend down';
+                        }
+                    };
+
+                    updateTrend('metricMinTrend', diff);
+                    updateTrend('metricMaxTrend', diff);
+                    updateTrend('metricAvgTrend', diff);
+                }
+            } catch (error) {
+                console.error('Failed to fetch temperature metrics:', error);
+            }
+        }
+
+        function setTimeRange(range) {
+            currentTimeRange = range;
+
+            // Update button states
+            document.querySelectorAll('.time-range-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${range}`).classList.add('active');
+
+            // Refresh metrics with new time range
+            refreshMetrics();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshStatus();
+            loadROIs();
+
+            // Initialize chart
+            initChart();
+            refreshMetrics();
+
+            // Update status every 5 seconds
+            statusUpdateInterval = setInterval(refreshStatus, 5000);
+
+            // Update ROIs every 10 seconds
+            roiUpdateInterval = setInterval(loadROIs, 10000);
+
+            // Update metrics every 30 seconds
+            metricsUpdateInterval = setInterval(refreshMetrics, 30000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (statusUpdateInterval) clearInterval(statusUpdateInterval);
+            if (roiUpdateInterval) clearInterval(roiUpdateInterval);
+            if (metricsUpdateInterval) clearInterval(metricsUpdateInterval);
+        });
+    </script>
+</body>
+</html>

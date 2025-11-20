@@ -10,6 +10,7 @@ import signal
 import logging
 import logging.config
 from pathlib import Path
+from threading import Thread
 
 import yaml
 
@@ -44,6 +45,7 @@ class TransformerMonitor:
         self.network_monitor = None
         self.storage_manager = None
         self.logger = None
+        self.web_update_thread = None
         
     def initialize(self):
         """Initialize all components"""
@@ -127,9 +129,50 @@ class TransformerMonitor:
         self.logger.info("Initializing watchdog timer...")
         self.watchdog = WatchdogTimer()
         self.watchdog.start()
-        
+
+        # Start web frame update thread (if web interface enabled)
+        if self.camera_web:
+            self.logger.info("Starting web interface frame update thread (8 Hz)...")
+            self.web_update_thread = Thread(target=self._web_frame_update_loop, daemon=True)
+            self.web_update_thread.start()
+
         self.logger.info("Initialization complete!")
-        
+
+    def _web_frame_update_loop(self):
+        """
+        Separate high-frequency loop for updating web interface thermal frames.
+        Runs at ~8 Hz (thermal camera native refresh rate) for smooth live feed.
+        """
+        self.logger.info("Web frame update loop started")
+        update_interval = 0.125  # 8 Hz (1/8 = 0.125 seconds)
+
+        while self.running:
+            try:
+                # Get fresh thermal frame from camera
+                thermal_frame = self.thermal_camera.get_frame()
+
+                if thermal_frame is not None:
+                    # Quick lightweight processing for web display only
+                    # Don't do full data processing here - that's for the main loop
+                    processed_data = {
+                        'timestamp': time.time(),
+                        'ambient_temp': float(thermal_frame.mean()),  # Quick ambient approximation
+                        'min_temp': float(thermal_frame.min()),
+                        'max_temp': float(thermal_frame.max())
+                    }
+
+                    # Update web interface
+                    self.camera_web.update_thermal_frame(thermal_frame, processed_data)
+
+                # Sleep to maintain ~8 Hz update rate
+                time.sleep(update_interval)
+
+            except Exception as e:
+                self.logger.error(f"Web frame update error: {e}")
+                time.sleep(1)  # Back off on error
+
+        self.logger.info("Web frame update loop stopped")
+
     def run(self):
         """Main monitoring loop"""
         self.running = True
@@ -186,14 +229,17 @@ class TransformerMonitor:
         # Save to local buffer
         self.local_buffer.store(processed_data)
 
-        # Update web interface with thermal frame
+        # Update web interface with fully processed data (ROI analysis, etc.)
+        # Note: Web interface also gets high-frequency updates from _web_frame_update_loop
+        # This update provides detailed ROI data while the loop provides smooth live feed
         if self.camera_web:
             self.camera_web.update_thermal_frame(thermal_frame, processed_data)
 
         # Log (since no AWS/FTP/MQTT)
+        composite_temp = processed_data.get('composite_temperature') or 0
         self.logger.info(
             f"Capture {capture_count}: "
-            f"Composite={processed_data.get('composite_temperature', 0):.1f}°C "
+            f"Composite={composite_temp:.1f}°C "
             f"(saved to local buffer)"
         )
 

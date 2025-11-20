@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Alignment Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #15202b;
+            min-height: 100vh;
+            padding: 2rem;
+            color: #e7e9ea;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: #e7e9ea;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions {
+            background: #15202b;
+            border: 1px solid #38444d;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #1d9bf0;
+            margin-top: 1rem;
+            color: #8b98a5;
+        }
+
+        .split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .camera-panel {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            padding: 1.5rem;
+            border-radius: 16px;
+        }
+
+        .camera-panel h2 {
+            color: #e7e9ea;
+            margin-bottom: 1rem;
+        }
+
+        .view-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .view-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .overlay-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .crosshair-h {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 0, 0, 0.7);
+            top: 50%;
+            left: 0;
+        }
+
+        .crosshair-v {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.7);
+            left: 50%;
+            top: 0;
+        }
+
+        .grid-line {
+            stroke: rgba(0, 255, 0, 0.3);
+            stroke-width: 1;
+        }
+
+        .controls {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #e7e9ea;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a8cd8;
+        }
+
+        .alignment-info {
+            background: #1e2732;
+            border: 1px solid #38444d;
+            padding: 1.5rem;
+            border-radius: 16px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .info-item {
+            padding: 1rem;
+            background: #15202b;
+            border: 1px solid #38444d;
+            border-radius: 12px;
+            border-left: 4px solid #1d9bf0;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #8b98a5;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1d9bf0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Camera Alignment & Calibration Tool</h1>
+            <div class="instructions">
+                <strong>Calibration Steps:</strong><br>
+                1. Place a hot object (coffee mug, laptop) in center of frame<br>
+                2. Align both cameras so crosshairs point to the same object<br>
+                3. Toggle grid overlay to verify alignment<br>
+                4. Verify the hot object appears in same relative position on both views<br>
+                5. Note any offset for manual correction in ROI mapper
+            </div>
+        </div>
+
+        <div class="split-view">
+            <div class="camera-panel">
+                <h2>Visual Camera (1920×1080)</h2>
+                <div class="view-container" id="visualView">
+                    <img src="/video/visual" alt="Visual Camera">
+                    <div class="overlay-grid">
+                        <div class="crosshair-h"></div>
+                        <div class="crosshair-v"></div>
+                        <svg id="visualGrid" width="100%" height="100%">
+                            <!-- Grid lines will be added by JS -->
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-panel">
+                <h2>Thermal Camera (32×24)</h2>
+                <div class="view-container" id="thermalView">
+                    <img src="/video/thermal" alt="Thermal Camera">
+                    <div class="overlay-grid">
+                        <div class="crosshair-h"></div>
+                        <div class="crosshair-v"></div>
+                        <svg id="thermalGrid" width="100%" height="100%">
+                            <!-- Grid lines will be added by JS -->
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h2 style="color: #667eea; margin-bottom: 1rem;">Controls</h2>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showGrid" checked> Show Grid Overlay
+                </label>
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showCrosshair" checked> Show Center Crosshair
+                </label>
+            </div>
+            <div>
+                <button class="btn btn-primary" onclick="captureAlignment()">Capture Alignment Check</button>
+                <button class="btn btn-primary" onclick="window.location.href='/smart-roi-mapper'">Go to ROI Mapper</button>
+            </div>
+        </div>
+
+        <div class="alignment-info">
+            <h2 style="color: #e7e9ea; margin-bottom: 1rem;">Alignment Information</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Visual Resolution</div>
+                    <div class="info-value">1920×1080</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Thermal Resolution</div>
+                    <div class="info-value">32×24</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Scaling Factor X</div>
+                    <div class="info-value">60×</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Scaling Factor Y</div>
+                    <div class="info-value">45×</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #15202b; border: 1px solid #38444d; border-radius: 12px; border-left: 4px solid #ffd400;">
+                <strong style="color: #e7e9ea;">Important Notes:</strong>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem; color: #8b98a5;">
+                    <li>Cameras should be mounted as close together as possible</li>
+                    <li>Both should point at exactly the same target</li>
+                    <li>Thermal camera has much wider pixels (60× larger than visual)</li>
+                    <li>Small misalignment = large ROI errors</li>
+                    <li>Use this tool BEFORE mapping ROIs</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function drawGrid(svgId, rows, cols) {
+            const svg = document.getElementById(svgId);
+            svg.innerHTML = '';
+
+            for (let i = 1; i < rows; i++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                const y = `${(i / rows) * 100}%`;
+                line.setAttribute('x1', '0');
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', '100%');
+                line.setAttribute('y2', y);
+                line.setAttribute('class', 'grid-line');
+                svg.appendChild(line);
+            }
+
+            for (let i = 1; i < cols; i++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                const x = `${(i / cols) * 100}%`;
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', '0');
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', '100%');
+                line.setAttribute('class', 'grid-line');
+                svg.appendChild(line);
+            }
+        }
+
+        document.getElementById('showGrid').addEventListener('change', (e) => {
+            document.querySelectorAll('svg').forEach(svg => {
+                svg.style.display = e.target.checked ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('showCrosshair').addEventListener('change', (e) => {
+            document.querySelectorAll('.crosshair-h, .crosshair-v').forEach(el => {
+                el.style.display = e.target.checked ? 'block' : 'none';
+            });
+        });
+
+        function captureAlignment() {
+            fetch('/api/snapshot')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Alignment snapshot captured!\n\nUse this image to verify camera alignment before mapping ROIs.');
+                    }
+                });
+        }
+
+        // Draw grids
+        drawGrid('visualGrid', 9, 16);  // 16:9 aspect ratio
+        drawGrid('thermalGrid', 24, 32);  // Actual thermal resolution
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Camera Alignment Tool loaded');
+        });
+    </script>
+</body>
+</html>

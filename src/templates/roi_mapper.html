@@ -4,202 +4,560 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROI Mapper - Transformer Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
             margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 1400px;
+
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #111111;
+            --border-primary: rgba(255, 255, 255, 0.1);
+            --border-glow: rgba(255, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-tertiary: #71717a;
+            --accent-primary: #0070f3;
+            --accent-secondary: #7928ca;
+            --accent-gradient: linear-gradient(135deg, #0070f3 0%, #7928ca 100%);
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff0080;
+            --glow-blue: rgba(0, 112, 243, 0.3);
+            --glow-purple: rgba(121, 40, 202, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -20%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, var(--glow-purple) 0%, transparent 70%);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-30px, 30px) scale(1.1); }
+        }
+
+        .navbar {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-content {
+            max-width: 1600px;
             margin: 0 auto;
-            background-color: white;
-            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.6rem 1.2rem;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            font-size: 0.9rem;
+            position: relative;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
         }
+
+        .nav-links a.active {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links a.active::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 2px;
+            background: var(--accent-gradient);
+            box-shadow: 0 0 10px var(--glow-blue);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .page-header {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
         .info {
-            background-color: #e3f2fd;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-left: 3px solid var(--accent-primary);
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
         .main-content {
             display: flex;
-            gap: 20px;
+            gap: 2rem;
+            align-items: flex-start;
         }
+
         .canvas-section {
             flex: 1;
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .canvas-section:hover {
+            border-color: var(--border-glow);
+        }
+
+        .mode-indicator {
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .mode-draw {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 0 20px var(--glow-blue);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .mode-view {
+            background: linear-gradient(135deg, var(--success) 0%, #00ba7c 100%);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px var(--glow-blue); }
+            50% { box-shadow: 0 0 30px var(--glow-purple); }
+        }
+
         .canvas-container {
             position: relative;
-            border: 2px solid #ddd;
+            border: 2px solid var(--accent-primary);
+            border-radius: 8px;
             background-color: #000;
             cursor: crosshair;
+            overflow: hidden;
+            box-shadow: 0 0 30px var(--glow-blue);
+            transition: all 0.3s ease;
         }
+
+        .canvas-container:hover {
+            box-shadow: 0 0 40px var(--glow-purple);
+        }
+
         #canvas {
             display: block;
             max-width: 100%;
+            border-radius: 5px;
         }
+
+        .control-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
         .sidebar {
-            width: 350px;
+            width: 380px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 1.5rem;
         }
+
         .panel {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .panel:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
         .panel h3 {
-            margin-top: 0;
-            color: #555;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
+
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 1rem;
         }
+
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+
         input[type="text"],
-        input[type="number"],
-        select {
+        input[type="number"] {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            padding: 0.75rem;
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
         }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--glow-blue), 0 0 15px var(--glow-blue);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        input[type="text"]:hover:not(:focus),
+        input[type="number"]:hover:not(:focus) {
+            border-color: var(--border-glow);
+        }
+
         button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
+            padding: 0.65rem 1.2rem;
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: none;
+            letter-spacing: -0.01em;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
+
         .btn-primary {
-            background-color: #2196F3;
+            background: var(--accent-gradient);
+            border-color: transparent;
             color: white;
+            box-shadow: 0 0 15px var(--glow-blue);
         }
+
         .btn-primary:hover {
-            background-color: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px var(--glow-purple), 0 6px 15px rgba(0, 0, 0, 0.3);
         }
+
         .btn-success {
-            background-color: #4CAF50;
-            color: white;
+            background: var(--success);
+            border-color: transparent;
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
         }
+
         .btn-success:hover {
-            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.5), 0 6px 15px rgba(0, 0, 0, 0.3);
         }
+
         .btn-danger {
-            background-color: #f44336;
+            background: var(--error);
+            border-color: transparent;
             color: white;
+            box-shadow: 0 0 15px rgba(255, 0, 128, 0.3);
         }
+
         .btn-danger:hover {
-            background-color: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(255, 0, 128, 0.5), 0 6px 15px rgba(0, 0, 0, 0.3);
         }
+
         .btn-secondary {
-            background-color: #757575;
-            color: white;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
         }
+
         .btn-secondary:hover {
-            background-color: #616161;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--border-glow);
+            transform: translateY(-1px);
         }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         .roi-list {
-            max-height: 400px;
+            max-height: 450px;
             overflow-y: auto;
+            padding-right: 0.5rem;
         }
+
+        .roi-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .roi-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .roi-list::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+
         .roi-item {
-            background-color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border-left: 4px solid #2196F3;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-primary);
+            border-left: 3px solid var(--accent-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .roi-item:hover {
+            transform: translateX(4px);
+            border-color: var(--border-glow);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 15px var(--glow-blue);
+        }
+
         .roi-item h4 {
-            margin: 0 0 8px 0;
-            color: #333;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            font-size: 1.1rem;
         }
+
         .roi-item p {
-            margin: 4px 0;
-            font-size: 12px;
-            color: #666;
+            margin: 0.25rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
         }
+
         .roi-item button {
-            padding: 5px 10px;
-            font-size: 12px;
-            margin-top: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
         }
+
         .status-message {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
             display: none;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
         }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
         .status-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+            border-left: 3px solid var(--success);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
         }
+
         .status-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: rgba(255, 0, 128, 0.1);
+            color: var(--error);
+            border-left: 3px solid var(--error);
+            box-shadow: 0 0 20px rgba(255, 0, 128, 0.2);
         }
-        .mode-indicator {
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
         }
-        .mode-draw {
-            background-color: #fff9c4;
-            color: #f57f17;
-        }
-        .mode-view {
-            background-color: #e8f5e9;
-            color: #2e7d32;
+
+        @media (max-width: 768px) {
+            .navbar-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .control-buttons {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <h1>🎯 ROI Mapper</h1>
+            <div class="nav-links">
+                <a href="/">← Dashboard</a>
+                <a href="/roi-mapper">ROI Mapper</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
-        <h1>Interactive ROI Mapper</h1>
-        <div class="info">
-            <strong>Instructions:</strong> Click two opposite corners on the image to define a Region of Interest (ROI).
-            The coordinates will automatically be converted from visual camera space to thermal camera space.
+        <div class="page-header">
+            <h1>Interactive ROI Mapper</h1>
+            <div class="info">
+                <strong>💡 Instructions:</strong> Click two opposite corners on the image to define a Region of Interest (ROI).
+                Coordinates are automatically converted from visual camera space (1920×1080) to thermal camera space (32×24).
+            </div>
         </div>
 
         <div id="statusMessage" class="status-message"></div>
 
         <div class="main-content">
             <div class="canvas-section">
-                <div class="mode-indicator" id="modeIndicator">View Mode</div>
+                <div class="mode-indicator mode-view" id="modeIndicator">📍 View Mode</div>
                 <div class="canvas-container">
                     <canvas id="canvas" width="1920" height="1080"></canvas>
                 </div>
-                <div style="margin-top: 10px;">
-                    <button class="btn-primary" onclick="startDrawing()">Start Drawing ROI</button>
-                    <button class="btn-secondary" onclick="clearCanvas()">Clear All</button>
-                    <button class="btn-secondary" onclick="refreshImage()">Refresh Image</button>
+                <div class="control-buttons">
+                    <button class="btn-primary" onclick="startDrawing()">✏️ Start Drawing ROI</button>
+                    <button class="btn-secondary" onclick="refreshImage()">🔄 Refresh Image</button>
+                    <button class="btn-secondary" onclick="clearCanvas()">🗑️ Clear All</button>
                 </div>
             </div>
 
             <div class="sidebar">
                 <!-- ROI Configuration Panel -->
                 <div class="panel">
-                    <h3>New ROI Configuration</h3>
+                    <h3>⚙️ New ROI Configuration</h3>
                     <div class="form-group">
                         <label for="roiName">ROI Name</label>
                         <input type="text" id="roiName" placeholder="e.g., Top Winding">
@@ -231,12 +589,12 @@
 
                 <!-- Existing ROIs Panel -->
                 <div class="panel">
-                    <h3>Defined ROIs</h3>
+                    <h3>📋 Defined ROIs</h3>
                     <div id="roiList" class="roi-list">
-                        <p style="text-align: center; color: #999;">No ROIs defined yet</p>
+                        <p style="text-align: center; color: #999; padding: 2rem;">No ROIs defined yet</p>
                     </div>
-                    <button class="btn-success" onclick="saveAllROIs()" style="width: 100%;">
-                        Save All to System
+                    <button class="btn-success" onclick="saveAllROIs()" style="width: 100%; margin-top: 1rem;">
+                        💾 Save All to System
                     </button>
                 </div>
             </div>
@@ -267,20 +625,41 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Load the captured image
-                        image.src = data.filepath + '?' + new Date().getTime();
+                        // Encode the filepath to handle spaces and special characters
+                        const encodedPath = encodeURI(data.filepath);
+                        image.src = encodedPath + '?' + new Date().getTime();
                         image.onload = () => {
                             drawCanvas();
                         };
+                        image.onerror = () => {
+                            console.error('Failed to load image:', data.filepath);
+                            showStatus('⚠️ Failed to load snapshot image. Try refreshing again.', 'error');
+                            drawCanvas(); // Draw placeholder
+                        };
+                    } else {
+                        showStatus('❌ Failed to capture snapshot', 'error');
                     }
+                })
+                .catch(error => {
+                    console.error('Snapshot error:', error);
+                    showStatus('❌ Error capturing snapshot', 'error');
                 });
         }
 
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (image.complete) {
+            // Only draw image if it loaded successfully
+            if (image.complete && image.naturalWidth > 0) {
                 ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            } else {
+                // Draw placeholder if no image
+                ctx.fillStyle = '#333';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Click "Refresh Image" to capture a snapshot', canvas.width / 2, canvas.height / 2);
             }
 
             // Draw existing ROIs
@@ -353,9 +732,9 @@
         function startDrawing() {
             isDrawingMode = true;
             points = [];
-            modeIndicator.textContent = 'Drawing Mode - Click 2 Points';
+            modeIndicator.textContent = '✏️ Drawing Mode - Click 2 Points';
             modeIndicator.className = 'mode-indicator mode-draw';
-            showStatus('Click two corners to define ROI', 'success');
+            showStatus('✅ Click two corners to define ROI', 'success');
         }
 
         canvas.addEventListener('click', (e) => {
@@ -380,9 +759,9 @@
                 };
 
                 isDrawingMode = false;
-                modeIndicator.textContent = 'View Mode - ROI Defined';
+                modeIndicator.textContent = '📍 View Mode - ROI Defined';
                 modeIndicator.className = 'mode-indicator mode-view';
-                showStatus('ROI defined! Configure and save it.', 'success');
+                showStatus('✅ ROI defined! Configure and save it.', 'success');
             }
 
             drawCanvas();
@@ -390,13 +769,13 @@
 
         function saveCurrentROI() {
             if (!currentROI) {
-                showStatus('Please draw an ROI first', 'error');
+                showStatus('⚠️ Please draw an ROI first', 'error');
                 return;
             }
 
             const name = document.getElementById('roiName').value;
             if (!name) {
-                showStatus('Please enter an ROI name', 'error');
+                showStatus('⚠️ Please enter an ROI name', 'error');
                 return;
             }
 
@@ -420,7 +799,7 @@
 
             drawCanvas();
             updateROIList();
-            showStatus('ROI saved to list!', 'success');
+            showStatus('✅ ROI saved to list!', 'success');
 
             // Clear form
             document.getElementById('roiName').value = '';
@@ -430,7 +809,7 @@
             const listDiv = document.getElementById('roiList');
 
             if (rois.length === 0) {
-                listDiv.innerHTML = '<p style="text-align: center; color: #999;">No ROIs defined yet</p>';
+                listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">No ROIs defined yet</p>';
                 return;
             }
 
@@ -446,27 +825,32 @@
         }
 
         function deleteROI(index) {
-            rois.splice(index, 1);
-            drawCanvas();
-            updateROIList();
-            showStatus('ROI deleted', 'success');
+            const roi = rois[index];
+            if (confirm(`🗑️ Delete ROI "${roi.name}"?\n\nThis will remove it from the list but won't affect the system until you click "Save All to System".`)) {
+                rois.splice(index, 1);
+                drawCanvas();
+                updateROIList();
+                showStatus(`✅ ROI "${roi.name}" deleted from list`, 'success');
+            }
         }
 
         function clearCanvas() {
-            if (confirm('Clear all ROIs?')) {
+            if (confirm('🗑️ Clear all ROIs? This cannot be undone.')) {
                 rois = [];
                 points = [];
                 currentROI = null;
                 drawCanvas();
                 updateROIList();
-                showStatus('All ROIs cleared', 'success');
+                showStatus('✅ All ROIs cleared', 'success');
             }
         }
 
         function saveAllROIs() {
+            // Allow saving empty ROI list (to delete all ROIs)
             if (rois.length === 0) {
-                showStatus('No ROIs to save', 'error');
-                return;
+                if (!confirm('This will delete all ROIs from the system. Are you sure?')) {
+                    return;
+                }
             }
 
             fetch('/api/rois', {
@@ -479,7 +863,11 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showStatus('ROIs saved to system successfully!', 'success');
+                    if (rois.length === 0) {
+                        showStatus('All ROIs deleted from system! Dashboard will update automatically.', 'success');
+                    } else {
+                        showStatus('ROIs saved to system successfully! Dashboard will update automatically within 10 seconds.', 'success');
+                    }
                 } else {
                     showStatus('Error: ' + data.error, 'error');
                 }
