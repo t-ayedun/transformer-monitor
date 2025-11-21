@@ -160,9 +160,9 @@ class SmartCamera:
         # Snapshot manager (no camera, used for processing only)
         self.snapshot_manager = CameraSnapshot(
             resolution=[1920, 1080],  # Not used, but required
-            quality=85
+            quality=85,
+            init_camera=False  # Don't initialize camera - we'll pass our camera instance
         )
-        self.snapshot_manager.camera = None  # Don't initialize camera in snapshot manager
 
         # Stats
         self.stats = {
@@ -204,6 +204,9 @@ class SmartCamera:
 
             self.camera.start()
             time.sleep(2)  # Let camera stabilize
+
+            # Share camera instance with snapshot manager
+            self.snapshot_manager.camera = self.camera
 
             self.logger.info(f"Camera initialized: {self.resolution} @ {self.framerate}fps")
 

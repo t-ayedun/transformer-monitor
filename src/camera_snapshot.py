@@ -33,13 +33,14 @@ class CameraSnapshot:
     MAX_IMAGE_SIZE_KB = 500
     RETENTION_DAYS = 30
 
-    def __init__(self, resolution: list, quality: int = 85):
+    def __init__(self, resolution: list, quality: int = 85, init_camera: bool = True):
         self.logger = logging.getLogger(__name__)
         self.resolution = tuple(resolution)
         self.quality = quality
         self.camera = None
 
-        self._init_camera()
+        if init_camera:
+            self._init_camera()
 
     def _init_camera(self):
         """Initialize Pi camera"""
