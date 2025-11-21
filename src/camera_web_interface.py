@@ -263,9 +263,6 @@ class CameraWebInterface:
                 self.config.set('regions_of_interest', new_rois)
                 self.config.save_config('site')
 
-                # Force config reload to ensure fresh data
-                self.config.load_config('site')
-
                 # Reload data processor with new ROIs
                 if self.data_processor:
                     self.data_processor.rois = new_rois
@@ -508,16 +505,38 @@ class CameraWebInterface:
                 continue
 
             name = roi['name']
-            coords = roi['coordinates']
+            coords = roi.get('coordinates')
 
-            # Scale coordinates
-            x1 = int(coords[0][0] * scale_x)
-            y1 = int(coords[0][1] * scale_y)
-            x2 = int(coords[1][0] * scale_x)
-            y2 = int(coords[1][1] * scale_y)
+            # Validate coordinates
+            if not coords or len(coords) != 2:
+                continue
+            if not all(isinstance(c, (list, tuple)) and len(c) == 2 for c in coords):
+                continue
+            if not all(isinstance(val, (int, float)) for c in coords for val in c):
+                continue
 
-            # Extract ROI temperature
-            roi_data = thermal_frame[coords[0][1]:coords[1][1], coords[0][0]:coords[1][0]]
+            # Ensure coordinates are within bounds
+            try:
+                x1_thermal = max(0, min(int(coords[0][0]), 31))
+                y1_thermal = max(0, min(int(coords[0][1]), 23))
+                x2_thermal = max(0, min(int(coords[1][0]), 32))
+                y2_thermal = max(0, min(int(coords[1][1]), 24))
+
+                # Skip if ROI is invalid (zero or negative size)
+                if x2_thermal <= x1_thermal or y2_thermal <= y1_thermal:
+                    continue
+
+                # Scale coordinates for display
+                x1 = int(x1_thermal * scale_x)
+                y1 = int(y1_thermal * scale_y)
+                x2 = int(x2_thermal * scale_x)
+                y2 = int(y2_thermal * scale_y)
+
+                # Extract ROI temperature with validated coordinates
+                roi_data = thermal_frame[y1_thermal:y2_thermal, x1_thermal:x2_thermal]
+            except (ValueError, TypeError, IndexError) as e:
+                self.logger.debug(f"Skipping invalid ROI {name}: {e}")
+                continue
             max_temp = np.max(roi_data)
             avg_temp = np.mean(roi_data)
 
