@@ -1024,6 +1024,23 @@
                     <span>Last AWS Sync: <strong id="lastSync">--</strong></span>
                 </div>
             </div>
+
+            <div class="status-card">
+                <div class="status-card-header">
+                    <div>
+                        <div class="status-card-title">Motion Detection</div>
+                    </div>
+                    <div class="status-icon system">👁️</div>
+                </div>
+                <div class="status-card-value" id="motionStatus" style="color: #71717a;">No Motion</div>
+                <div class="status-card-meta">
+                    <div class="status-indicator">
+                        <span class="status-dot" id="motionDot"></span>
+                        <span id="motionText">Monitoring</span>
+                    </div>
+                    <span id="motionDetails">Last: <strong id="lastMotion">Never</strong></span>
+                </div>
+            </div>
         </div>
 
         <!-- Temperature Metrics Dashboard -->
@@ -1114,6 +1131,30 @@
                 </div>
             </div>
         </div>
+
+        <!-- Recent Files Section -->
+        <div class="roi-section" style="margin-top: 2rem;">
+            <div class="roi-header">
+                <h2>Recent Recordings & Snapshots</h2>
+                <span class="roi-timestamp" id="filesTimestamp">Last updated: --</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Recent Recordings -->
+                <div>
+                    <h3 style="color: #e7e9ea; margin-bottom: 1rem; font-size: 1.1rem;">Recent Recordings</h3>
+                    <div id="recentRecordings" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="text-align: center; color: #8b98a5; padding: 2rem;">No recordings yet</div>
+                    </div>
+                </div>
+                <!-- Recent Snapshots -->
+                <div>
+                    <h3 style="color: #e7e9ea; margin-bottom: 1rem; font-size: 1.1rem;">Recent Snapshots</h3>
+                    <div id="recentSnapshots" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="text-align: center; color: #8b98a5; padding: 2rem;">No snapshots yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1186,6 +1227,64 @@
                 // Update last sync
                 const now = new Date();
                 document.getElementById('lastSync').textContent = data.aws_connected ? now.toLocaleTimeString() : 'N/A';
+
+                // Update motion detection status
+                const motionStatusEl = document.getElementById('motionStatus');
+                const motionDotEl = document.getElementById('motionDot');
+                const motionTextEl = document.getElementById('motionText');
+                const lastMotionEl = document.getElementById('lastMotion');
+
+                if (data.camera_stats) {
+                    const lastMotion = data.camera_stats.last_motion;
+                    const currentEventType = data.camera_stats.current_event_type;
+                    const isRecording = data.camera_stats.is_recording;
+
+                    // Check if motion was detected recently (within last 10 seconds)
+                    let motionActive = false;
+                    let timeSinceMotion = null;
+
+                    if (lastMotion) {
+                        const lastMotionTime = new Date(lastMotion);
+                        timeSinceMotion = Math.floor((Date.now() - lastMotionTime.getTime()) / 1000);
+                        motionActive = timeSinceMotion < 10; // Motion is "active" if within last 10 seconds
+
+                        // Format time since last motion
+                        if (timeSinceMotion < 60) {
+                            lastMotionEl.textContent = `${timeSinceMotion}s ago`;
+                        } else if (timeSinceMotion < 3600) {
+                            lastMotionEl.textContent = `${Math.floor(timeSinceMotion / 60)}m ago`;
+                        } else {
+                            lastMotionEl.textContent = `${Math.floor(timeSinceMotion / 3600)}h ago`;
+                        }
+                    } else {
+                        lastMotionEl.textContent = 'Never';
+                    }
+
+                    // Update motion status display
+                    if (motionActive) {
+                        motionDotEl.className = 'status-dot online';
+                        motionStatusEl.style.color = '#00ff88';
+                        if (currentEventType) {
+                            motionStatusEl.textContent = `${currentEventType}`;
+                            motionTextEl.textContent = isRecording ? 'Recording' : 'Detected';
+                        } else {
+                            motionStatusEl.textContent = 'Motion Detected';
+                            motionTextEl.textContent = isRecording ? 'Recording' : 'Active';
+                        }
+                    } else {
+                        motionDotEl.className = 'status-dot offline';
+                        motionStatusEl.style.color = '#71717a';
+                        motionStatusEl.textContent = 'No Motion';
+                        motionTextEl.textContent = 'Monitoring';
+                    }
+                } else {
+                    // Camera offline
+                    motionDotEl.className = 'status-dot offline';
+                    motionStatusEl.style.color = '#71717a';
+                    motionStatusEl.textContent = 'Offline';
+                    motionTextEl.textContent = 'Camera Offline';
+                    lastMotionEl.textContent = 'N/A';
+                }
 
             } catch (error) {
                 console.error('Failed to fetch status:', error);
@@ -1436,10 +1535,72 @@
             refreshMetrics();
         }
 
+        async function loadRecentFiles() {
+            try {
+                const response = await fetch('/api/recent-files');
+                const data = await response.json();
+
+                const now = new Date();
+                document.getElementById('filesTimestamp').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+
+                // Format file size
+                const formatSize = (bytes) => {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                };
+
+                // Format timestamp
+                const formatTime = (timestamp) => {
+                    const date = new Date(timestamp * 1000);
+                    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+                    if (diff < 60) return `${diff}s ago`;
+                    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                    return date.toLocaleDateString();
+                };
+
+                // Update recordings
+                const recordingsDiv = document.getElementById('recentRecordings');
+                if (data.recordings && data.recordings.length > 0) {
+                    recordingsDiv.innerHTML = data.recordings.map(file => `
+                        <div style="background: #15202b; padding: 1rem; border-radius: 8px; border: 1px solid #38444d; transition: all 0.2s;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="color: #e7e9ea; font-weight: 600; font-size: 0.9rem;">${file.filename}</span>
+                                <span style="color: #1d9bf0; font-size: 0.85rem;">${formatSize(file.size)}</span>
+                            </div>
+                            <div style="color: #8b98a5; font-size: 0.85rem;">${formatTime(file.timestamp)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    recordingsDiv.innerHTML = '<div style="text-align: center; color: #8b98a5; padding: 2rem;">No recordings yet</div>';
+                }
+
+                // Update snapshots
+                const snapshotsDiv = document.getElementById('recentSnapshots');
+                if (data.snapshots && data.snapshots.length > 0) {
+                    snapshotsDiv.innerHTML = data.snapshots.map(file => `
+                        <div style="background: #15202b; padding: 1rem; border-radius: 8px; border: 1px solid #38444d; transition: all 0.2s; cursor: pointer;" onclick="window.open('${file.url}', '_blank')">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="color: #e7e9ea; font-weight: 600; font-size: 0.9rem;">${file.filename}</span>
+                                <span style="color: #1d9bf0; font-size: 0.85rem;">${formatSize(file.size)}</span>
+                            </div>
+                            <div style="color: #8b98a5; font-size: 0.85rem;">${formatTime(file.timestamp)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    snapshotsDiv.innerHTML = '<div style="text-align: center; color: #8b98a5; padding: 2rem;">No snapshots yet</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load recent files:', error);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             refreshStatus();
             loadROIs();
+            loadRecentFiles();
 
             // Initialize chart
             initChart();
@@ -1453,6 +1614,9 @@
 
             // Update metrics every 30 seconds
             metricsUpdateInterval = setInterval(refreshMetrics, 30000);
+
+            // Update recent files every 15 seconds
+            setInterval(loadRecentFiles, 15000);
         });
 
         // Cleanup on page unload

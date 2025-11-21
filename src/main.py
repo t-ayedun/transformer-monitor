@@ -217,9 +217,12 @@ class TransformerMonitor:
                     # Don't do full data processing here - that's for the main loop
                     processed_data = {
                         'timestamp': time.time(),
-                        'ambient_temp': float(thermal_frame.mean()),  # Quick ambient approximation
-                        'min_temp': float(thermal_frame.min()),
-                        'max_temp': float(thermal_frame.max())
+                        'composite_temperature': float(thermal_frame.mean()),  # Quick composite temperature
+                        'frame_stats': {
+                            'avg_temp': float(thermal_frame.mean()),
+                            'min_temp': float(thermal_frame.min()),
+                            'max_temp': float(thermal_frame.max())
+                        }
                     }
 
                     # Update web interface

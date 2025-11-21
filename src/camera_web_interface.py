@@ -334,6 +334,48 @@ class CameraWebInterface:
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
 
+        @self.app.route('/api/recent-files')
+        def get_recent_files():
+            """Get list of recent recordings and snapshots"""
+            try:
+                recent_files = {
+                    'recordings': [],
+                    'snapshots': []
+                }
+
+                # Get recent recordings (videos)
+                video_dir = Path('/data/videos')
+                if video_dir.exists():
+                    video_files = sorted(video_dir.glob('*.h264'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    recent_files['recordings'] = [
+                        {
+                            'filename': f.name,
+                            'size': f.stat().st_size,
+                            'timestamp': f.stat().st_mtime,
+                            'url': f'/videos/{f.name}'
+                        }
+                        for f in video_files[:10]  # Last 10 recordings
+                    ]
+
+                # Get recent snapshots (images)
+                image_dir = Path('/data/images')
+                if image_dir.exists():
+                    image_files = sorted(image_dir.glob('*.jpg'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    recent_files['snapshots'] = [
+                        {
+                            'filename': f.name,
+                            'size': f.stat().st_size,
+                            'timestamp': f.stat().st_mtime,
+                            'url': f'/snapshots/{f.name}'
+                        }
+                        for f in image_files[:10]  # Last 10 snapshots
+                    ]
+
+                return jsonify(recent_files)
+            except Exception as e:
+                self.logger.error(f"Error getting recent files: {e}")
+                return jsonify({'error': str(e)}), 500
+
         @self.app.route('/snapshots/<filename>')
         def serve_snapshot(filename):
             """Serve captured snapshot images"""
