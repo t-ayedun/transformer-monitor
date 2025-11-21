@@ -21,11 +21,12 @@ import cv2
 class CameraWebInterface:
     """Web interface for camera monitoring and configuration"""
 
-    def __init__(self, smart_camera, config, thermal_capture=None, data_processor=None, port=5000):
+    def __init__(self, smart_camera, config, thermal_capture=None, data_processor=None, aws_publisher=None, port=5000):
         self.logger = logging.getLogger(__name__)
         self.smart_camera = smart_camera
         self.thermal_capture = thermal_capture
         self.data_processor = data_processor
+        self.aws_publisher = aws_publisher
         self.config = config
         self.port = port
 
@@ -180,11 +181,20 @@ class CameraWebInterface:
         @self.app.route('/api/status')
         def get_status():
             """Get system status"""
+            # Check if AWS is enabled and connected
+            aws_enabled = self.config.get('aws_iot.enabled', False)
+            aws_connected = False
+            if aws_enabled and self.aws_publisher:
+                # Check if aws_publisher has a connected property or method
+                aws_connected = getattr(self.aws_publisher, 'connected', False)
+
             status = {
                 'site_id': self.config.get('site.id', 'UNKNOWN'),
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
                 'thermal_data': self.latest_thermal_data,
                 'camera_stats': self.smart_camera.get_stats() if self.smart_camera else None,
+                'aws_enabled': aws_enabled,
+                'aws_connected': aws_connected,
             }
             return jsonify(status)
 

@@ -149,6 +149,7 @@ class TransformerMonitor:
                     config=self.config,
                     thermal_capture=self.thermal_camera,
                     data_processor=self.data_processor,
+                    aws_publisher=self.aws_publisher,
                     port=5000
                 )
                 self.camera_web.start()

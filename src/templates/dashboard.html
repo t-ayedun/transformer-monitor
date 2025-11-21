@@ -1019,7 +1019,7 @@
                     </div>
                     <div class="status-icon cloud">☁️</div>
                 </div>
-                <div class="status-card-value" id="awsStatus">Connected</div>
+                <div class="status-card-value" id="awsStatus" style="color: #71717a;">Checking...</div>
                 <div class="status-card-meta">
                     <span>Last AWS Sync: <strong id="lastSync">--</strong></span>
                 </div>
@@ -1144,13 +1144,22 @@
                 visualDot.className = `status-dot ${visualOnline ? 'online' : 'offline'}`;
 
                 // Update temperature
-                if (data.thermal_data && data.thermal_data.ambient_temp) {
-                    const temp = data.thermal_data.ambient_temp;
-                    document.getElementById('currentTemp').textContent = `${temp.toFixed(1)}°C`;
+                if (data.thermal_data) {
+                    // Try composite_temperature first, then sensor_temp, then frame_stats.avg_temp
+                    const temp = data.thermal_data.composite_temperature ||
+                                data.thermal_data.sensor_temp ||
+                                (data.thermal_data.frame_stats && data.thermal_data.frame_stats.avg_temp);
 
-                    // Mock min/max for now
-                    document.getElementById('minTemp').textContent = `${(temp - 2).toFixed(1)}°C`;
-                    document.getElementById('maxTemp').textContent = `${(temp + 3).toFixed(1)}°C`;
+                    if (temp) {
+                        document.getElementById('currentTemp').textContent = `${temp.toFixed(1)}°C`;
+
+                        // Use frame stats if available, otherwise mock
+                        const minTemp = (data.thermal_data.frame_stats && data.thermal_data.frame_stats.min_temp) || (temp - 2);
+                        const maxTemp = (data.thermal_data.frame_stats && data.thermal_data.frame_stats.max_temp) || (temp + 3);
+
+                        document.getElementById('minTemp').textContent = `${minTemp.toFixed(1)}°C`;
+                        document.getElementById('maxTemp').textContent = `${maxTemp.toFixed(1)}°C`;
+                    }
                 }
 
                 // Update uptime
@@ -1159,9 +1168,24 @@
                 const minutes = Math.floor((uptime % 3600) / 60);
                 document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
 
-                // Update last sync (mock)
+                // Update AWS connection status
+                const awsStatusEl = document.getElementById('awsStatus');
+                if (data.aws_enabled) {
+                    if (data.aws_connected) {
+                        awsStatusEl.textContent = 'Connected';
+                        awsStatusEl.style.color = '#00ff88'; // Green for connected
+                    } else {
+                        awsStatusEl.textContent = 'Disconnected';
+                        awsStatusEl.style.color = '#ffaa00'; // Orange for disconnected
+                    }
+                } else {
+                    awsStatusEl.textContent = 'Disabled';
+                    awsStatusEl.style.color = '#71717a'; // Gray for disabled
+                }
+
+                // Update last sync
                 const now = new Date();
-                document.getElementById('lastSync').textContent = now.toLocaleTimeString();
+                document.getElementById('lastSync').textContent = data.aws_connected ? now.toLocaleTimeString() : 'N/A';
 
             } catch (error) {
                 console.error('Failed to fetch status:', error);
