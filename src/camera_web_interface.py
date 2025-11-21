@@ -364,18 +364,6 @@ class CameraWebInterface:
             response.headers['Expires'] = '0'
             return response
 
-        @self.app.route('/video/fusion')
-        def fusion_stream():
-            """MJPEG stream of thermal+visual fusion"""
-            response = Response(
-                self._generate_fusion_stream(),
-                mimetype='multipart/x-mixed-replace; boundary=frame'
-            )
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-            return response
-
     def _generate_thermal_stream(self):
         """Generate thermal camera stream with ROI overlays"""
         while self.running:
@@ -434,45 +422,6 @@ class CameraWebInterface:
 
             except Exception as e:
                 self.logger.error(f"Visual stream error: {e}")
-                time.sleep(1)
-
-    def _generate_fusion_stream(self):
-        """Generate thermal+visual fusion stream"""
-        while self.running:
-            try:
-                if self.latest_thermal_frame is None or not self.smart_camera:
-                    time.sleep(0.1)
-                    continue
-
-                # Get visual frame
-                visual_frame = self.smart_camera.camera.capture_array("main")
-                visual_frame = cv2.cvtColor(visual_frame, cv2.COLOR_RGB2BGR)
-
-                # Get thermal frame
-                with self.thermal_frame_lock:
-                    thermal_frame = self.latest_thermal_frame.copy()
-
-                # Create thermal overlay
-                thermal_rgb = self._thermal_to_rgb(thermal_frame)
-
-                # Resize thermal to match visual
-                h, w = visual_frame.shape[:2]
-                thermal_resized = cv2.resize(thermal_rgb, (w, h), interpolation=cv2.INTER_CUBIC)
-
-                # Blend: 60% visual + 40% thermal
-                fusion = cv2.addWeighted(visual_frame, 0.6, thermal_resized, 0.4, 0)
-
-                # Encode as JPEG
-                _, buffer = cv2.imencode('.jpg', fusion, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                frame_bytes = buffer.tobytes()
-
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
-                time.sleep(0.033)  # ~30 FPS
-
-            except Exception as e:
-                self.logger.error(f"Fusion stream error: {e}")
                 time.sleep(1)
 
     def _thermal_to_rgb(self, thermal_frame):
