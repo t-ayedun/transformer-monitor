@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart ROI Mapper - Thermal Native</title>
+    <title>Transformer Zone Mapper - Thermal Native</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -576,22 +576,22 @@
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>Smart ROI Mapper</h1>
+            <h1>Transformer Zone Mapper</h1>
             <div class="nav-links">
                 <a href="/">Dashboard</a>
-                <a href="/smart-roi-mapper" class="active">ROI Mapper</a>
+                <a href="/smart-roi-mapper" class="active">Zone Mapper</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
         <div class="info-banner">
-            <h2>How This Works</h2>
+            <h2>Configure Transformer Monitoring Zones</h2>
             <p>
-                <strong>No camera alignment needed!</strong> This tool works directly with your 32×24 thermal camera data.
+                <strong>No camera alignment needed!</strong> This tool works directly with your 32×24 thermal camera to monitor transformer components.
                 <br><br>
-                <strong>Method 1 (Manual):</strong> Click and drag on thermal cells to select ROI areas<br>
-                <strong>Method 2 (Auto):</strong> Let AI detect hotspots automatically and suggest ROIs for you
+                <strong>Method 1 (Manual):</strong> Click and drag on thermal cells to select zones for windings, bushings, tap changers, etc.<br>
+                <strong>Method 2 (Auto-Detect):</strong> Let AI automatically detect transformer hotspots and suggest monitoring zones
             </p>
         </div>
 
@@ -602,13 +602,13 @@
                 <div class="controls-bar">
                     <div class="mode-indicator" id="modeIndicator">Manual Selection Mode</div>
                     <button class="btn btn-primary" id="autoDetectBtn" onclick="autoDetectHotspots()">
-                        Auto-Detect Hotspots
+                        Auto-Detect Transformer Hotspots
                     </button>
                     <button class="btn btn-secondary" onclick="toggleViewMode()">
                         <span id="viewToggleText">Heatmap View</span>
                     </button>
                     <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
-                    <button class="btn btn-secondary" onclick="refreshData()">Refresh</button>
+                    <button class="btn btn-secondary" onclick="refreshData()">Refresh Thermal Data</button>
                 </div>
 
                 <div class="controls-bar" style="margin-top: 0.75rem;">
@@ -626,17 +626,17 @@
                 </div>
 
                 <div class="tips-box">
-                    <strong>Tips:</strong>
+                    <strong>Zone Mapping Tips:</strong>
                     <ul>
-                        <li><strong>Manual:</strong> Click cells to start, drag to select area, release to finish</li>
-                        <li><strong>Auto:</strong> Click "Auto-Detect" to let AI find hotspots above threshold</li>
-                        <li>Selected cells turn yellow, suggested ROIs turn green</li>
-                        <li>Name and configure each ROI in the sidebar</li>
+                        <li><strong>Manual:</strong> Click cells to start, drag to select transformer component area, release to finish</li>
+                        <li><strong>Auto-Detect:</strong> AI automatically finds transformer hotspots above temperature threshold</li>
+                        <li>Selected cells turn yellow, AI-suggested zones turn green</li>
+                        <li>Name each zone by component (HV Winding, LV Bushing, Tap Changer, Cooling Radiator, etc.)</li>
                     </ul>
                 </div>
 
                 <div class="panel" style="margin-top: 1.5rem;">
-                    <h3>Thermal Statistics</h3>
+                    <h3>Transformer Thermal Statistics</h3>
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
                         <div style="text-align: center; padding: 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-primary); border-radius: 8px; transition: all 0.3s ease;">
                             <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Minimum</div>
@@ -660,10 +660,10 @@
 
             <div class="sidebar">
                 <div class="panel">
-                    <h3>Current ROI Configuration</h3>
+                    <h3>New Monitoring Zone Configuration</h3>
                     <div class="form-group">
-                        <label for="roiName">ROI Name</label>
-                        <input type="text" id="roiName" placeholder="e.g., Top Coil, Bottom Winding">
+                        <label for="roiName">Zone Name</label>
+                        <input type="text" id="roiName" placeholder="e.g., HV Winding, LV Bushing, Tap Changer, Cooling Radiator">
                     </div>
                     <div class="form-group">
                         <label for="roiWeight">Weight</label>
@@ -686,17 +686,17 @@
                         <input type="number" id="roiEmergency" value="95" step="1">
                     </div>
                     <button class="btn btn-success" onclick="saveCurrentROI()" style="width: 100%;">
-                        Save ROI
+                        Save Monitoring Zone
                     </button>
                 </div>
 
                 <div class="panel">
-                    <h3>Defined ROIs</h3>
+                    <h3>Configured Monitoring Zones</h3>
                     <div id="roiList" class="roi-list">
-                        <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No ROIs defined yet</p>
+                        <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No transformer zones configured yet</p>
                     </div>
                     <button class="btn btn-success" onclick="saveAllROIs()" style="width: 100%; margin-top: 1rem;">
-                        Save All to System
+                        Save All Zones to System
                     </button>
                 </div>
             </div>
@@ -847,7 +847,7 @@
         function endSelection() {
             isDragging = false;
             if (selectedCells.size > 0) {
-                showStatus(`Selected ${selectedCells.size} cells. Configure and save as ROI.`, 'info');
+                showStatus(`Selected ${selectedCells.size} cells. Configure and save as monitoring zone.`, 'info');
             }
         }
 
@@ -871,7 +871,7 @@
                 if (data.success && data.hotspots && data.hotspots.length > 0) {
                     suggestedROIs = data.suggested_rois;
 
-                    showStatus(`Found ${data.hotspots.length} hotspot(s)! Review suggested ROIs below.`, 'success');
+                    showStatus(`Found ${data.hotspots.length} transformer hotspot(s)! Review suggested monitoring zones below.`, 'success');
 
                     // Add suggested ROIs to list
                     suggestedROIs.forEach((roi, index) => {
@@ -892,13 +892,13 @@
                         }
                     });
                 } else {
-                    showStatus('No hotspots detected. Try lowering the threshold or check thermal camera.', 'error');
+                    showStatus('No transformer hotspots detected. Try lowering the threshold or check thermal camera.', 'error');
                 }
             } catch (error) {
                 showStatus(`Error: ${error.message}`, 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Auto-Detect Hotspots';
+                btn.textContent = 'Auto-Detect Transformer Hotspots';
             }
         }
 
@@ -910,7 +910,7 @@
 
             const name = document.getElementById('roiName').value;
             if (!name) {
-                showStatus('Please enter an ROI name', 'error');
+                showStatus('Please enter a zone name for the transformer component', 'error');
                 return;
             }
 
@@ -943,7 +943,7 @@
             selectedCells.clear();
             renderHeatmap();
             updateROIList();
-            showStatus(`ROI "${name}" saved!`, 'success');
+            showStatus(`Monitoring zone "${name}" saved!`, 'success');
 
             document.getElementById('roiName').value = '';
         }
@@ -952,17 +952,17 @@
             const listDiv = document.getElementById('roiList');
 
             if (rois.length === 0) {
-                listDiv.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No ROIs defined yet</p>';
+                listDiv.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No transformer zones configured yet</p>';
                 return;
             }
 
             listDiv.innerHTML = rois.map((roi, index) => `
                 <div class="roi-item ${roi.suggested ? 'suggested-roi' : ''}">
-                    <h4>${roi.suggested ? 'AI: ' : ''}${roi.name}</h4>
+                    <h4>${roi.suggested ? 'AI-Detected: ' : ''}${roi.name}</h4>
                     <p>Thermal: [${roi.coordinates[0].join(', ')}] to [${roi.coordinates[1].join(', ')}]</p>
                     <p>Weight: ${roi.weight} | Emissivity: ${roi.emissivity}</p>
                     <p>Thresholds: ${roi.thresholds.warning}°C / ${roi.thresholds.critical}°C / ${roi.thresholds.emergency}°C</p>
-                    ${roi.suggested ? '<p style="color: #00ba7c; font-weight: 600;">AI Suggested</p>' : ''}
+                    ${roi.suggested ? '<p style="color: #00ba7c; font-weight: 600;">AI-Detected Hotspot</p>' : ''}
                     <div class="roi-actions">
                         <button class="btn btn-secondary" onclick="deleteROI(${index})">Delete</button>
                     </div>
@@ -972,11 +972,11 @@
 
         function deleteROI(index) {
             const roi = rois[index];
-            if (confirm(`Delete ROI "${roi.name}"?`)) {
+            if (confirm(`Delete monitoring zone "${roi.name}"?`)) {
                 rois.splice(index, 1);
                 renderHeatmap();
                 updateROIList();
-                showStatus(`ROI "${roi.name}" deleted`, 'success');
+                showStatus(`Monitoring zone "${roi.name}" deleted`, 'success');
             }
         }
 
@@ -999,9 +999,9 @@
 
                 if (data.success) {
                     if (rois.length === 0) {
-                        showStatus('All ROIs deleted from system! Dashboard will update automatically.', 'success');
+                        showStatus('All monitoring zones deleted from system! Dashboard will update automatically.', 'success');
                     } else {
-                        showStatus(`${rois.length} ROI(s) saved to system! Dashboard will update automatically.`, 'success');
+                        showStatus(`${rois.length} transformer monitoring zone(s) saved to system! Dashboard will update automatically.`, 'success');
                     }
                 } else {
                     showStatus(`Error: ${data.error}`, 'error');

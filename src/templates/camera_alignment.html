@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Alignment Tool</title>
+    <title>Transformer Camera Alignment</title>
     <style>
         * {
             margin: 0;
@@ -203,14 +203,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Camera Alignment & Calibration Tool</h1>
+            <h1>Transformer Camera Alignment & Calibration</h1>
             <div class="instructions">
                 <strong>Calibration Steps:</strong><br>
-                1. Place a hot object (coffee mug, laptop) in center of frame<br>
-                2. Align both cameras so crosshairs point to the same object<br>
+                1. Point both cameras at a prominent transformer component (bushing, radiator fin, or tap changer)<br>
+                2. Align both cameras so crosshairs point to the same transformer feature<br>
                 3. Toggle grid overlay to verify alignment<br>
-                4. Verify the hot object appears in same relative position on both views<br>
-                5. Note any offset for manual correction in ROI mapper
+                4. Verify the transformer component appears in same relative position on both views<br>
+                5. Note any offset for manual correction in zone mapper
             </div>
         </div>
 
@@ -258,12 +258,12 @@
             </div>
             <div>
                 <button class="btn btn-primary" onclick="captureAlignment()">Capture Alignment Check</button>
-                <button class="btn btn-primary" onclick="window.location.href='/smart-roi-mapper'">Go to ROI Mapper</button>
+                <button class="btn btn-primary" onclick="window.location.href='/smart-roi-mapper'">Go to Zone Mapper</button>
             </div>
         </div>
 
         <div class="alignment-info">
-            <h2 style="color: #e7e9ea; margin-bottom: 1rem;">Alignment Information</h2>
+            <h2 style="color: #e7e9ea; margin-bottom: 1rem;">Camera Alignment Details</h2>
             <div class="info-grid">
                 <div class="info-item">
                     <div class="info-label">Visual Resolution</div>
@@ -286,11 +286,11 @@
             <div style="margin-top: 1.5rem; padding: 1rem; background: #15202b; border: 1px solid #38444d; border-radius: 12px; border-left: 4px solid #ffd400;">
                 <strong style="color: #e7e9ea;">Important Notes:</strong>
                 <ul style="margin-left: 1.5rem; margin-top: 0.5rem; color: #8b98a5;">
-                    <li>Cameras should be mounted as close together as possible</li>
-                    <li>Both should point at exactly the same target</li>
+                    <li>Cameras should be mounted as close together as possible to monitor the same transformer area</li>
+                    <li>Both should point at exactly the same transformer component</li>
                     <li>Thermal camera has much wider pixels (60× larger than visual)</li>
-                    <li>Small misalignment = large ROI errors</li>
-                    <li>Use this tool BEFORE mapping ROIs</li>
+                    <li>Small misalignment = large monitoring zone errors</li>
+                    <li>Use this tool BEFORE mapping transformer monitoring zones</li>
                 </ul>
             </div>
         </div>
@@ -341,7 +341,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('✅ Alignment snapshot captured!\n\nUse this image to verify camera alignment before mapping ROIs.');
+                        alert('Alignment snapshot captured!\n\nUse this image to verify camera alignment before mapping transformer monitoring zones.');
                     }
                 });
         }

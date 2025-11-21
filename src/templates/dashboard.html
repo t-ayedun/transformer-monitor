@@ -949,18 +949,18 @@
             </div>
             <div class="nav-links">
                 <a href="/" class="active">Dashboard</a>
-                <a href="/smart-roi-mapper">ROI Mapper</a>
+                <a href="/smart-roi-mapper">Zone Mapper</a>
             </div>
             <div class="quick-toolbar">
-                <button class="toolbar-btn" onclick="refreshAll()">Refresh</button>
-                <button class="toolbar-btn toolbar-btn-primary" onclick="captureSnapshot()">Snapshot</button>
+                <button class="toolbar-btn" onclick="refreshAll()">Refresh Data</button>
+                <button class="toolbar-btn toolbar-btn-primary" onclick="captureSnapshot()">Capture Thermal Snapshot</button>
             </div>
         </div>
     </nav>
 
     <div class="container">
         <div class="alert-banner">
-            <strong>Configuration Interface</strong> — This dashboard is for installation, configuration, and calibration. Data extraction happens automatically and is sent to AWS.
+            <strong>Transformer Monitoring Configuration</strong> — Configure thermal monitoring zones, set temperature thresholds, and calibrate cameras. Thermal data and events are automatically published to AWS IoT Core.
         </div>
 
         <!-- Status Cards -->
@@ -968,7 +968,7 @@
             <div class="status-card">
                 <div class="status-card-header">
                     <div>
-                        <div class="status-card-title">Camera Status</div>
+                        <div class="status-card-title">Dual-Camera System</div>
                     </div>
                     <div class="status-icon camera">📷</div>
                 </div>
@@ -976,11 +976,11 @@
                 <div class="status-card-meta">
                     <div class="status-indicator">
                         <span class="status-dot online" id="thermalDot"></span>
-                        <span id="thermalText">Thermal</span>
+                        <span id="thermalText">Thermal Camera</span>
                     </div>
                     <div class="status-indicator">
                         <span class="status-dot online" id="visualDot"></span>
-                        <span id="visualText">Visual</span>
+                        <span id="visualText">Visual Camera</span>
                     </div>
                 </div>
             </div>
@@ -988,40 +988,40 @@
             <div class="status-card">
                 <div class="status-card-header">
                     <div>
-                        <div class="status-card-title">Temperature</div>
+                        <div class="status-card-title">Transformer Temperature</div>
                     </div>
                     <div class="status-icon temp">🌡️</div>
                 </div>
                 <div class="status-card-value" id="currentTemp">--°C</div>
                 <div class="status-card-meta">
-                    <span>Min: <strong id="minTemp">--</strong></span>
-                    <span>Max: <strong id="maxTemp">--</strong></span>
+                    <span>Min Temp: <strong id="minTemp">--</strong></span>
+                    <span>Max Temp: <strong id="maxTemp">--</strong></span>
                 </div>
             </div>
 
             <div class="status-card">
                 <div class="status-card-header">
                     <div>
-                        <div class="status-card-title">System Health</div>
+                        <div class="status-card-title">Monitor System</div>
                     </div>
                     <div class="status-icon system">💻</div>
                 </div>
                 <div class="status-card-value" id="systemStatus">Online</div>
                 <div class="status-card-meta">
-                    <span>Uptime: <strong id="uptime">--</strong></span>
+                    <span>System Uptime: <strong id="uptime">--</strong></span>
                 </div>
             </div>
 
             <div class="status-card">
                 <div class="status-card-header">
                     <div>
-                        <div class="status-card-title">Connectivity</div>
+                        <div class="status-card-title">AWS Cloud Status</div>
                     </div>
                     <div class="status-icon cloud">☁️</div>
                 </div>
                 <div class="status-card-value" id="awsStatus">Connected</div>
                 <div class="status-card-meta">
-                    <span>Last sync: <strong id="lastSync">--</strong></span>
+                    <span>Last AWS Sync: <strong id="lastSync">--</strong></span>
                 </div>
             </div>
         </div>
@@ -1029,7 +1029,7 @@
         <!-- Temperature Metrics Dashboard -->
         <div class="metrics-section">
             <div class="metrics-header">
-                <h2>Temperature Metrics</h2>
+                <h2>Transformer Temperature Trends</h2>
                 <div class="time-range-selector">
                     <button class="time-range-btn active" onclick="setTimeRange('1h')" id="btn-1h">1h</button>
                     <button class="time-range-btn" onclick="setTimeRange('6h')" id="btn-6h">6h</button>
@@ -1070,14 +1070,14 @@
             <div class="hero-section">
                 <div class="video-card primary">
                     <div class="video-card-header">
-                        <h2>Thermal Camera Feed</h2>
+                        <h2>Live Thermal View</h2>
                         <span class="live-badge">LIVE</span>
                     </div>
                     <div class="video-container primary">
                         <img src="/video/thermal" alt="Thermal Camera Feed">
                     </div>
                     <div class="video-card-footer">
-                        Real-time thermal imaging (32×24) with temperature overlays and ROI markers
+                        Real-time transformer thermal imaging (32×24) with zone markers and temperature overlays
                     </div>
                 </div>
             </div>
@@ -1085,14 +1085,14 @@
             <div class="sidebar">
                 <div class="video-card">
                     <div class="video-card-header">
-                        <h2>Visual Feed</h2>
+                        <h2>Live Visual Camera</h2>
                         <span class="live-badge">LIVE</span>
                     </div>
                     <div class="video-container">
                         <img src="/video/visual" alt="Visual Camera Feed">
                     </div>
                     <div class="video-card-footer">
-                        High-res visual (1920×1080)
+                        High-resolution visual context (1920×1080) for incident investigation
                     </div>
                 </div>
             </div>
@@ -1101,15 +1101,15 @@
         <!-- ROI Section -->
         <div class="roi-section">
             <div class="roi-header">
-                <h2>Active Regions of Interest</h2>
+                <h2>Transformer Monitoring Zones</h2>
                 <span class="roi-timestamp" id="roiTimestamp">Last updated: --</span>
             </div>
             <div class="roi-grid" id="roiGrid">
                 <div class="empty-state">
-                    <h3>No ROIs Configured</h3>
-                    <p>Configure regions of interest to monitor specific areas</p>
+                    <h3>No Monitoring Zones Configured</h3>
+                    <p>Configure thermal monitoring zones for transformer components like windings, bushings, tap changers, and cooling radiators</p>
                     <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
-                        Configure ROIs
+                        Configure Monitoring Zones
                     </button>
                 </div>
             </div>
@@ -1218,10 +1218,10 @@
                 } else {
                     roiGrid.innerHTML = `
                         <div class="empty-state">
-                            <h3>No ROIs Configured</h3>
-                            <p>Configure regions of interest to monitor specific areas</p>
+                            <h3>No Monitoring Zones Configured</h3>
+                            <p>Configure thermal monitoring zones for transformer components like windings, bushings, tap changers, and cooling radiators</p>
                             <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
-                                Configure ROIs
+                                Configure Monitoring Zones
                             </button>
                         </div>
                     `;
@@ -1237,9 +1237,9 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Snapshot captured successfully!\n\nFile: ' + data.filepath);
+                    alert('Thermal snapshot captured successfully!\n\nFile: ' + data.filepath);
                 } else {
-                    alert('Failed to capture snapshot: ' + data.error);
+                    alert('Failed to capture thermal snapshot: ' + data.error);
                 }
             } catch (error) {
                 alert('Error: ' + error.message);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thermal Heatmap - Validation View</title>
+    <title>Transformer Thermal Validation</title>
     <style>
         * {
             margin: 0;
@@ -258,10 +258,10 @@
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>Thermal Heatmap Validation</h1>
+            <h1>Transformer Thermal Validation</h1>
             <div class="nav-links">
                 <a href="/">Dashboard</a>
-                <a href="/smart-roi-mapper" class="active">ROI Mapper</a>
+                <a href="/smart-roi-mapper" class="active">Zone Mapper</a>
             </div>
         </div>
     </nav>
@@ -270,29 +270,29 @@
         <div class="controls">
             <div class="control-row">
                 <div class="control-group">
-                    <strong>Resolution:</strong>
+                    <strong>Thermal Resolution:</strong>
                     <button class="zoom-btn" onclick="setResolution(4, 3)">4×3</button>
                     <button class="zoom-btn" onclick="setResolution(8, 6)">8×6</button>
                     <button class="zoom-btn" onclick="setResolution(16, 12)">16×12</button>
                     <button class="zoom-btn active" onclick="setResolution(32, 24)">32×24 (Full)</button>
                 </div>
                 <div class="control-group">
-                    <button class="zoom-btn" onclick="refreshData()">Refresh</button>
+                    <button class="zoom-btn" onclick="refreshData()">Refresh Thermal Data</button>
                 </div>
             </div>
         </div>
 
         <div class="heatmap-container">
             <h2 class="heatmap-title">
-                Temperature Heatmap (<span id="currentResolution">32×24</span>)
+                Transformer Temperature Heatmap (<span id="currentResolution">32×24</span>)
             </h2>
             <div id="heatmapGrid" class="heatmap-grid">
-                <div class="loading">Loading thermal data...</div>
+                <div class="loading">Loading transformer thermal data...</div>
             </div>
         </div>
 
         <div class="stats-panel">
-            <h2 class="stats-title">Thermal Statistics</h2>
+            <h2 class="stats-title">Transformer Thermal Statistics</h2>
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-label">Minimum</div>

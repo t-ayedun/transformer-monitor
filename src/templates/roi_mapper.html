@@ -522,19 +522,19 @@
 <body>
     <nav class="navbar">
         <div class="navbar-content">
-            <h1>🎯 ROI Mapper</h1>
+            <h1>Transformer Zone Mapper</h1>
             <div class="nav-links">
                 <a href="/">← Dashboard</a>
-                <a href="/roi-mapper">ROI Mapper</a>
+                <a href="/roi-mapper">Zone Mapper</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
         <div class="page-header">
-            <h1>Interactive ROI Mapper</h1>
+            <h1>Interactive Transformer Zone Mapper</h1>
             <div class="info">
-                <strong>💡 Instructions:</strong> Click two opposite corners on the image to define a Region of Interest (ROI).
+                <strong>Instructions:</strong> Click two opposite corners on the visual camera feed to define a transformer monitoring zone.
                 Coordinates are automatically converted from visual camera space (1920×1080) to thermal camera space (32×24).
             </div>
         </div>
@@ -543,24 +543,24 @@
 
         <div class="main-content">
             <div class="canvas-section">
-                <div class="mode-indicator mode-view" id="modeIndicator">📍 View Mode</div>
+                <div class="mode-indicator mode-view" id="modeIndicator">View Mode</div>
                 <div class="canvas-container">
                     <canvas id="canvas" width="1920" height="1080"></canvas>
                 </div>
                 <div class="control-buttons">
-                    <button class="btn-primary" onclick="startDrawing()">✏️ Start Drawing ROI</button>
-                    <button class="btn-secondary" onclick="refreshImage()">🔄 Refresh Image</button>
-                    <button class="btn-secondary" onclick="clearCanvas()">🗑️ Clear All</button>
+                    <button class="btn-primary" onclick="startDrawing()">Draw Monitoring Zone</button>
+                    <button class="btn-secondary" onclick="refreshImage()">Refresh Camera View</button>
+                    <button class="btn-secondary" onclick="clearCanvas()">Clear All</button>
                 </div>
             </div>
 
             <div class="sidebar">
                 <!-- ROI Configuration Panel -->
                 <div class="panel">
-                    <h3>⚙️ New ROI Configuration</h3>
+                    <h3>Configure New Monitoring Zone</h3>
                     <div class="form-group">
-                        <label for="roiName">ROI Name</label>
-                        <input type="text" id="roiName" placeholder="e.g., Top Winding">
+                        <label for="roiName">Zone Name</label>
+                        <input type="text" id="roiName" placeholder="e.g., HV Winding, LV Bushing, Tap Changer, Cooling Radiator">
                     </div>
                     <div class="form-group">
                         <label for="roiWeight">Weight</label>
@@ -583,18 +583,18 @@
                         <input type="number" id="roiEmergency" value="95" step="1">
                     </div>
                     <button class="btn-success" onclick="saveCurrentROI()" style="width: 100%;">
-                        Save ROI
+                        Save Monitoring Zone
                     </button>
                 </div>
 
                 <!-- Existing ROIs Panel -->
                 <div class="panel">
-                    <h3>📋 Defined ROIs</h3>
+                    <h3>Configured Monitoring Zones</h3>
                     <div id="roiList" class="roi-list">
-                        <p style="text-align: center; color: #999; padding: 2rem;">No ROIs defined yet</p>
+                        <p style="text-align: center; color: #999; padding: 2rem;">No transformer monitoring zones configured yet</p>
                     </div>
                     <button class="btn-success" onclick="saveAllROIs()" style="width: 100%; margin-top: 1rem;">
-                        💾 Save All to System
+                        Save All Zones to System
                     </button>
                 </div>
             </div>
@@ -633,16 +633,16 @@
                         };
                         image.onerror = () => {
                             console.error('Failed to load image:', data.filepath);
-                            showStatus('⚠️ Failed to load snapshot image. Try refreshing again.', 'error');
+                            showStatus('Failed to load camera snapshot. Try refreshing again.', 'error');
                             drawCanvas(); // Draw placeholder
                         };
                     } else {
-                        showStatus('❌ Failed to capture snapshot', 'error');
+                        showStatus('Failed to capture camera snapshot', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Snapshot error:', error);
-                    showStatus('❌ Error capturing snapshot', 'error');
+                    showStatus('Error capturing camera snapshot', 'error');
                 });
         }
 
@@ -732,9 +732,9 @@
         function startDrawing() {
             isDrawingMode = true;
             points = [];
-            modeIndicator.textContent = '✏️ Drawing Mode - Click 2 Points';
+            modeIndicator.textContent = 'Drawing Mode - Click 2 Points';
             modeIndicator.className = 'mode-indicator mode-draw';
-            showStatus('✅ Click two corners to define ROI', 'success');
+            showStatus('Click two corners to define monitoring zone', 'success');
         }
 
         canvas.addEventListener('click', (e) => {
@@ -759,9 +759,9 @@
                 };
 
                 isDrawingMode = false;
-                modeIndicator.textContent = '📍 View Mode - ROI Defined';
+                modeIndicator.textContent = 'View Mode - Zone Defined';
                 modeIndicator.className = 'mode-indicator mode-view';
-                showStatus('✅ ROI defined! Configure and save it.', 'success');
+                showStatus('Monitoring zone defined! Configure and save it.', 'success');
             }
 
             drawCanvas();
@@ -769,13 +769,13 @@
 
         function saveCurrentROI() {
             if (!currentROI) {
-                showStatus('⚠️ Please draw an ROI first', 'error');
+                showStatus('Please draw a monitoring zone first', 'error');
                 return;
             }
 
             const name = document.getElementById('roiName').value;
             if (!name) {
-                showStatus('⚠️ Please enter an ROI name', 'error');
+                showStatus('Please enter a zone name for the transformer component', 'error');
                 return;
             }
 
@@ -799,7 +799,7 @@
 
             drawCanvas();
             updateROIList();
-            showStatus('✅ ROI saved to list!', 'success');
+            showStatus('Monitoring zone saved to list!', 'success');
 
             // Clear form
             document.getElementById('roiName').value = '';
@@ -809,7 +809,7 @@
             const listDiv = document.getElementById('roiList');
 
             if (rois.length === 0) {
-                listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">No ROIs defined yet</p>';
+                listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">No transformer monitoring zones configured yet</p>';
                 return;
             }
 
@@ -826,29 +826,29 @@
 
         function deleteROI(index) {
             const roi = rois[index];
-            if (confirm(`🗑️ Delete ROI "${roi.name}"?\n\nThis will remove it from the list but won't affect the system until you click "Save All to System".`)) {
+            if (confirm(`Delete monitoring zone "${roi.name}"?\n\nThis will remove it from the list but won't affect the system until you click "Save All Zones to System".`)) {
                 rois.splice(index, 1);
                 drawCanvas();
                 updateROIList();
-                showStatus(`✅ ROI "${roi.name}" deleted from list`, 'success');
+                showStatus(`Monitoring zone "${roi.name}" deleted from list`, 'success');
             }
         }
 
         function clearCanvas() {
-            if (confirm('🗑️ Clear all ROIs? This cannot be undone.')) {
+            if (confirm('Clear all monitoring zones? This cannot be undone.')) {
                 rois = [];
                 points = [];
                 currentROI = null;
                 drawCanvas();
                 updateROIList();
-                showStatus('✅ All ROIs cleared', 'success');
+                showStatus('All monitoring zones cleared', 'success');
             }
         }
 
         function saveAllROIs() {
             // Allow saving empty ROI list (to delete all ROIs)
             if (rois.length === 0) {
-                if (!confirm('This will delete all ROIs from the system. Are you sure?')) {
+                if (!confirm('This will delete all monitoring zones from the system. Are you sure?')) {
                     return;
                 }
             }
@@ -864,9 +864,9 @@
             .then(data => {
                 if (data.success) {
                     if (rois.length === 0) {
-                        showStatus('All ROIs deleted from system! Dashboard will update automatically.', 'success');
+                        showStatus('All monitoring zones deleted from system! Dashboard will update automatically.', 'success');
                     } else {
-                        showStatus('ROIs saved to system successfully! Dashboard will update automatically within 10 seconds.', 'success');
+                        showStatus('Transformer monitoring zones saved to system successfully! Dashboard will update automatically within 10 seconds.', 'success');
                     }
                 } else {
                     showStatus('Error: ' + data.error, 'error');
