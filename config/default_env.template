@@ -1,0 +1,161 @@
+###############################################################################
+# Transformer Monitor - Environment Configuration
+#
+# Copy this file to .env in the project root and fill in your settings
+# Command: cp config/default_env.template .env
+#
+# Then edit .env with your specific configuration
+###############################################################################
+
+# ============================================================================
+# SITE IDENTIFICATION (REQUIRED)
+# ============================================================================
+SITE_ID=TRANSFORMER_001
+SITE_NAME=Main Substation Transformer
+SITE_LOCATION=North Yard - Transformer Bank A
+SITE_CONTACT=operations@example.com
+
+# ============================================================================
+# TRANSFORMER DETAILS (OPTIONAL - for documentation)
+# ============================================================================
+TRANSFORMER_RATING=500kVA
+TRANSFORMER_TYPE=Distribution
+TRANSFORMER_MANUFACTURER=ABB
+TRANSFORMER_SERIAL=TF-2023-001
+
+# ============================================================================
+# THERMAL CAMERA SETTINGS
+# ============================================================================
+# MLX90640 I2C bus (usually 1 on Raspberry Pi)
+THERMAL_I2C_BUS=1
+
+# Refresh rate: 1, 2, 4, 8, 16, 32 Hz (8 recommended for balance)
+THERMAL_REFRESH_RATE=8
+
+# Emissivity (0.1-1.0): Material-specific reflectivity
+# Transformer oil tank: 0.95
+# Metal surfaces: 0.85-0.90
+THERMAL_EMISSIVITY=0.95
+
+# ============================================================================
+# VISUAL CAMERA SETTINGS
+# ============================================================================
+# Pi Camera resolution
+CAMERA_WIDTH=1920
+CAMERA_HEIGHT=1080
+
+# JPEG quality (1-100, higher = better quality but larger files)
+CAMERA_QUALITY=85
+
+# ============================================================================
+# DATA CAPTURE SETTINGS
+# ============================================================================
+# Capture interval in seconds (how often to process and log data)
+CAPTURE_INTERVAL=60
+
+# Data retention in hours (how long to keep local data)
+DATA_RETENTION_HOURS=168
+
+# ============================================================================
+# MOTION DETECTION SETTINGS
+# ============================================================================
+# Enable motion detection and video recording
+MOTION_DETECTION_ENABLED=true
+
+# Motion sensitivity (1-100, higher = more sensitive)
+MOTION_SENSITIVITY=50
+
+# Minimum motion area in pixels to trigger event
+MOTION_MIN_AREA=500
+
+# Pre-record buffer in seconds (saves video BEFORE motion detected)
+PRE_RECORD_SECONDS=30
+
+# Maximum recording duration in seconds
+MAX_RECORDING_DURATION=300
+
+# ============================================================================
+# ALERT THRESHOLDS (°C)
+# ============================================================================
+# Temperature thresholds for transformer monitoring
+TEMP_WARNING=75
+TEMP_CRITICAL=85
+TEMP_EMERGENCY=95
+
+# ============================================================================
+# AWS IOT CORE SETTINGS (OPTIONAL - leave blank to disable)
+# ============================================================================
+# Enable AWS IoT publishing (true/false)
+AWS_IOT_ENABLED=false
+
+# AWS IoT Core endpoint (get from AWS Console)
+# Example: a3xxxxxxxxx-ats.iot.us-east-1.amazonaws.com
+IOT_ENDPOINT=
+
+# AWS IoT Thing name (must match certificate)
+IOT_THING_NAME=
+
+# AWS Region
+AWS_REGION=us-east-1
+
+# Certificate paths (place certificates in /data/certs/)
+ROOT_CA_PATH=/data/certs/root-ca.pem
+DEVICE_CERT_PATH=/data/certs/device-cert.pem
+DEVICE_KEY_PATH=/data/certs/device-key.pem
+
+# MQTT topic prefix
+MQTT_TOPIC_PREFIX=transformer
+
+# ============================================================================
+# FTP COLD STORAGE SETTINGS (OPTIONAL - leave blank to disable)
+# ============================================================================
+# Enable FTP cold storage for old recordings/snapshots (true/false)
+FTP_ENABLED=false
+
+# FTP server details
+FTP_HOST=
+FTP_PORT=21
+FTP_USERNAME=
+FTP_PASSWORD=
+
+# FTP directory to upload to
+FTP_REMOTE_DIR=/transformer-data
+
+# Move files to FTP when disk usage exceeds threshold (percentage)
+FTP_DISK_THRESHOLD=80
+
+# Move files older than X days to FTP
+FTP_AGE_THRESHOLD_DAYS=7
+
+# ============================================================================
+# WEB INTERFACE SETTINGS
+# ============================================================================
+# Web dashboard port
+WEB_PORT=5000
+
+# Enable web interface (true/false)
+WEB_ENABLED=true
+
+# ============================================================================
+# STORAGE SETTINGS
+# ============================================================================
+# Maximum local storage in GB (for videos and images)
+MAX_STORAGE_GB=25
+
+# Enable automatic cleanup when storage full (true/false)
+AUTO_CLEANUP_ENABLED=true
+
+# ============================================================================
+# LOGGING SETTINGS
+# ============================================================================
+# Log level: DEBUG, INFO, WARNING, ERROR
+LOG_LEVEL=INFO
+
+# Enable file logging (true/false)
+LOG_TO_FILE=true
+
+# Maximum log file size in MB
+LOG_MAX_SIZE_MB=10
+
+# Number of log file backups to keep
+LOG_BACKUP_COUNT=5
