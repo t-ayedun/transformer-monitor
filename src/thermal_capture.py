@@ -1,7 +1,7 @@
 """
 Thermal Camera Interface
 Handles MLX90640 thermal camera communication with advanced processing
-Uses PyMLX90640 library (more stable on Pi 5)
+Uses seeed-python-mlx90640 library (Pi 5 compatible)
 
 Advanced Features:
 - Image denoising (Gaussian and temporal filtering)
@@ -21,18 +21,17 @@ import cv2
 from scipy import ndimage
 
 try:
-    from PyMLX90640 import LibMLX90640 as mlx_lib
-    from PyMLX90640.MLX90640 import MLX90640, RefreshRate
+    from seeed_mlx90640 import grove_mxl90640
     LIBRARY_AVAILABLE = True
 except ImportError:
     LIBRARY_AVAILABLE = False
-    print("WARNING: PyMLX90640 not installed. Install with: pip install RPI-PyMLX90640")
+    print("WARNING: seeed-python-mlx90640 not installed. Install with: pip install seeed-python-mlx90640")
 
 
 class ThermalCapture:
     """
     Interface for MLX90640 thermal camera with advanced processing
-    Uses PyMLX90640 library for better Pi 5 compatibility
+    Uses seeed-python-mlx90640 library for Pi 5 compatibility
 
     Processing Pipeline:
     1. Raw frame capture
@@ -51,16 +50,16 @@ class ThermalCapture:
         Args:
             i2c_addr: I2C address (default 0x33)
             i2c_bus: I2C bus number (default 1)
-            refresh_rate: Camera refresh rate in Hz (2 recommended for Pi 5)
+            refresh_rate: Camera refresh rate in Hz (2-8 recommended)
             enable_advanced_processing: Enable noise filtering and processing
         """
         if not LIBRARY_AVAILABLE:
-            raise ImportError("PyMLX90640 library not installed")
+            raise ImportError("seeed-python-mlx90640 library not installed")
             
         self.logger = logging.getLogger(__name__)
         self.i2c_addr = i2c_addr
         self.i2c_bus = i2c_bus
-        self.refresh_rate = refresh_rate
+        self.refresh_rate = min(refresh_rate, 8)  # Cap at 8 Hz for stability
         self.mlx = None
         self.frame_shape = (24, 32)  # MLX90640 resolution
 
@@ -84,10 +83,15 @@ class ThermalCapture:
         self.consecutive_failures = 0
         self.last_successful_frame = None
 
+        if self.refresh_rate != refresh_rate:
+            self.logger.warning(
+                f"Refresh rate capped at {self.refresh_rate}Hz (requested {refresh_rate}Hz)"
+            )
+
         self._initialize_camera()
 
     def _initialize_camera(self, retry_count=3):
-        """Initialize MLX90640 with PyMLX90640 library"""
+        """Initialize MLX90640 with seeed library"""
         for attempt in range(retry_count):
             try:
                 self.logger.info(
@@ -95,30 +99,29 @@ class ThermalCapture:
                     f"(attempt {attempt + 1}/{retry_count})"
                 )
 
-                # Initialize camera
-                self.mlx = MLX90640(
-                    address=self.i2c_addr,
-                    i2c_bus=self.i2c_bus
-                )
+                # Initialize camera with seeed library
+                self.mlx = grove_mxl90640.Grove_MLX90640()
                 
                 # Set refresh rate
-                refresh_rate_map = {
-                    0.5: RefreshRate.REFRESH_0_5_HZ,
-                    1: RefreshRate.REFRESH_1_HZ,
-                    2: RefreshRate.REFRESH_2_HZ,
-                    4: RefreshRate.REFRESH_4_HZ,
-                    8: RefreshRate.REFRESH_8_HZ,
-                    16: RefreshRate.REFRESH_16_HZ,
-                    32: RefreshRate.REFRESH_32_HZ,
-                    64: RefreshRate.REFRESH_64_HZ,
+                # Seeed library uses refresh rate codes: 0=0.5Hz, 1=1Hz, 2=2Hz, 3=4Hz, 4=8Hz, 5=16Hz, 6=32Hz
+                rate_map = {
+                    0.5: 0,
+                    1: 1,
+                    2: 2,
+                    4: 3,
+                    8: 4,
+                    16: 5,
+                    32: 6,
+                    64: 7
                 }
                 
-                rate_const = refresh_rate_map.get(self.refresh_rate, RefreshRate.REFRESH_2_HZ)
-                self.mlx.set_refresh_rate(rate_const)
+                rate_code = rate_map.get(self.refresh_rate, 2)  # Default to 2Hz
+                self.mlx.refresh_rate = rate_code
                 
                 self.logger.info(f"Refresh rate set to {self.refresh_rate} Hz")
 
-                # Test frame capture
+                # Test frame capture - give sensor time to stabilize
+                time.sleep(1.0)
                 test_frame = self.mlx.get_frame()
                 
                 if test_frame is None or len(test_frame) != 768:
@@ -143,12 +146,7 @@ class ThermalCapture:
                     f"Failed to initialize MLX90640 (attempt {attempt + 1}/{retry_count}): {e}"
                 )
                 
-                if self.mlx:
-                    try:
-                        self.mlx.cleanup()
-                    except:
-                        pass
-                    self.mlx = None
+                self.mlx = None
                 
                 if attempt < retry_count - 1:
                     wait_time = 2 * (attempt + 1)
@@ -224,13 +222,7 @@ class ThermalCapture:
         """Reinitialize camera after failures"""
         self.logger.info("Reinitializing thermal camera...")
         try:
-            if self.mlx:
-                try:
-                    self.mlx.cleanup()
-                except:
-                    pass
-                self.mlx = None
-            
+            self.mlx = None
             time.sleep(2)
             self._initialize_camera()
             self.consecutive_failures = 0
@@ -401,9 +393,4 @@ class ThermalCapture:
             f"Processed {self.frame_count} frames, "
             f"detected {len(self.bad_pixels)} bad pixels"
         )
-        if self.mlx:
-            try:
-                self.mlx.cleanup()
-            except:
-                pass
-            self.mlx = None
+        self.mlx = None
