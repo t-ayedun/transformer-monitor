@@ -127,7 +127,7 @@ class ThermalCapture:
                 time.sleep(1.0)
                 
                 # Test frame capture
-                test_frame = self.mlx.get_frame()
+                test_frame = self.mlx.getFrame()
                 
                 if test_frame is None or len(test_frame) != 768:
                     raise ValueError("Invalid test frame")
@@ -181,7 +181,7 @@ class ThermalCapture:
                         time.sleep(min_interval - time_since_last)
 
                 # Get frame from sensor
-                frame_data = self.mlx.get_frame()
+                frame_data = self.mlx.getFrame()
                 
                 if frame_data is None or len(frame_data) != 768:
                     self.logger.warning(f"Invalid frame data (attempt {attempt + 1})")
