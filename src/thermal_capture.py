@@ -1,6 +1,7 @@
 """
 Thermal Camera Interface
 Handles MLX90640 thermal camera communication with advanced processing
+Uses PyMLX90640 library (more stable on Pi 5)
 
 Advanced Features:
 - Image denoising (Gaussian and temporal filtering)
@@ -16,16 +17,22 @@ import logging
 import numpy as np
 from collections import deque
 from datetime import datetime
-import board
-import busio
-import adafruit_mlx90640
 import cv2
 from scipy import ndimage
+
+try:
+    from PyMLX90640 import LibMLX90640 as mlx_lib
+    from PyMLX90640.MLX90640 import MLX90640, RefreshRate
+    LIBRARY_AVAILABLE = True
+except ImportError:
+    LIBRARY_AVAILABLE = False
+    print("WARNING: PyMLX90640 not installed. Install with: pip install RPI-PyMLX90640")
 
 
 class ThermalCapture:
     """
     Interface for MLX90640 thermal camera with advanced processing
+    Uses PyMLX90640 library for better Pi 5 compatibility
 
     Processing Pipeline:
     1. Raw frame capture
@@ -41,23 +48,28 @@ class ThermalCapture:
         """
         Initialize thermal camera
         
-        IMPORTANT: Pi 5 works best with refresh_rate=2 (2 Hz)
-        Higher rates may cause I2C timeout issues
+        Args:
+            i2c_addr: I2C address (default 0x33)
+            i2c_bus: I2C bus number (default 1)
+            refresh_rate: Camera refresh rate in Hz (2 recommended for Pi 5)
+            enable_advanced_processing: Enable noise filtering and processing
         """
+        if not LIBRARY_AVAILABLE:
+            raise ImportError("PyMLX90640 library not installed")
+            
         self.logger = logging.getLogger(__name__)
         self.i2c_addr = i2c_addr
-        # Force maximum 2 Hz on Pi 5 to avoid I2C timeouts
-        self.refresh_rate = min(refresh_rate, 2)
+        self.i2c_bus = i2c_bus
+        self.refresh_rate = refresh_rate
         self.mlx = None
-        self.i2c = None
         self.frame_shape = (24, 32)  # MLX90640 resolution
 
         # Advanced processing settings
         self.enable_advanced_processing = enable_advanced_processing
-        self.temporal_buffer_size = 5  # Frames to keep for temporal filtering
+        self.temporal_buffer_size = 5
         self.frame_buffer = deque(maxlen=self.temporal_buffer_size)
 
-        # Bad pixel map (will be learned during operation)
+        # Bad pixel map
         self.bad_pixels = set()
         self.frame_count = 0
 
@@ -65,117 +77,89 @@ class ThermalCapture:
         self.hotspots_history = deque(maxlen=10)
         self.hotspot_threshold = 80.0  # °C
 
-        # Ambient temperature for compensation
+        # Ambient temperature
         self.ambient_temp = None
         
-        # Connection health tracking
+        # Connection health
         self.consecutive_failures = 0
         self.last_successful_frame = None
-
-        if self.refresh_rate != refresh_rate:
-            self.logger.warning(
-                f"Refresh rate capped at {self.refresh_rate}Hz (requested {refresh_rate}Hz) "
-                "for Pi 5 stability"
-            )
 
         self._initialize_camera()
 
     def _initialize_camera(self, retry_count=3):
-        """Initialize I2C connection and camera with retries"""
+        """Initialize MLX90640 with PyMLX90640 library"""
         for attempt in range(retry_count):
             try:
                 self.logger.info(
-                    f"Initializing MLX90640 at address 0x{self.i2c_addr:02x} "
+                    f"Initializing MLX90640 at 0x{self.i2c_addr:02x} on bus {self.i2c_bus} "
                     f"(attempt {attempt + 1}/{retry_count})"
                 )
 
-                # Initialize I2C - Blinka doesn't support frequency setting, but that's OK
-                self.i2c = busio.I2C(board.SCL, board.SDA)
-
-                # Give I2C bus time to stabilize
-                time.sleep(0.5)
+                # Initialize camera
+                self.mlx = MLX90640(
+                    address=self.i2c_addr,
+                    i2c_bus=self.i2c_bus
+                )
                 
-                # Lock the I2C bus while we initialize
-                while not self.i2c.try_lock():
-                    time.sleep(0.01)
+                # Set refresh rate
+                refresh_rate_map = {
+                    0.5: RefreshRate.REFRESH_0_5_HZ,
+                    1: RefreshRate.REFRESH_1_HZ,
+                    2: RefreshRate.REFRESH_2_HZ,
+                    4: RefreshRate.REFRESH_4_HZ,
+                    8: RefreshRate.REFRESH_8_HZ,
+                    16: RefreshRate.REFRESH_16_HZ,
+                    32: RefreshRate.REFRESH_32_HZ,
+                    64: RefreshRate.REFRESH_64_HZ,
+                }
                 
-                try:
-                    # Initialize MLX90640
-                    self.mlx = adafruit_mlx90640.MLX90640(self.i2c)
-                    
-                    # Set refresh rate (use lowest setting for reliability)
-                    self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
-                    
-                    self.logger.info(f"MLX90640 refresh rate set to {self.refresh_rate}Hz")
+                rate_const = refresh_rate_map.get(self.refresh_rate, RefreshRate.REFRESH_2_HZ)
+                self.mlx.set_refresh_rate(rate_const)
+                
+                self.logger.info(f"Refresh rate set to {self.refresh_rate} Hz")
 
-                    # Try to capture a test frame to verify it works
-                    # This is where the "math domain error" was happening
-                    test_frame = [0] * 768
-                    
-                    # Give the sensor time to stabilize after init
-                    time.sleep(1.0)
-                    
-                    self.mlx.getFrame(test_frame)
-                    
-                    # Verify frame has reasonable data
-                    test_array = np.array(test_frame)
-                    if np.all(test_array == 0) or np.any(np.isnan(test_array)):
-                        raise ValueError("Test frame contains invalid data")
-                    
-                    temp_range = f"{test_array.min():.1f}°C to {test_array.max():.1f}°C"
-                    self.logger.info(
-                        f"MLX90640 initialized successfully at {self.refresh_rate}Hz "
-                        f"(Test frame: {temp_range}, Advanced processing: {self.enable_advanced_processing})"
-                    )
-                    
-                    self.consecutive_failures = 0
-                    return
-                    
-                finally:
-                    # Always unlock the I2C bus
-                    self.i2c.unlock()
+                # Test frame capture
+                test_frame = self.mlx.get_frame()
+                
+                if test_frame is None or len(test_frame) != 768:
+                    raise ValueError("Invalid test frame")
+                
+                test_array = np.array(test_frame)
+                if np.all(test_array == 0) or np.any(np.isnan(test_array)):
+                    raise ValueError("Test frame contains invalid data")
+                
+                temp_range = f"{test_array.min():.1f}°C to {test_array.max():.1f}°C"
+                self.logger.info(
+                    f"MLX90640 initialized successfully! "
+                    f"Test frame: {temp_range}, "
+                    f"Advanced processing: {self.enable_advanced_processing}"
+                )
+                
+                self.consecutive_failures = 0
+                return
 
             except Exception as e:
                 self.logger.error(
                     f"Failed to initialize MLX90640 (attempt {attempt + 1}/{retry_count}): {e}"
                 )
                 
-                # Clean up and wait before retry
                 if self.mlx:
-                    self.mlx = None
-                if self.i2c:
                     try:
-                        if self.i2c.try_lock():
-                            self.i2c.unlock()
-                        self.i2c.deinit()
+                        self.mlx.cleanup()
                     except:
                         pass
-                    self.i2c = None
+                    self.mlx = None
                 
                 if attempt < retry_count - 1:
-                    wait_time = 2 * (attempt + 1)  # Increasing wait time
+                    wait_time = 2 * (attempt + 1)
                     self.logger.info(f"Waiting {wait_time}s before retry...")
                     time.sleep(wait_time)
                 else:
                     raise RuntimeError(f"Failed to initialize MLX90640 after {retry_count} attempts")
 
-    def _get_refresh_rate_constant(self, rate):
-        """Convert refresh rate to MLX90640 constant"""
-        rate_map = {
-            0.5: adafruit_mlx90640.RefreshRate.REFRESH_0_5_HZ,
-            1: adafruit_mlx90640.RefreshRate.REFRESH_1_HZ,
-            2: adafruit_mlx90640.RefreshRate.REFRESH_2_HZ,
-            4: adafruit_mlx90640.RefreshRate.REFRESH_4_HZ,
-            8: adafruit_mlx90640.RefreshRate.REFRESH_8_HZ,
-            16: adafruit_mlx90640.RefreshRate.REFRESH_16_HZ,
-            32: adafruit_mlx90640.RefreshRate.REFRESH_32_HZ,
-            64: adafruit_mlx90640.RefreshRate.REFRESH_64_HZ,
-        }
-        return rate_map.get(rate, adafruit_mlx90640.RefreshRate.REFRESH_2_HZ)
-
     def get_frame(self, max_retries=3, apply_processing=True):
         """
-        Capture a thermal frame with optional advanced processing
+        Capture a thermal frame
 
         Args:
             max_retries: Number of retry attempts
@@ -186,54 +170,35 @@ class ThermalCapture:
         """
         for attempt in range(max_retries):
             try:
-                # Add delay between frames to prevent I2C bus saturation
+                # Respect frame rate limit
                 if self.last_successful_frame is not None:
                     time_since_last = time.time() - self.last_successful_frame
                     min_interval = 1.0 / self.refresh_rate
                     if time_since_last < min_interval:
                         time.sleep(min_interval - time_since_last)
 
-                frame = [0] * 768  # 24x32 = 768 pixels
+                # Get frame from sensor
+                frame_data = self.mlx.get_frame()
                 
-                # Lock I2C bus during frame capture
-                while not self.i2c.try_lock():
-                    time.sleep(0.01)
-                
-                try:
-                    self.mlx.getFrame(frame)
-                except RuntimeError as e:
-                    if "Too many retries" in str(e):
-                        self.logger.warning(f"I2C timeout (attempt {attempt + 1}/{max_retries})")
-                        self.consecutive_failures += 1
-                        
-                        # If too many consecutive failures, try to reinitialize
-                        if self.consecutive_failures >= 5:
-                            self.logger.warning("Too many consecutive failures, reinitializing camera...")
-                            self.i2c.unlock()
-                            self._reinitialize_camera()
-                            return None
-                        
-                        time.sleep(0.5)  # Longer wait after I2C timeout
-                        continue
-                    else:
-                        raise
-                finally:
-                    self.i2c.unlock()
-
-                # Convert to numpy array and reshape
-                frame_array = np.array(frame, dtype=np.float32).reshape(self.frame_shape)
-
-                # Basic validation
-                if not self._validate_frame(frame_array):
+                if frame_data is None or len(frame_data) != 768:
                     self.logger.warning(f"Invalid frame data (attempt {attempt + 1})")
+                    time.sleep(0.2)
+                    continue
+
+                # Convert to numpy array
+                frame_array = np.array(frame_data, dtype=np.float32).reshape(self.frame_shape)
+
+                # Validate
+                if not self._validate_frame(frame_array):
+                    self.logger.warning(f"Frame validation failed (attempt {attempt + 1})")
                     time.sleep(0.1)
                     continue
 
-                # Apply advanced processing if enabled
+                # Apply processing
                 if apply_processing and self.enable_advanced_processing:
                     frame_array = self._process_frame(frame_array)
 
-                # Add to temporal buffer
+                # Update buffers
                 self.frame_buffer.append(frame_array.copy())
                 self.frame_count += 1
                 self.last_successful_frame = time.time()
@@ -243,164 +208,102 @@ class ThermalCapture:
 
             except Exception as e:
                 self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
+                self.consecutive_failures += 1
+                
+                # Reinitialize if too many failures
+                if self.consecutive_failures >= 5:
+                    self.logger.warning("Too many failures, reinitializing...")
+                    self._reinitialize_camera()
+                
                 time.sleep(0.2)
 
         self.logger.error("Failed to capture valid frame after retries")
         return None
 
     def _reinitialize_camera(self):
-        """Reinitialize camera after persistent failures"""
+        """Reinitialize camera after failures"""
         self.logger.info("Reinitializing thermal camera...")
         try:
             if self.mlx:
-                self.mlx = None
-            if self.i2c:
                 try:
-                    self.i2c.deinit()
+                    self.mlx.cleanup()
                 except:
                     pass
-                self.i2c = None
+                self.mlx = None
             
-            time.sleep(2)  # Wait for hardware to reset
+            time.sleep(2)
             self._initialize_camera()
             self.consecutive_failures = 0
             self.logger.info("Camera reinitialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to reinitialize camera: {e}")
+            self.logger.error(f"Failed to reinitialize: {e}")
 
     def _process_frame(self, frame):
-        """
-        Apply advanced processing pipeline to thermal frame
-
-        Steps:
-        1. Bad pixel correction
-        2. Temporal filtering (if buffer has enough frames)
-        3. Spatial denoising
-        4. Ambient compensation
-        """
-        # 1. Bad pixel correction
+        """Apply processing pipeline"""
         frame = self._correct_bad_pixels(frame)
-
-        # 2. Temporal filtering (reduces noise by averaging recent frames)
+        
         if len(self.frame_buffer) >= 3:
             frame = self._temporal_filter(frame)
-
-        # 3. Spatial denoising (Gaussian blur)
+        
         frame = self._spatial_denoise(frame)
-
-        # 4. Ambient compensation (if ambient temp is set)
+        
         if self.ambient_temp is not None:
             frame = self._ambient_compensation(frame)
-
+        
         return frame
 
     def _correct_bad_pixels(self, frame):
-        """
-        Correct bad/dead pixels using interpolation from neighbors
-
-        Bad pixels are detected as outliers that appear consistently
-        """
-        # Auto-detect bad pixels (very simple heuristic)
-        # A more robust implementation would calibrate during startup
+        """Correct bad pixels using neighbor interpolation"""
         median_temp = np.median(frame)
         std_temp = np.std(frame)
-
-        # Pixels that are >5 std deviations from median might be bad
         outliers = np.abs(frame - median_temp) > (5 * std_temp)
 
         if np.any(outliers):
-            # Replace bad pixels with median of neighbors
             for y, x in zip(*np.where(outliers)):
-                # Get neighbor values
                 y_min = max(0, y - 1)
                 y_max = min(frame.shape[0], y + 2)
                 x_min = max(0, x - 1)
                 x_max = min(frame.shape[1], x + 2)
-
                 neighbors = frame[y_min:y_max, x_min:x_max]
                 frame[y, x] = np.median(neighbors)
-
                 self.bad_pixels.add((y, x))
 
         return frame
 
     def _temporal_filter(self, current_frame):
-        """
-        Temporal filtering: Average recent frames to reduce noise
-
-        This is effective for stationary scenes (transformers)
-        Uses exponential weighted moving average
-        """
+        """Temporal filtering with exponential weighting"""
         if len(self.frame_buffer) < 2:
             return current_frame
 
-        # Convert deque to array
         buffer_array = np.array(list(self.frame_buffer))
-
-        # Weighted average: more weight on recent frames
         weights = np.exp(np.linspace(-1, 0, len(buffer_array)))
         weights /= weights.sum()
-
-        # Weighted average along time axis
         filtered = np.average(buffer_array, axis=0, weights=weights)
-
         return filtered.astype(np.float32)
 
     def _spatial_denoise(self, frame):
-        """
-        Spatial denoising using Gaussian filter
-
-        Reduces high-frequency noise while preserving thermal gradients
-        """
-        # Use small kernel to preserve detail
-        denoised = cv2.GaussianBlur(frame, (3, 3), 0.5)
-
-        return denoised
+        """Gaussian spatial denoising"""
+        return cv2.GaussianBlur(frame, (3, 3), 0.5)
 
     def _ambient_compensation(self, frame):
-        """
-        Compensate for ambient temperature
-
-        Thermal cameras can drift with ambient temp changes
-        This uses the ambient temp to adjust readings
-        """
+        """Ambient temperature compensation"""
         if self.ambient_temp is None:
             return frame
-
-        # Simple linear compensation
-        # More sophisticated methods would use sensor-specific calibration
-        compensation = (self.ambient_temp - 25.0) * 0.1  # 10% drift per 10°C
-
+        compensation = (self.ambient_temp - 25.0) * 0.1
         return frame - compensation
 
     def detect_hotspots(self, frame, threshold=None):
-        """
-        Detect and track thermal hotspots
-
-        Args:
-            frame: Thermal frame
-            threshold: Temperature threshold for hotspot detection
-
-        Returns:
-            List of hotspot dictionaries with location and temperature
-        """
+        """Detect thermal hotspots"""
         if threshold is None:
             threshold = self.hotspot_threshold
 
-        # Find pixels above threshold
         hotspot_mask = frame > threshold
-
-        # Label connected components (blobs)
         labeled, num_features = ndimage.label(hotspot_mask)
-
         hotspots = []
 
         for i in range(1, num_features + 1):
-            # Get pixels in this hotspot
             hotspot_pixels = frame[labeled == i]
             hotspot_coords = np.argwhere(labeled == i)
-
-            # Calculate hotspot properties
             max_temp = np.max(hotspot_pixels)
             avg_temp = np.mean(hotspot_pixels)
             center_y, center_x = hotspot_coords.mean(axis=0)
@@ -414,7 +317,6 @@ class ThermalCapture:
                 'timestamp': datetime.now().isoformat()
             })
 
-        # Track hotspots history
         self.hotspots_history.append({
             'timestamp': datetime.now().isoformat(),
             'hotspots': hotspots
@@ -423,59 +325,21 @@ class ThermalCapture:
         return hotspots
 
     def calculate_thermal_gradient(self, frame):
-        """
-        Calculate thermal gradient magnitude and direction
-
-        Useful for detecting uneven heating patterns
-        that might indicate faults
-
-        Returns:
-            gradient_magnitude: Magnitude of temperature gradient
-            gradient_direction: Direction of gradient in degrees
-        """
-        # Calculate gradients using Sobel operators
+        """Calculate thermal gradient"""
         grad_x = cv2.Sobel(frame, cv2.CV_32F, 1, 0, ksize=3)
         grad_y = cv2.Sobel(frame, cv2.CV_32F, 0, 1, ksize=3)
-
-        # Magnitude and direction
         gradient_magnitude = np.sqrt(grad_x**2 + grad_y**2)
         gradient_direction = np.arctan2(grad_y, grad_x) * 180 / np.pi
-
         return gradient_magnitude, gradient_direction
 
     def super_resolution_upscale(self, frame, scale_factor=4):
-        """
-        Upscale thermal frame using bicubic interpolation
-
-        Increases resolution from 24x32 to larger size for better
-        visualization and analysis
-
-        Args:
-            frame: Input thermal frame (24x32)
-            scale_factor: Upscaling factor (default 4 -> 96x128)
-
-        Returns:
-            Upscaled frame
-        """
+        """Upscale frame using bicubic interpolation"""
         new_height = frame.shape[0] * scale_factor
         new_width = frame.shape[1] * scale_factor
-
-        # Use bicubic interpolation for smooth upscaling
-        upscaled = cv2.resize(
-            frame,
-            (new_width, new_height),
-            interpolation=cv2.INTER_CUBIC
-        )
-
-        return upscaled
+        return cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
 
     def get_frame_statistics(self, frame):
-        """
-        Calculate comprehensive frame statistics
-
-        Returns:
-            Dictionary with detailed statistics
-        """
+        """Calculate frame statistics"""
         return {
             'min': float(np.min(frame)),
             'max': float(np.max(frame)),
@@ -484,74 +348,39 @@ class ThermalCapture:
             'std': float(np.std(frame)),
             'percentile_95': float(np.percentile(frame, 95)),
             'percentile_5': float(np.percentile(frame, 5)),
-            'range': float(np.ptp(frame)),  # peak-to-peak
+            'range': float(np.ptp(frame)),
         }
 
     def _validate_frame(self, frame):
-        """Validate thermal frame data"""
-        # Check for reasonable temperature range (-40°C to 300°C)
+        """Validate frame data"""
         if np.any(frame < -40) or np.any(frame > 300):
             return False
-
-        # Check for NaN or inf values
         if np.any(np.isnan(frame)) or np.any(np.isinf(frame)):
             return False
-
         return True
 
     def set_ambient_temperature(self, temp):
-        """
-        Set ambient temperature for compensation
-
-        Args:
-            temp: Ambient temperature in Celsius
-        """
+        """Set ambient temperature for compensation"""
         self.ambient_temp = temp
         self.logger.info(f"Ambient temperature set to {temp}°C")
 
     def get_sensor_temp(self):
-        """
-        Get internal sensor temperature
-
-        This can be used for ambient temperature estimation
-        """
+        """Get sensor temperature estimate"""
         try:
-            # The sensor temperature is embedded in the frame data
-            # This is a simplified approach - actual implementation may vary
             frame = self.get_frame(apply_processing=False)
             if frame is not None:
-                # Sensor temp is typically around ambient
-                # Use minimum temperature as estimate
-                return float(np.percentile(frame, 10))  # 10th percentile
+                return float(np.percentile(frame, 10))
             return None
         except Exception as e:
             self.logger.error(f"Failed to get sensor temperature: {e}")
             return None
 
     def apply_emissivity_correction(self, frame, emissivity=0.95):
-        """
-        Apply emissivity correction to thermal frame
-
-        Stefan-Boltzmann approach:
-        T_actual = T_measured / emissivity^0.25
-
-        Args:
-            frame: Thermal frame in Celsius
-            emissivity: Material emissivity (0-1)
-
-        Returns:
-            Corrected frame
-        """
+        """Apply emissivity correction"""
         if emissivity == 1.0:
             return frame
-
-        # Convert to Kelvin
         frame_k = frame + 273.15
-
-        # Apply correction
         corrected_k = frame_k / (emissivity ** 0.25)
-
-        # Convert back to Celsius
         return corrected_k - 273.15
 
     def get_processing_stats(self):
@@ -566,20 +395,15 @@ class ThermalCapture:
         }
 
     def close(self):
-        """Cleanup camera resources"""
+        """Cleanup resources"""
         self.logger.info("Closing thermal camera")
         self.logger.info(
             f"Processed {self.frame_count} frames, "
             f"detected {len(self.bad_pixels)} bad pixels"
         )
-        
-        if self.i2c:
+        if self.mlx:
             try:
-                if self.i2c.try_lock():
-                    self.i2c.unlock()
-                self.i2c.deinit()
+                self.mlx.cleanup()
             except:
                 pass
-        
-        self.mlx = None
-        self.i2c = None
+            self.mlx = None
