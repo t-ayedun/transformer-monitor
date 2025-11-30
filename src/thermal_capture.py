@@ -37,11 +37,19 @@ class ThermalCapture:
     7. Super-resolution upscaling (optional)
     """
 
-    def __init__(self, i2c_addr=0x33, i2c_bus=1, refresh_rate=8, enable_advanced_processing=True):
+    def __init__(self, i2c_addr=0x33, i2c_bus=1, refresh_rate=2, enable_advanced_processing=True):
+        """
+        Initialize thermal camera
+        
+        IMPORTANT: Pi 5 works best with refresh_rate=2 (2 Hz)
+        Higher rates may cause I2C timeout issues
+        """
         self.logger = logging.getLogger(__name__)
         self.i2c_addr = i2c_addr
-        self.refresh_rate = refresh_rate
+        # Force maximum 2 Hz on Pi 5 to avoid I2C timeouts
+        self.refresh_rate = min(refresh_rate, 2)
         self.mlx = None
+        self.i2c = None
         self.frame_shape = (24, 32)  # MLX90640 resolution
 
         # Advanced processing settings
@@ -59,29 +67,82 @@ class ThermalCapture:
 
         # Ambient temperature for compensation
         self.ambient_temp = None
+        
+        # Connection health tracking
+        self.consecutive_failures = 0
+        self.last_successful_frame = None
+
+        if self.refresh_rate != refresh_rate:
+            self.logger.warning(
+                f"Refresh rate capped at {self.refresh_rate}Hz (requested {refresh_rate}Hz) "
+                "for Pi 5 stability"
+            )
 
         self._initialize_camera()
 
-    def _initialize_camera(self):
-        """Initialize I2C connection and camera"""
-        try:
-            self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
+    def _initialize_camera(self, retry_count=3):
+        """Initialize I2C connection and camera with retries"""
+        for attempt in range(retry_count):
+            try:
+                self.logger.info(
+                    f"Initializing MLX90640 at address 0x{self.i2c_addr:02x} "
+                    f"(attempt {attempt + 1}/{retry_count})"
+                )
 
-            # Initialize I2C
-            i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+                # Initialize I2C with slower speed for reliability
+                # Pi 5 can be finicky with 400kHz - try 100kHz first
+                try:
+                    self.i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+                except Exception as e:
+                    self.logger.warning(f"Failed at 400kHz, trying 100kHz: {e}")
+                    self.i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)
 
-            # Initialize MLX90640
-            self.mlx = adafruit_mlx90640.MLX90640(i2c)
-            self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
+                # Give I2C bus time to stabilize
+                time.sleep(0.5)
 
-            self.logger.info(
-                f"MLX90640 initialized at {self.refresh_rate}Hz "
-                f"(Advanced processing: {self.enable_advanced_processing})"
-            )
+                # Initialize MLX90640
+                self.mlx = adafruit_mlx90640.MLX90640(self.i2c)
+                
+                # Set refresh rate (use lowest setting for reliability)
+                self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
 
-        except Exception as e:
-            self.logger.error(f"Failed to initialize MLX90640: {e}")
-            raise
+                # Try to capture a test frame to verify it works
+                test_frame = [0] * 768
+                self.mlx.getFrame(test_frame)
+                
+                # Verify frame has reasonable data
+                test_array = np.array(test_frame)
+                if np.all(test_array == 0) or np.any(np.isnan(test_array)):
+                    raise ValueError("Test frame contains invalid data")
+
+                self.logger.info(
+                    f"MLX90640 initialized successfully at {self.refresh_rate}Hz "
+                    f"(I2C: {self.i2c.frequency}Hz, "
+                    f"Advanced processing: {self.enable_advanced_processing})"
+                )
+                
+                self.consecutive_failures = 0
+                return
+
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to initialize MLX90640 (attempt {attempt + 1}/{retry_count}): {e}"
+                )
+                
+                # Clean up and wait before retry
+                if self.mlx:
+                    self.mlx = None
+                if self.i2c:
+                    try:
+                        self.i2c.deinit()
+                    except:
+                        pass
+                    self.i2c = None
+                
+                if attempt < retry_count - 1:
+                    time.sleep(2)  # Wait before retry
+                else:
+                    raise RuntimeError(f"Failed to initialize MLX90640 after {retry_count} attempts")
 
     def _get_refresh_rate_constant(self, rate):
         """Convert refresh rate to MLX90640 constant"""
@@ -95,7 +156,7 @@ class ThermalCapture:
             32: adafruit_mlx90640.RefreshRate.REFRESH_32_HZ,
             64: adafruit_mlx90640.RefreshRate.REFRESH_64_HZ,
         }
-        return rate_map.get(rate, adafruit_mlx90640.RefreshRate.REFRESH_8_HZ)
+        return rate_map.get(rate, adafruit_mlx90640.RefreshRate.REFRESH_2_HZ)
 
     def get_frame(self, max_retries=3, apply_processing=True):
         """
@@ -110,8 +171,32 @@ class ThermalCapture:
         """
         for attempt in range(max_retries):
             try:
+                # Add delay between frames to prevent I2C bus saturation
+                if self.last_successful_frame is not None:
+                    time_since_last = time.time() - self.last_successful_frame
+                    min_interval = 1.0 / self.refresh_rate
+                    if time_since_last < min_interval:
+                        time.sleep(min_interval - time_since_last)
+
                 frame = [0] * 768  # 24x32 = 768 pixels
-                self.mlx.getFrame(frame)
+                
+                # Try to get frame with timeout protection
+                try:
+                    self.mlx.getFrame(frame)
+                except RuntimeError as e:
+                    if "Too many retries" in str(e):
+                        self.logger.warning(f"I2C timeout (attempt {attempt + 1}/{max_retries})")
+                        self.consecutive_failures += 1
+                        
+                        # If too many consecutive failures, try to reinitialize
+                        if self.consecutive_failures >= 5:
+                            self.logger.warning("Too many consecutive failures, reinitializing camera...")
+                            self._reinitialize_camera()
+                        
+                        time.sleep(0.5)  # Longer wait after I2C timeout
+                        continue
+                    else:
+                        raise
 
                 # Convert to numpy array and reshape
                 frame_array = np.array(frame, dtype=np.float32).reshape(self.frame_shape)
@@ -129,15 +214,37 @@ class ThermalCapture:
                 # Add to temporal buffer
                 self.frame_buffer.append(frame_array.copy())
                 self.frame_count += 1
+                self.last_successful_frame = time.time()
+                self.consecutive_failures = 0
 
                 return frame_array
 
             except Exception as e:
                 self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
-                time.sleep(0.1)
+                time.sleep(0.2)
 
         self.logger.error("Failed to capture valid frame after retries")
         return None
+
+    def _reinitialize_camera(self):
+        """Reinitialize camera after persistent failures"""
+        self.logger.info("Reinitializing thermal camera...")
+        try:
+            if self.mlx:
+                self.mlx = None
+            if self.i2c:
+                try:
+                    self.i2c.deinit()
+                except:
+                    pass
+                self.i2c = None
+            
+            time.sleep(2)  # Wait for hardware to reset
+            self._initialize_camera()
+            self.consecutive_failures = 0
+            self.logger.info("Camera reinitialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to reinitialize camera: {e}")
 
     def _process_frame(self, frame):
         """
@@ -432,7 +539,8 @@ class ThermalCapture:
             'bad_pixels_detected': len(self.bad_pixels),
             'buffer_size': len(self.frame_buffer),
             'hotspots_tracked': len(self.hotspots_history),
-            'advanced_processing_enabled': self.enable_advanced_processing
+            'advanced_processing_enabled': self.enable_advanced_processing,
+            'consecutive_failures': self.consecutive_failures
         }
 
     def close(self):
@@ -442,5 +550,12 @@ class ThermalCapture:
             f"Processed {self.frame_count} frames, "
             f"detected {len(self.bad_pixels)} bad pixels"
         )
-        # MLX90640 doesn't require explicit cleanup
+        
+        if self.i2c:
+            try:
+                self.i2c.deinit()
+            except:
+                pass
+        
         self.mlx = None
+        self.i2c = None
