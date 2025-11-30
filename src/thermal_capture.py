@@ -21,7 +21,7 @@ import cv2
 from scipy import ndimage
 
 try:
-    from seeed_mlx90640 import grove_mxl90640
+    import seeed_mlx90640
     LIBRARY_AVAILABLE = True
 except ImportError:
     LIBRARY_AVAILABLE = False
@@ -99,29 +99,34 @@ class ThermalCapture:
                     f"(attempt {attempt + 1}/{retry_count})"
                 )
 
-                # Initialize camera with seeed library
-                self.mlx = grove_mxl90640.Grove_MLX90640()
+                # Initialize using the seeed_mlx90640 module directly
+                # The library uses module-level functions, not a class
+                self.mlx = seeed_mlx90640.grove_mxl90640
                 
                 # Set refresh rate
                 # Seeed library uses refresh rate codes: 0=0.5Hz, 1=1Hz, 2=2Hz, 3=4Hz, 4=8Hz, 5=16Hz, 6=32Hz
                 rate_map = {
-                    0.5: 0,
-                    1: 1,
-                    2: 2,
-                    4: 3,
-                    8: 4,
-                    16: 5,
-                    32: 6,
-                    64: 7
+                    0.5: seeed_mlx90640.RefreshRate.REFRESH_0_5_HZ,
+                    1: seeed_mlx90640.RefreshRate.REFRESH_1_HZ,
+                    2: seeed_mlx90640.RefreshRate.REFRESH_2_HZ,
+                    4: seeed_mlx90640.RefreshRate.REFRESH_4_HZ,
+                    8: seeed_mlx90640.RefreshRate.REFRESH_8_HZ,
+                    16: seeed_mlx90640.RefreshRate.REFRESH_16_HZ,
+                    32: seeed_mlx90640.RefreshRate.REFRESH_32_HZ,
+                    64: seeed_mlx90640.RefreshRate.REFRESH_64_HZ
                 }
                 
-                rate_code = rate_map.get(self.refresh_rate, 2)  # Default to 2Hz
-                self.mlx.refresh_rate = rate_code
+                rate_const = rate_map.get(self.refresh_rate, seeed_mlx90640.RefreshRate.REFRESH_2_HZ)
+                
+                # Set refresh rate on the module
+                self.mlx.refresh_rate = rate_const
                 
                 self.logger.info(f"Refresh rate set to {self.refresh_rate} Hz")
 
-                # Test frame capture - give sensor time to stabilize
+                # Give sensor time to stabilize
                 time.sleep(1.0)
+                
+                # Test frame capture
                 test_frame = self.mlx.get_frame()
                 
                 if test_frame is None or len(test_frame) != 768:
