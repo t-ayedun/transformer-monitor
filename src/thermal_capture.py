@@ -99,11 +99,9 @@ class ThermalCapture:
                     f"(attempt {attempt + 1}/{retry_count})"
                 )
 
-                # Initialize the grove_mxl90640 class (lowercase 'g')
-                self.mlx = seeed_mlx90640.grove_mxl90640(
-                    i2c_addr=self.i2c_addr,
-                    i2c_bus=self.i2c_bus
-                )
+                # Initialize the grove_mxl90640 class
+                # Parameter is 'address' (decimal), default is 51 (0x33)
+                self.mlx = seeed_mlx90640.grove_mxl90640(address=self.i2c_addr)
                 
                 # Set refresh rate
                 # Seeed library uses refresh rate codes: 0=0.5Hz, 1=1Hz, 2=2Hz, 3=4Hz, 4=8Hz, 5=16Hz, 6=32Hz
