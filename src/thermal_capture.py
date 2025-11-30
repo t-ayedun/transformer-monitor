@@ -99,9 +99,11 @@ class ThermalCapture:
                     f"(attempt {attempt + 1}/{retry_count})"
                 )
 
-                # Initialize using the seeed_mlx90640 module directly
-                # The library uses module-level functions, not a class
-                self.mlx = seeed_mlx90640.grove_mxl90640
+                # Initialize the grove_mxl90640 class (lowercase 'g')
+                self.mlx = seeed_mlx90640.grove_mxl90640(
+                    i2c_addr=self.i2c_addr,
+                    i2c_bus=self.i2c_bus
+                )
                 
                 # Set refresh rate
                 # Seeed library uses refresh rate codes: 0=0.5Hz, 1=1Hz, 2=2Hz, 3=4Hz, 4=8Hz, 5=16Hz, 6=32Hz
@@ -118,7 +120,7 @@ class ThermalCapture:
                 
                 rate_const = rate_map.get(self.refresh_rate, seeed_mlx90640.RefreshRate.REFRESH_2_HZ)
                 
-                # Set refresh rate on the module
+                # Set refresh rate on the instance
                 self.mlx.refresh_rate = rate_const
                 
                 self.logger.info(f"Refresh rate set to {self.refresh_rate} Hz")
@@ -126,8 +128,9 @@ class ThermalCapture:
                 # Give sensor time to stabilize
                 time.sleep(1.0)
                 
-                # Test frame capture
-                test_frame = self.mlx.getFrame()
+                # Test frame capture - need to provide buffer
+                test_frame = [0] * 768  # Pre-allocate buffer
+                self.mlx.getFrame(test_frame)
                 
                 if test_frame is None or len(test_frame) != 768:
                     raise ValueError("Invalid test frame")
@@ -180,8 +183,9 @@ class ThermalCapture:
                     if time_since_last < min_interval:
                         time.sleep(min_interval - time_since_last)
 
-                # Get frame from sensor
-                frame_data = self.mlx.getFrame()
+                # Get frame from sensor - need to provide buffer
+                frame_data = [0] * 768
+                self.mlx.getFrame(frame_data)
                 
                 if frame_data is None or len(frame_data) != 768:
                     self.logger.warning(f"Invalid frame data (attempt {attempt + 1})")
