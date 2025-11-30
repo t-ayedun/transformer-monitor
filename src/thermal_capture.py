@@ -89,40 +89,51 @@ class ThermalCapture:
                     f"(attempt {attempt + 1}/{retry_count})"
                 )
 
-                # Initialize I2C with slower speed for reliability
-                # Pi 5 can be finicky with 400kHz - try 100kHz first
-                try:
-                    self.i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
-                except Exception as e:
-                    self.logger.warning(f"Failed at 400kHz, trying 100kHz: {e}")
-                    self.i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)
+                # Initialize I2C - Blinka doesn't support frequency setting, but that's OK
+                self.i2c = busio.I2C(board.SCL, board.SDA)
 
                 # Give I2C bus time to stabilize
                 time.sleep(0.5)
-
-                # Initialize MLX90640
-                self.mlx = adafruit_mlx90640.MLX90640(self.i2c)
                 
-                # Set refresh rate (use lowest setting for reliability)
-                self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
-
-                # Try to capture a test frame to verify it works
-                test_frame = [0] * 768
-                self.mlx.getFrame(test_frame)
+                # Lock the I2C bus while we initialize
+                while not self.i2c.try_lock():
+                    time.sleep(0.01)
                 
-                # Verify frame has reasonable data
-                test_array = np.array(test_frame)
-                if np.all(test_array == 0) or np.any(np.isnan(test_array)):
-                    raise ValueError("Test frame contains invalid data")
+                try:
+                    # Initialize MLX90640
+                    self.mlx = adafruit_mlx90640.MLX90640(self.i2c)
+                    
+                    # Set refresh rate (use lowest setting for reliability)
+                    self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
+                    
+                    self.logger.info(f"MLX90640 refresh rate set to {self.refresh_rate}Hz")
 
-                self.logger.info(
-                    f"MLX90640 initialized successfully at {self.refresh_rate}Hz "
-                    f"(I2C: {self.i2c.frequency}Hz, "
-                    f"Advanced processing: {self.enable_advanced_processing})"
-                )
-                
-                self.consecutive_failures = 0
-                return
+                    # Try to capture a test frame to verify it works
+                    # This is where the "math domain error" was happening
+                    test_frame = [0] * 768
+                    
+                    # Give the sensor time to stabilize after init
+                    time.sleep(1.0)
+                    
+                    self.mlx.getFrame(test_frame)
+                    
+                    # Verify frame has reasonable data
+                    test_array = np.array(test_frame)
+                    if np.all(test_array == 0) or np.any(np.isnan(test_array)):
+                        raise ValueError("Test frame contains invalid data")
+                    
+                    temp_range = f"{test_array.min():.1f}°C to {test_array.max():.1f}°C"
+                    self.logger.info(
+                        f"MLX90640 initialized successfully at {self.refresh_rate}Hz "
+                        f"(Test frame: {temp_range}, Advanced processing: {self.enable_advanced_processing})"
+                    )
+                    
+                    self.consecutive_failures = 0
+                    return
+                    
+                finally:
+                    # Always unlock the I2C bus
+                    self.i2c.unlock()
 
             except Exception as e:
                 self.logger.error(
@@ -134,13 +145,17 @@ class ThermalCapture:
                     self.mlx = None
                 if self.i2c:
                     try:
+                        if self.i2c.try_lock():
+                            self.i2c.unlock()
                         self.i2c.deinit()
                     except:
                         pass
                     self.i2c = None
                 
                 if attempt < retry_count - 1:
-                    time.sleep(2)  # Wait before retry
+                    wait_time = 2 * (attempt + 1)  # Increasing wait time
+                    self.logger.info(f"Waiting {wait_time}s before retry...")
+                    time.sleep(wait_time)
                 else:
                     raise RuntimeError(f"Failed to initialize MLX90640 after {retry_count} attempts")
 
@@ -180,7 +195,10 @@ class ThermalCapture:
 
                 frame = [0] * 768  # 24x32 = 768 pixels
                 
-                # Try to get frame with timeout protection
+                # Lock I2C bus during frame capture
+                while not self.i2c.try_lock():
+                    time.sleep(0.01)
+                
                 try:
                     self.mlx.getFrame(frame)
                 except RuntimeError as e:
@@ -191,12 +209,16 @@ class ThermalCapture:
                         # If too many consecutive failures, try to reinitialize
                         if self.consecutive_failures >= 5:
                             self.logger.warning("Too many consecutive failures, reinitializing camera...")
+                            self.i2c.unlock()
                             self._reinitialize_camera()
+                            return None
                         
                         time.sleep(0.5)  # Longer wait after I2C timeout
                         continue
                     else:
                         raise
+                finally:
+                    self.i2c.unlock()
 
                 # Convert to numpy array and reshape
                 frame_array = np.array(frame, dtype=np.float32).reshape(self.frame_shape)
@@ -553,6 +575,8 @@ class ThermalCapture:
         
         if self.i2c:
             try:
+                if self.i2c.try_lock():
+                    self.i2c.unlock()
                 self.i2c.deinit()
             except:
                 pass
