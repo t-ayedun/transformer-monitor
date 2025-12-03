@@ -243,9 +243,20 @@ class TransformerMonitor:
         self.logger.info("Starting monitoring loop (TEST MODE)...")
         
         capture_interval = self.config.get('data_capture.interval', 60)
+        sync_to_minute = self.config.get('data_capture.sync_to_minute', True)
         
         last_thermal_capture = 0
         capture_count = 0
+        
+        # If sync_to_minute is enabled, wait until the top of the next minute
+        if sync_to_minute:
+            import datetime
+            now = datetime.datetime.now()
+            seconds_until_next_minute = 60 - now.second
+            if seconds_until_next_minute < 60:
+                self.logger.info(f"Syncing to minute boundary - waiting {seconds_until_next_minute} seconds...")
+                time.sleep(seconds_until_next_minute)
+                self.logger.info("Synchronized! Starting captures at top of each minute.")
         
         try:
             while self.running:
