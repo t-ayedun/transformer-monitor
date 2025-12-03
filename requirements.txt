@@ -40,3 +40,5 @@ pytz
 # GPIO
 gpiozero
 RPi.GPIO
+lgpio  # Required for Pi 5
+rpi-lgpio  # Pi 5 compatibility layer

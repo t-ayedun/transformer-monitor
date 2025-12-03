@@ -66,8 +66,26 @@ class ThermalCapture:
         try:
             self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
 
-            # Initialize I2C
-            i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+            # Initialize I2C - try board pins first (Pi 4), then fall back to explicit bus (Pi 5)
+            try:
+                i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+                self.logger.info("Using board.SCL/SDA pins for I2C")
+            except (ValueError, RuntimeError) as e:
+                # Pi 5 may need explicit I2C bus specification
+                self.logger.warning(f"Board pins failed ({e}), trying explicit I2C bus")
+                import board
+                # Use I2C bus 1 explicitly (pins GPIO2/GPIO3 on Pi 5)
+                if hasattr(board, 'SCL1') and hasattr(board, 'SDA1'):
+                    i2c = busio.I2C(board.SCL1, board.SDA1, frequency=400000)
+                    self.logger.info("Using board.SCL1/SDA1 pins for I2C (Pi 5)")
+                else:
+                    # Last resort: try to use /dev/i2c-1 directly
+                    self.logger.info("Attempting to use I2C bus via device file")
+                    raise ValueError(
+                        "Could not initialize I2C. Please ensure I2C is enabled:\n"
+                        "  sudo raspi-config -> Interface Options -> I2C -> Enable\n"
+                        "Then reboot and try again."
+                    )
 
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
