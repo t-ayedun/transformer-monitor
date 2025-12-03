@@ -66,25 +66,8 @@ class ThermalCapture:
         try:
             self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
 
-            # Initialize I2C - try board pins first (Pi 4), then fall back to explicit bus (Pi 5)
-            try:
-                i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
-                self.logger.info("Using board.SCL/SDA pins for I2C")
-            except (ValueError, RuntimeError) as e:
-                # Pi 5 may need explicit I2C bus specification
-                self.logger.warning(f"Board pins failed ({e}), trying explicit I2C bus")
-                # Use I2C bus 1 explicitly (pins GPIO2/GPIO3 on Pi 5)
-                if hasattr(board, 'SCL1') and hasattr(board, 'SDA1'):
-                    i2c = busio.I2C(board.SCL1, board.SDA1, frequency=400000)
-                    self.logger.info("Using board.SCL1/SDA1 pins for I2C (Pi 5)")
-                else:
-                    # Last resort: try to use /dev/i2c-1 directly
-                    self.logger.info("Attempting to use I2C bus via device file")
-                    raise ValueError(
-                        "Could not initialize I2C. Please ensure I2C is enabled:\n"
-                        "  sudo raspi-config -> Interface Options -> I2C -> Enable\n"
-                        "Then reboot and try again."
-                    )
+            # Initialize I2C
+            i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
 
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
@@ -113,12 +96,12 @@ class ThermalCapture:
         }
         return rate_map.get(rate, adafruit_mlx90640.RefreshRate.REFRESH_8_HZ)
 
-    def get_frame(self, max_retries=3, apply_processing=True):
+    def get_frame(self, max_retries=5, apply_processing=True):
         """
         Capture a thermal frame with optional advanced processing
 
         Args:
-            max_retries: Number of retry attempts
+            max_retries: Number of retry attempts (increased for Pi 5)
             apply_processing: Apply advanced processing pipeline
 
         Returns:
@@ -127,6 +110,11 @@ class ThermalCapture:
         for attempt in range(max_retries):
             try:
                 frame = [0] * 768  # 24x32 = 768 pixels
+                
+                # Pi 5 needs longer delays between frame reads
+                if attempt > 0:
+                    time.sleep(0.5)  # Increased from 0.1 for Pi 5 compatibility
+                
                 self.mlx.getFrame(frame)
 
                 # Convert to numpy array and reshape
@@ -135,7 +123,7 @@ class ThermalCapture:
                 # Basic validation
                 if not self._validate_frame(frame_array):
                     self.logger.warning(f"Invalid frame data (attempt {attempt + 1})")
-                    time.sleep(0.1)
+                    time.sleep(0.2)
                     continue
 
                 # Apply advanced processing if enabled
@@ -148,9 +136,17 @@ class ThermalCapture:
 
                 return frame_array
 
+            except RuntimeError as e:
+                # Pi 5 specific: "Too many retries" error
+                if "Too many retries" in str(e):
+                    self.logger.warning(f"Pi 5 timing issue (attempt {attempt + 1}/{max_retries}), retrying with longer delay...")
+                    time.sleep(1.0)  # Longer delay for Pi 5
+                else:
+                    self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
+                    time.sleep(0.5)
             except Exception as e:
                 self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
-                time.sleep(0.1)
+                time.sleep(0.5)
 
         self.logger.error("Failed to capture valid frame after retries")
         return None
