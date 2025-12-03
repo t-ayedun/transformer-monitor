@@ -66,17 +66,50 @@ class ThermalCapture:
         try:
             self.logger.info(f"Initializing MLX90640 at address 0x{self.i2c_addr:02x}")
 
-            # Initialize I2C
-            i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+            # Initialize I2C - try board pins first (Pi 4), then fall back to explicit bus (Pi 5)
+            try:
+                i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+                self.logger.info("Using board.SCL/SDA pins for I2C")
+            except (ValueError, RuntimeError) as e:
+                # Pi 5 may need explicit I2C bus specification
+                self.logger.warning(f"Board pins failed ({e}), trying explicit I2C bus")
+                # Use I2C bus 1 explicitly (pins GPIO2/GPIO3 on Pi 5)
+                if hasattr(board, 'SCL1') and hasattr(board, 'SDA1'):
+                    i2c = busio.I2C(board.SCL1, board.SDA1, frequency=400000)
+                    self.logger.info("Using board.SCL1/SDA1 pins for I2C (Pi 5)")
+                else:
+                    # Last resort: try to use /dev/i2c-1 directly
+                    self.logger.info("Attempting to use I2C bus via device file")
+                    raise ValueError(
+                        "Could not initialize I2C. Please ensure I2C is enabled:\n"
+                        "  sudo raspi-config -> Interface Options -> I2C -> Enable\n"
+                        "Then reboot and try again."
+                    )
 
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
-            self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
-
+            
+            # Pi 5 needs slower refresh rate for reliability
+            # Use 2 Hz instead of default 8 Hz
+            target_rate = min(self.refresh_rate, 2)  # Cap at 2 Hz for Pi 5
+            self.mlx.refresh_rate = self._get_refresh_rate_constant(target_rate)
+            
             self.logger.info(
-                f"MLX90640 initialized at {self.refresh_rate}Hz "
+                f"MLX90640 initialized at {target_rate}Hz "
                 f"(Advanced processing: {self.enable_advanced_processing})"
             )
+            
+            # CRITICAL: Discard first 2 frames (contain garbage calibration data)
+            self.logger.info("Discarding initial calibration frames...")
+            for i in range(2):
+                dummy_frame = [0] * 768
+                try:
+                    self.mlx.getFrame(dummy_frame)
+                    time.sleep(0.6)  # Wait between frames
+                except:
+                    pass  # Ignore errors in dummy frames
+            
+            self.logger.info("Thermal camera ready")
 
         except Exception as e:
             self.logger.error(f"Failed to initialize MLX90640: {e}")
@@ -372,8 +405,11 @@ class ThermalCapture:
 
     def _validate_frame(self, frame):
         """Validate thermal frame data"""
-        # Check for reasonable temperature range (-40°C to 300°C)
-        if np.any(frame < -40) or np.any(frame > 300):
+        # Check for reasonable temperature range
+        # Transformers typically operate between -40°C and 150°C
+        # Anything above 150°C is likely sensor error
+        if np.any(frame < -40) or np.any(frame > 150):
+            self.logger.warning(f"Frame rejected: temps outside valid range ({frame.min():.1f}°C to {frame.max():.1f}°C)")
             return False
 
         # Check for NaN or inf values
