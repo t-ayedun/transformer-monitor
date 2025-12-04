@@ -1,43 +1,121 @@
 # Transformer Thermal Monitor
 
-Real-time thermal monitoring system for distribution transformers using MLX90640 and Raspberry Pi.
+Real-time thermal monitoring system for distribution transformers using MLX90640 thermal camera and Raspberry Pi.
 
-## Quick Start
+## 🚀 Quick Start
 
-1. Flash Balena image to SD card
-2. Configure device variables in Balena dashboard
-3. Upload certificates to `/data/certs/`
-4. Deploy: `balena push transformer-monitor`
+**For complete deployment instructions, see:** [**DEPLOYMENT_MASTER_GUIDE.md**](DEPLOYMENT_MASTER_GUIDE.md)
 
-## Documentation
+### Hardware Requirements
+- Raspberry Pi 4B or Pi 5 (4GB+ RAM)
+- MLX90640 Thermal Camera (I2C)
+- Raspberry Pi Camera Module 3
+- Teltonika Router with RMS Connect
+- 32GB+ microSD card
 
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Remote Access Setup](docs/REMOTE_ACCESS.md) - OpenVPN & Teltonika RMS
-- [Remote Access Checklist](docs/REMOTE_ACCESS_CHECKLIST.md)
-- [AWS Setup](docs/AWS_SETUP.md)
-- [Calibration](docs/CALIBRATION.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
+### Quick Setup
 
-## Architecture
+```bash
+# 1. Clone repository
+git clone https://github.com/t-ayedun/transformer-monitor.git
+cd transformer-monitor
+git checkout stable-deployment
+
+# 2. Install dependencies
+pip3 install --break-system-packages -r requirements.txt
+
+# 3. Create data directories
+sudo mkdir -p /data/{config,logs,images,buffer,certs}
+sudo chown -R $USER:$USER /data
+
+# 4. Configure site
+cp config/site_config.template.yaml /data/config/site_config.yaml
+nano /data/config/site_config.yaml  # Edit site details
+
+# 5. Run
+python3 src/main.py
 ```
-Raspberry Pi 4
-├── MLX90640 Thermal Camera (I2C)
-├── Pi Camera Module
-└── Network (Ethernet/WiFi) → Teltonika Router
-    └── AWS IoT Core (MQTT)
-        ├── S3 (images)
-        ├── Timestream (metrics)
-        └── SNS (alerts)
+
+## 📚 Documentation
+
+- **[Complete Deployment Guide](DEPLOYMENT_MASTER_GUIDE.md)** - Full setup instructions
+- [Calibration Guide](docs/CALIBRATION.md) - Thermal camera calibration
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+## 🌐 Web Interface
+
+Access the monitoring dashboard at: `http://<pi-ip>:5000`
+
+Features:
+- Live thermal stream (2 Hz)
+- Temperature monitoring with ROI analysis
+- Motion-triggered event recording
+- ROI configuration tool
+- System status and diagnostics
+
+## ☁️ AWS IoT Integration
+
+The system publishes data to AWS IoT Core:
+- Thermal telemetry every 60 seconds
+- Heartbeat every 5 minutes
+- Alert notifications on threshold violations
+- Image uploads to S3 on critical events
+
+See [DEPLOYMENT_MASTER_GUIDE.md](DEPLOYMENT_MASTER_GUIDE.md#7-aws-iot-core-setup) for AWS setup.
+
+## 🔧 System Architecture
+
+```
+Raspberry Pi 4/5
+├── MLX90640 Thermal Camera (I2C) → 2 Hz thermal data
+├── Pi Camera Module 3 → Motion detection & recording
+└── Ethernet → Teltonika Router → AWS IoT Core
+    ├── MQTT (telemetry, heartbeat, alerts)
+    ├── S3 (thermal images, event videos)
+    └── RMS Connect (remote access)
 ```
 
-## Configuration
+## 📊 Features
 
-All site-specific settings via Balena Device Variables:
-- `SITE_ID`: Unique site identifier
-- `IOT_ENDPOINT`: AWS IoT endpoint
-- `IOT_THING_NAME`: AWS IoT thing name
-- `FTP_HOST`, `FTP_USERNAME`, `FTP_PASSWORD`: FTP server details
+- ✅ **Thermal Monitoring**: Accurate temperature measurement with ROI analysis
+- ✅ **Motion Detection**: Automatic event recording with pre/post buffering
+- ✅ **Cloud Integration**: AWS IoT Core with MQTT and S3 storage
+- ✅ **Remote Access**: Teltonika RMS Connect for remote management
+- ✅ **Auto-Start**: Systemd service for automatic startup
+- ✅ **Data Resilience**: Local buffering when network unavailable
+- ✅ **Web Dashboard**: Real-time monitoring and configuration
 
-## Version
+## 🛠️ Maintenance
 
-Current: v1.0.0 (see VERSION file)
+```bash
+# Check service status
+sudo systemctl status transformer-monitor
+
+# View logs
+sudo journalctl -u transformer-monitor -f
+
+# Restart service
+sudo systemctl restart transformer-monitor
+
+# Update code
+cd ~/transformer-monitor
+git pull origin stable-deployment
+sudo systemctl restart transformer-monitor
+```
+
+## 📞 Support
+
+For issues or questions, see:
+- [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+- [GitHub Issues](https://github.com/t-ayedun/transformer-monitor/issues)
+- Email: support@smarterise.com
+
+## 📄 License
+
+Proprietary - Smarterise Energy Solutions
+
+---
+
+**Version:** 1.0  
+**Compatible with:** Raspberry Pi 4B, Raspberry Pi 5  
+**Last Updated:** December 2024
