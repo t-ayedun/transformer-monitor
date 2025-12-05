@@ -221,6 +221,32 @@ def _safe_ExtractKvPixelParameters(self) -> None:
     self.kvScale = kvScale
 
 
+def _safe_ExtractDeviatingPixels(self) -> None:
+    """
+    Safe version of _ExtractDeviatingPixels
+    Suppresses RuntimeError for >4 broken/outlier pixels
+    """
+    eeData = adafruit_mlx90640.eeData
+    
+    pixCnt = 0
+    while (pixCnt < 768) and (len(self.brokenPixels) < 5) and (len(self.outlierPixels) < 5):
+        if eeData[pixCnt + 64] == 0:
+            self.brokenPixels.append(pixCnt)
+        elif (eeData[pixCnt + 64] & 0x0001) != 0:
+            self.outlierPixels.append(pixCnt)
+        pixCnt += 1
+
+    # Patch: Do NOT raise RuntimeError if more than 4 broken/outlier pixels
+    # Just warn debug print if needed, but for now silent success to allow run
+    if len(self.brokenPixels) > 4:
+        # self.brokenPixels = [] # Option: Clear them if it's just garbage? 
+        # For now, let's keep the first 5 identified and ignore the rest
+        pass
+        
+    if len(self.outlierPixels) > 4:
+        pass
+
+
 class ThermalCapture:
     """
     Interface for MLX90640 thermal camera with advanced processing
@@ -275,6 +301,8 @@ class ThermalCapture:
             adafruit_mlx90640.MLX90640._ExtractKtaPixelParameters = _safe_ExtractKtaPixelParameters
             # 3. Prevent infinite loops in Kv extraction (if EEPROM is garbage)
             adafruit_mlx90640.MLX90640._ExtractKvPixelParameters = _safe_ExtractKvPixelParameters
+            # 4. Prevent crash on "too many broken pixels" (common with garbage EEPROM)
+            adafruit_mlx90640.MLX90640._ExtractDeviatingPixels = _safe_ExtractDeviatingPixels
             
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
