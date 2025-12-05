@@ -60,6 +60,9 @@ class WatchdogTimer:
             # Write to watchdog device
             with open('/dev/watchdog', 'w') as wd:
                 wd.write('1')
+        except PermissionError:
+            # Non-root user cannot pet watchdog, ignore or log once
+            pass
         except Exception as e:
             self.logger.error(f"Failed to pet watchdog: {e}")
     

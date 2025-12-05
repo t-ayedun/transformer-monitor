@@ -366,11 +366,17 @@ class ThermalCapture:
 
                 return frame_array
 
+                return frame_array
+
+            except (OSError, RuntimeError) as e:
+                # Common errors: [Errno 5] Input/output error, or I2C timeout
+                self.logger.warning(f"Frame capture error (attempt {attempt + 1}): {e}")
+                time.sleep(0.2)
             except Exception as e:
-                self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
+                self.logger.error(f"Frame capture unexpected error (attempt {attempt + 1}): {e}")
                 time.sleep(0.1)
 
-        self.logger.error("Failed to capture valid frame after retries")
+        self.logger.warning("Failed to capture valid frame after retries")
         return None
 
     def _process_frame(self, frame):

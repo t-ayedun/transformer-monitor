@@ -30,7 +30,8 @@ class CameraWebInterface:
         self.port = port
 
         # Flask app
-        self.app = Flask(__name__)
+        template_dir = Path(__file__).parent / 'templates'
+        self.app = Flask(__name__, template_folder=str(template_dir))
         self.app.config['SECRET_KEY'] = 'transformer-monitor-secret'
 
         # State
