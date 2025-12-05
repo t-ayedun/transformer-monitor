@@ -12,6 +12,7 @@ Advanced Features:
 """
 
 import time
+import math
 import logging
 import numpy as np
 from collections import deque
@@ -21,6 +22,82 @@ import busio
 import adafruit_mlx90640
 import cv2
 from scipy import ndimage
+
+
+def _safe_ExtractAlphaParameters(self) -> None:
+    """
+    Monkey patch for MLX90640 _ExtractAlphaParameters to handle ZeroDivisionError
+    Common on Raspberry Pi 4 due to I2C/EEPROM issues
+    """
+    # Access module globals from the library
+    eeData = adafruit_mlx90640.eeData
+    SCALEALPHA = adafruit_mlx90640.SCALEALPHA
+    
+    # extract alpha
+    accRemScale = eeData[32] & 0x000F
+    accColumnScale = (eeData[32] & 0x00F0) >> 4
+    accRowScale = (eeData[32] & 0x0F00) >> 8
+    alphaScale = ((eeData[32] & 0xF000) >> 12) + 30
+    alphaRef = eeData[33]
+    accRow = [0] * 24
+    accColumn = [0] * 32
+    alphaTemp = [0] * 768
+
+    for i in range(6):
+        p = i * 4
+        accRow[p + 0] = eeData[34 + i] & 0x000F
+        accRow[p + 1] = (eeData[34 + i] & 0x00F0) >> 4
+        accRow[p + 2] = (eeData[34 + i] & 0x0F00) >> 8
+        accRow[p + 3] = (eeData[34 + i] & 0xF000) >> 12
+
+    for i in range(24):
+        if accRow[i] > 7:
+            accRow[i] -= 16
+
+    for i in range(8):
+        p = i * 4
+        accColumn[p + 0] = eeData[40 + i] & 0x000F
+        accColumn[p + 1] = (eeData[40 + i] & 0x00F0) >> 4
+        accColumn[p + 2] = (eeData[40 + i] & 0x0F00) >> 8
+        accColumn[p + 3] = (eeData[40 + i] & 0xF000) >> 12
+
+    for i in range(32):
+        if accColumn[i] > 7:
+            accColumn[i] -= 16
+
+    for i in range(24):
+        for j in range(32):
+            p = 32 * i + j
+            alphaTemp[p] = (eeData[64 + p] & 0x03F0) >> 4
+            if alphaTemp[p] > 31:
+                alphaTemp[p] -= 64
+            alphaTemp[p] *= 1 << accRemScale
+            alphaTemp[p] += (
+                alphaRef + (accRow[i] << accRowScale) + (accColumn[j] << accColumnScale)
+            )
+            alphaTemp[p] /= math.pow(2, alphaScale)
+            alphaTemp[p] -= self.tgc * (self.cpAlpha[0] + self.cpAlpha[1]) / 2
+            
+            # Patch: Check for zero before division
+            if alphaTemp[p] == 0:
+                alphaTemp[p] = 0.000001
+                
+            alphaTemp[p] = SCALEALPHA / alphaTemp[p]
+    # print("alphaTemp: ", alphaTemp)
+
+    temp = max(alphaTemp)
+    # print("temp", temp)
+
+    alphaScale = 0
+    while temp < 32768:
+        temp *= 2
+        alphaScale += 1
+
+    for i in range(768):
+        temp = alphaTemp[i] * math.pow(2, alphaScale)
+        self.alpha[i] = int(temp + 0.5)
+
+    self.alphaScale = alphaScale
 
 
 class ThermalCapture:
@@ -70,6 +147,9 @@ class ThermalCapture:
             # Initialize I2C
             i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
 
+            # Apply monkey patch for Pi 4 likely ZeroDivisionError
+            adafruit_mlx90640.MLX90640._ExtractAlphaParameters = _safe_ExtractAlphaParameters
+            
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
             self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
