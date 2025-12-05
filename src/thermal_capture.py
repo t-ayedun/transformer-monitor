@@ -283,6 +283,7 @@ class ThermalCapture:
 
         # Ambient temperature for compensation
         self.ambient_temp = None
+        self.last_retry_time = 0
 
         self._initialize_camera()
 
@@ -315,7 +316,8 @@ class ThermalCapture:
 
         except Exception as e:
             self.logger.error(f"Failed to initialize MLX90640: {e}")
-            raise
+            self.logger.warning("Thermal camera unavailable - Running in DEGRADED MODE")
+            self.mlx = None
 
     def _get_refresh_rate_constant(self, rate):
         """Convert refresh rate to MLX90640 constant"""
@@ -342,6 +344,16 @@ class ThermalCapture:
         Returns:
             numpy array of shape (24, 32) with temperatures in Celsius
         """
+        # handle degraded mode (retry connection)
+        if self.mlx is None:
+            current_time = time.time()
+            if current_time - self.last_retry_time > 5:  # Retry every 5s
+                self.last_retry_time = current_time
+                self._initialize_camera()
+            
+            if self.mlx is None:
+                return None
+
         for attempt in range(max_retries):
             try:
                 frame = [0] * 768  # 24x32 = 768 pixels
