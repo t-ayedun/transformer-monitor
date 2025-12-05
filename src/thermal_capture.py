@@ -89,9 +89,14 @@ def _safe_ExtractAlphaParameters(self) -> None:
     # print("temp", temp)
 
     alphaScale = 0
-    while temp < 32768:
-        temp *= 2
-        alphaScale += 1
+    # Patch: Guard against infinite loop if temp <= 0 (garbage data)
+    if temp > 0:
+        while temp < 32768 and alphaScale < 100:
+            temp *= 2
+            alphaScale += 1
+    else:
+        # Fallback for garbage data
+        alphaScale = 30
 
     for i in range(768):
         temp = alphaTemp[i] * math.pow(2, alphaScale)
