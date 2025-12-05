@@ -356,10 +356,12 @@ class SmartCamera:
                 Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
                 # Start recording to file (includes circular buffer content)
-                file_output = FileOutput(filepath)
-
+                # Picamera2 CircularOutput expects a file-like object or filename depending on usage.
+                # The error "Must pass io.BufferedIOBase" suggests it strictly wants an open file object.
+                self.output_file = open(filepath, "wb")
+                
                 # This writes the circular buffer content first, then continues with live frames
-                self.circular_output.fileoutput = file_output
+                self.circular_output.fileoutput = self.output_file
                 self.circular_output.start()
 
                 self.is_recording = True
@@ -410,6 +412,11 @@ class SmartCamera:
                 self.is_recording = False
                 self.current_recording_path = None
                 self.recording_start_time = None
+
+                # Close file if opened
+                if hasattr(self, 'output_file') and self.output_file:
+                    self.output_file.close()
+                    self.output_file = None
 
             except Exception as e:
                 self.logger.error(f"Failed to stop recording: {e}")

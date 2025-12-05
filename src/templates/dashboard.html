@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer Monitor | {{ site_id }}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: #e0e0e0; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; margin-bottom: 20px; }
+        .card-header { background-color: #252525; border-bottom: 1px solid #333; font-weight: bold; }
+        .stream-container { position: relative; width: 100%; padding-top: 75%; /* 4:3 Aspect Ratio */ overflow: hidden; background: #000; border-radius: 4px; }
+        .stream-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+        .status-badge { font-size: 0.8em; padding: 5px 10px; border-radius: 12px; }
+        .status-ok { background-color: #198754; color: white; }
+        .status-warn { background-color: #ffc107; color: black; }
+        .status-err { background-color: #dc3545; color: white; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; }
+        .stat-label { font-size: 0.9rem; color: #aaa; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-bolt me-2"></i>Transformer Monitor
+                <span class="badge bg-secondary ms-2" id="site-id">{{ site_id }}</span>
+            </span>
+            <div class="d-flex">
+                <span id="connection-status" class="badge bg-danger">Disconnected</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Left Column: Video Streams -->
+            <div class="col-lg-8">
+                <div class="row">
+                    <!-- Thermal Stream -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-temperature-high me-2 text-warning"></i>Thermal Feed</span>
+                                <span class="badge bg-primary" id="temp-range">--°C</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="stream-container">
+                                    <img src="/video/thermal" class="stream-img" alt="Thermal Stream" onerror="this.src='https://placehold.co/640x480?text=Thermal+Offline'">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Visual Stream -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-video me-2 text-info"></i>Visual Feed
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="stream-container">
+                                    <img src="/video/visual" class="stream-img" alt="Visual Stream" onerror="this.src='https://placehold.co/640x480?text=Visual+Offline'">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fusion Stream (Optional/Full Width) -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-layer-group me-2 text-success"></i>Fusion View
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="stream-container" style="padding-top: 56.25%;"> <!-- 16:9 -->
+                                    <img src="/video/fusion" class="stream-img" alt="Fusion Stream" onerror="this.src='https://placehold.co/800x450?text=Fusion+Offline'">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Stats & Controls -->
+            <div class="col-lg-4">
+                <!-- System Health -->
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-heartbeat me-2"></i>System Health</div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6 mb-3">
+                                <div class="stat-value" id="cpu-load">--%</div>
+                                <div class="stat-label">CPU Load</div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="stat-value" id="disk-space">--%</div>
+                                <div class="stat-label">Disk Usage</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-value" id="temp-cpu">--°C</div>
+                                <div class="stat-label">CPU Temp</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-value" id="uptime">--</div>
+                                <div class="stat-label">Uptime</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera Stats -->
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-camera me-2"></i>Camera Stats</div>
+                    <ul class="list-group list-group-flush bg-dark text-white">
+                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
+                            <span>Motion Events</span>
+                            <span class="badge bg-primary rounded-pill" id="motion-events">0</span>
+                        </li>
+                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
+                            <span>Recordings Saved</span>
+                            <span class="badge bg-success rounded-pill" id="recordings-saved">0</span>
+                        </li>
+                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
+                            <span>Snapshots</span>
+                            <span class="badge bg-info rounded-pill" id="snapshots-taken">0</span>
+                        </li>
+                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
+                            <span>Buffer Usage</span>
+                            <span class="badge bg-secondary rounded-pill" id="buffer-usage">0 MB</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ROI Status -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-vector-square me-2"></i>Regions of Interest</span>
+                        <a href="/roi-mapper" class="btn btn-sm btn-outline-light">Edit</a>
+                    </div>
+                    <div class="card-body" id="roi-list">
+                        <p class="text-muted text-center">Loading ROIs...</p>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-cogs me-2"></i>Controls</div>
+                    <div class="card-body">
+                        <button class="btn btn-primary w-100 mb-2" onclick="captureSnapshot()">
+                            <i class="fas fa-camera me-2"></i>Take Snapshot
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Update connection status
+        function updateStatus(connected) {
+            const el = document.getElementById('connection-status');
+            if (connected) {
+                el.className = 'badge bg-success shadow-none';
+                el.textContent = 'Connected';
+            } else {
+                el.className = 'badge bg-danger shadow-none';
+                el.textContent = 'Disconnected';
+            }
+        }
+
+        // Fetch stats periodically
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                updateStatus(true);
+                
+                // Update Camera Stats
+                if (data.camera_stats) {
+                    document.getElementById('motion-events').textContent = data.camera_stats.motion_events;
+                    document.getElementById('recordings-saved').textContent = data.camera_stats.recordings_saved;
+                    document.getElementById('snapshots-taken').textContent = data.camera_stats.snapshots_taken;
+                    document.getElementById('buffer-usage').textContent = data.camera_stats.buffer_size_mb + ' MB';
+                }
+
+                // Update Thermal Data & ROIs
+                if (data.thermal_data) {
+                    const rois = data.thermal_data.rois || [];
+                    const listEl = document.getElementById('roi-list');
+                    
+                    if (rois.length > 0) {
+                        let html = '<ul class="list-group list-group-flush">';
+                        rois.forEach(roi => {
+                            const badgeClass = roi.status === 'EMERGENCY' ? 'bg-danger' : 
+                                             roi.status === 'CRITICAL' ? 'bg-warning text-dark' : 'bg-success';
+                            html += `
+                                <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <span>${roi.name}</span>
+                                    <span>
+                                        <span class="me-2">${roi.max_temp.toFixed(1)}°C</span>
+                                        <span class="badge ${badgeClass}">${roi.status}</span>
+                                    </span>
+                                </li>
+                            `;
+                        });
+                        html += '</ul>';
+                        listEl.innerHTML = html;
+                    } else {
+                        listEl.innerHTML = '<p class="text-muted text-center">No ROIs configured</p>';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch stats:', e);
+                updateStatus(false);
+            }
+        }
+
+        // Capture snapshot
+        async function captureSnapshot() {
+            try {
+                const btn = event.target.closest('button');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Capturing...';
+                
+                const response = await fetch('/api/snapshot');
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Snapshot saved to: ' + data.filepath);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            } catch (e) {
+                alert('Failed to trigger snapshot');
+            }
+        }
+
+        // Poll every 2 seconds
+        setInterval(fetchStats, 2000);
+        fetchStats();
+    </script>
+</body>
+</html>
