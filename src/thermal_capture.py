@@ -29,6 +29,7 @@ def _safe_ExtractAlphaParameters(self) -> None:
     Monkey patch for MLX90640 _ExtractAlphaParameters to handle ZeroDivisionError
     Common on Raspberry Pi 4 due to I2C/EEPROM issues
     """
+    print("DEBUG: Entering _safe_ExtractAlphaParameters")
     # Access module globals from the library
     eeData = adafruit_mlx90640.eeData
     SCALEALPHA = adafruit_mlx90640.SCALEALPHA
@@ -83,26 +84,67 @@ def _safe_ExtractAlphaParameters(self) -> None:
                 alphaTemp[p] = 0.000001
                 
             alphaTemp[p] = SCALEALPHA / alphaTemp[p]
-    # print("alphaTemp: ", alphaTemp)
+    
+    print(f"DEBUG: alphaTemp calculation done. Max value: {max(alphaTemp)}")
 
     temp = max(alphaTemp)
     # print("temp", temp)
-
+    
     alphaScale = 0
     # Patch: Guard against infinite loop if temp <= 0 (garbage data)
+    print(f"DEBUG: Starting alphaScale loop. temp={temp}")
     if temp > 0:
         while temp < 32768 and alphaScale < 100:
             temp *= 2
             alphaScale += 1
+            if alphaScale % 10 == 0:
+                print(f"DEBUG: alphaScale loop {alphaScale}, temp={temp}")
     else:
         # Fallback for garbage data
+        print("DEBUG: temp <= 0, using fallback alphaScale")
         alphaScale = 30
+        
+    print(f"DEBUG: alphaScale loop done. alphaScale={alphaScale}")
 
     for i in range(768):
         temp = alphaTemp[i] * math.pow(2, alphaScale)
         self.alpha[i] = int(temp + 0.5)
 
     self.alphaScale = alphaScale
+    print("DEBUG: Exiting _safe_ExtractAlphaParameters")
+
+
+def _debug_ExtractParameters(self) -> None:
+    print("DEBUG: Starting _ExtractParameters (Monkey Patched)")
+    self._ExtractVDDParameters()
+    print("DEBUG: VDD extracted")
+    self._ExtractPTATParameters()
+    print("DEBUG: PTAT extracted")
+    self._ExtractGainParameters()
+    print("DEBUG: Gain extracted")
+    self._ExtractTgcParameters()
+    print("DEBUG: Tgc extracted")
+    self._ExtractResolutionParameters()
+    print("DEBUG: Resolution extracted")
+    self._ExtractKsTaParameters()
+    print("DEBUG: KsTa extracted")
+    self._ExtractKsToParameters()
+    print("DEBUG: KsTo extracted")
+    self._ExtractCPParameters()
+    print("DEBUG: CP extracted")
+    self._ExtractAlphaParameters()
+    print("DEBUG: Alpha extracted")
+    self._ExtractOffsetParameters()
+    print("DEBUG: Offset extracted")
+    self._ExtractKtaPixelParameters()
+    print("DEBUG: KtaPixel extracted")
+    self._ExtractKvPixelParameters()
+    print("DEBUG: KvPixel extracted")
+    self._ExtractCILCParameters()
+    print("DEBUG: CILC extracted")
+    self._ExtractDeviatingPixels()
+    print("DEBUG: DeviatingPixels extracted")
+    print("DEBUG: Finished _ExtractParameters")
 
 
 class ThermalCapture:
@@ -154,7 +196,9 @@ class ThermalCapture:
 
             # Apply monkey patch for Pi 4 likely ZeroDivisionError
             adafruit_mlx90640.MLX90640._ExtractAlphaParameters = _safe_ExtractAlphaParameters
+            adafruit_mlx90640.MLX90640._ExtractParameters = _debug_ExtractParameters
             
+            print("DEBUG: Initializing MLX90640 instance...")
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
             self.mlx.refresh_rate = self._get_refresh_rate_constant(self.refresh_rate)
