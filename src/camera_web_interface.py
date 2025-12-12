@@ -307,8 +307,20 @@ class CameraWebInterface:
         # Apply colormap (INFERNO or JET for thermal imaging)
         colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO)
 
-        # Resize for better visibility (24x32 -> 480x640)
-        resized = cv2.resize(colored, (640, 480), interpolation=cv2.INTER_CUBIC)
+        # Apply rotation if configured
+        rotation = self.config.get('thermal_camera.rotation', 0)
+        if rotation == 90:
+            colored = cv2.rotate(colored, cv2.ROTATE_90_CLOCKWISE)
+        elif rotation == 180:
+            colored = cv2.rotate(colored, cv2.ROTATE_180)
+        elif rotation == 270:
+            colored = cv2.rotate(colored, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+        # Resize for better visibility (24x32 -> 480x640 or adjusted for rotation)
+        if rotation in [90, 270]:
+            resized = cv2.resize(colored, (480, 640), interpolation=cv2.INTER_CUBIC)
+        else:
+            resized = cv2.resize(colored, (640, 480), interpolation=cv2.INTER_CUBIC)
 
         return resized
 
