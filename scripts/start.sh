@@ -51,6 +51,12 @@ if [ -d "$PROJECT_ROOT/venv" ]; then
     source "$PROJECT_ROOT/venv/bin/activate"
 fi
 
+# Activate virtual environment if it exists
+if [ -d "$PROJECT_ROOT/venv" ]; then
+    echo "Activating virtual environment..."
+    source "$PROJECT_ROOT/venv/bin/activate"
+fi
+
 # Start the application
 echo "Starting monitor application..."
 cd "$PROJECT_ROOT"
