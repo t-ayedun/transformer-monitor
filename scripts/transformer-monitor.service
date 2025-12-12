@@ -9,6 +9,7 @@ User=pi
 WorkingDirectory=/home/pi/transformer-monitor
 # Uses the start.sh script which handles environment setup
 ExecStart=/home/pi/transformer-monitor/scripts/start.sh
+Environment=PYTHONUNBUFFERED=1
 Restart=always
 RestartSec=10
 # Standard output logging to syslog
