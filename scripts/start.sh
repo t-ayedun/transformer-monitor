@@ -25,19 +25,27 @@ fi
 
 # Check configuration
 echo "Checking configuration..."
-if [ ! -f "/data/config/site_config.yaml" ]; then
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_DIR="/data/config"
+
+if [ ! -f "$CONFIG_DIR/site_config.yaml" ]; then
     echo "Creating site configuration from template..."
-    mkdir -p /data/config
-    python3 /app/scripts/generate_config.py
+    # Ensure config directory exists
+    if [ ! -d "$CONFIG_DIR" ]; then
+        echo "Error: $CONFIG_DIR does not exist. Please run: sudo mkdir -p /data/{config,logs,images,buffer,certs} && sudo chown -R \$USER:\$USER /data"
+        exit 1
+    fi
+    python3 "$PROJECT_ROOT/scripts/generate_config.py"
 fi
 
 # Display environment
 echo "Environment:"
+echo "  PROJECT_ROOT: $PROJECT_ROOT"
 echo "  SITE_ID: ${SITE_ID:-NOT SET}"
 echo "  IOT_ENDPOINT: ${IOT_ENDPOINT:-NOT SET}"
 echo "  LOG_LEVEL: ${LOG_LEVEL:-INFO}"
 
 # Start the application
 echo "Starting monitor application..."
-cd /app
+cd "$PROJECT_ROOT"
 exec python3 -u src/main.py
