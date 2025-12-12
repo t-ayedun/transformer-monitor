@@ -17,6 +17,7 @@ thermal_camera:
   refresh_rate: 8
   resolution: [32, 24]
   emissivity: 0.95
+  rotation: 0  # 0, 90, 180, or 270 degrees
 
 # DEFAULT ROIs - Will be replaced by visual mapper
 regions_of_interest:
