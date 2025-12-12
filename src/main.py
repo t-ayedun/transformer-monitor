@@ -191,9 +191,10 @@ class TransformerMonitor:
             self.camera_web.update_thermal_frame(thermal_frame, processed_data)
 
         # Log (since no AWS/FTP/MQTT)
+        comp_temp = processed_data.get('composite_temperature') or 0
         self.logger.info(
             f"Capture {capture_count}: "
-            f"Composite={processed_data.get('composite_temperature', 0):.1f}°C "
+            f"Composite={comp_temp:.1f}°C "
             f"(saved to local buffer)"
         )
 
