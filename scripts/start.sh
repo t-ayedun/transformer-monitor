@@ -45,6 +45,12 @@ echo "  SITE_ID: ${SITE_ID:-NOT SET}"
 echo "  IOT_ENDPOINT: ${IOT_ENDPOINT:-NOT SET}"
 echo "  LOG_LEVEL: ${LOG_LEVEL:-INFO}"
 
+# Activate virtual environment if it exists
+if [ -d "$PROJECT_ROOT/venv" ]; then
+    echo "Activating virtual environment..."
+    source "$PROJECT_ROOT/venv/bin/activate"
+fi
+
 # Start the application
 echo "Starting monitor application..."
 cd "$PROJECT_ROOT"
