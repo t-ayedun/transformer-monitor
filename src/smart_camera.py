@@ -60,17 +60,11 @@ class SmartCamera:
     - Real-time statistics
     """
 
-<<<<<<< HEAD
-    def __init__(self, config, aws_publisher=None):
+    def __init__(self, config, aws_publisher=None, media_uploader=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
         self.aws_publisher = aws_publisher
-=======
-    def __init__(self, config, media_uploader=None):
-        self.logger = logging.getLogger(__name__)
-        self.config = config
         self.media_uploader = media_uploader
->>>>>>> fix/pi4-mlx90640
 
         # Camera settings
         self.resolution = tuple(config.get('pi_camera.resolution', [1920, 1080]))

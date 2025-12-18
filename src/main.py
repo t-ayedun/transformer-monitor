@@ -152,7 +152,6 @@ class TransformerMonitor:
                 self.aws_publisher = None
         else:
             self.logger.info("AWS IoT disabled - running in local-only mode")
-=======
         
         # Initialize FTP publisher (if configured)
         ftp_enabled = self.config.get('ftp.enabled', False)
@@ -180,16 +179,15 @@ class TransformerMonitor:
                 self.media_uploader = None
         else:
             self.logger.info("FTP disabled or not configured")
->>>>>>> fix/pi4-mlx90640
 
         # Initialize smart camera (if enabled)
         if self.config.get('pi_camera.enabled', False):
             self.logger.info("Initializing smart camera...")
-<<<<<<< HEAD
-            self.smart_camera = SmartCamera(self.config, aws_publisher=self.aws_publisher)
-=======
-            self.smart_camera = SmartCamera(self.config, media_uploader=self.media_uploader)
->>>>>>> fix/pi4-mlx90640
+            self.smart_camera = SmartCamera(
+                self.config, 
+                aws_publisher=self.aws_publisher,
+                media_uploader=self.media_uploader
+            )
             self.smart_camera.start_monitoring()
             
             # Initialize web interface
