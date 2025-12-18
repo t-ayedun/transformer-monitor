@@ -10,6 +10,7 @@ import signal
 import logging
 import logging.config
 from pathlib import Path
+from typing import Dict
 
 import yaml
 
