@@ -107,8 +107,6 @@ class TransformerMonitor:
             composite_config=self.config.get('composite_temperature'),
             transformer_detection_config=self.config.get('transformer_detection', {})
         )
-<<<<<<< HEAD
-
         # Initialize AWS publisher (optional - requires credentials)
         if self.config.get('aws.iot.enabled', False):
             try:
