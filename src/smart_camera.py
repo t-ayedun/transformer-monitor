@@ -55,9 +55,10 @@ class SmartCamera:
     - Real-time statistics
     """
 
-    def __init__(self, config):
+    def __init__(self, config, media_uploader=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
+        self.media_uploader = media_uploader
 
         # Camera settings
         self.resolution = tuple(config.get('pi_camera.resolution', [1920, 1080]))
@@ -407,6 +408,16 @@ class SmartCamera:
                     f"Recording stopped: {Path(self.current_recording_path).name} "
                     f"(duration: {duration:.1f}s)"
                 )
+                
+                # Upload video if configured
+                if self.media_uploader:
+                    metadata = {
+                        'site_id': self.config.get('site.id', 'UNKNOWN'),
+                        'timestamp': datetime.fromtimestamp(self.recording_start_time).isoformat(),
+                        'duration': duration,
+                        'trigger': 'motion'
+                    }
+                    self.media_uploader.queue_video(self.current_recording_path, metadata)
 
                 # Reset state
                 self.is_recording = False
@@ -464,6 +475,15 @@ class SmartCamera:
 
             self.stats['snapshots_taken'] += 1
             self.logger.info(f"Snapshot captured: {filename}")
+            
+            # Upload visual snapshot
+            if self.media_uploader:
+                metadata = {
+                    'site_id': site_id,
+                    'timestamp': datetime.now().isoformat(),
+                    'type': 'snapshot'
+                }
+                self.media_uploader.queue_visual_image(filepath, metadata)
 
             return filepath
 

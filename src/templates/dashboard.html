@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,27 +10,84 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #121212; color: #e0e0e0; }
-        .card { background-color: #1e1e1e; border: 1px solid #333; margin-bottom: 20px; }
-        .card-header { background-color: #252525; border-bottom: 1px solid #333; font-weight: bold; }
-        .stream-container { position: relative; width: 100%; padding-top: 75%; /* 4:3 Aspect Ratio */ overflow: hidden; background: #000; border-radius: 4px; }
-        .stream-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
-        .status-badge { font-size: 0.8em; padding: 5px 10px; border-radius: 12px; }
-        .status-ok { background-color: #198754; color: white; }
-        .status-warn { background-color: #ffc107; color: black; }
-        .status-err { background-color: #dc3545; color: white; }
-        .stat-value { font-size: 1.5rem; font-weight: bold; }
-        .stat-label { font-size: 0.9rem; color: #aaa; }
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+
+        .card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #252525;
+            border-bottom: 1px solid #333;
+            font-weight: bold;
+        }
+
+        .stream-container {
+            position: relative;
+            width: 100%;
+            padding-top: 75%;
+            /* 4:3 Aspect Ratio */
+            overflow: hidden;
+            background: #000;
+            border-radius: 4px;
+        }
+
+        .stream-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .status-badge {
+            font-size: 0.8em;
+            padding: 5px 10px;
+            border-radius: 12px;
+        }
+
+        .status-ok {
+            background-color: #198754;
+            color: white;
+        }
+
+        .status-warn {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .status-err {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
     </style>
 </head>
+
 <body>
-    <nav class="navbar navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1">
-                <i class="fas fa-bolt me-2"></i>Transformer Monitor
+                <i class="fas fa-bolt me-2 text-warning"></i>Transformer Monitor
                 <span class="badge bg-secondary ms-2" id="site-id">{{ site_id }}</span>
             </span>
-            <div class="d-flex">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/gallery" class="btn btn-outline-light btn-sm"><i class="fas fa-images me-2"></i>Gallery</a>
                 <span id="connection-status" class="badge bg-danger">Disconnected</span>
             </div>
         </div>
@@ -49,7 +107,15 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="stream-container">
-                                    <img src="/video/thermal" class="stream-img" alt="Thermal Stream" onerror="this.src='https://placehold.co/640x480?text=Thermal+Offline'">
+                                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
+                                        <button class="btn btn-sm btn-light opacity-75"
+                                            onclick="refreshImage('thermal')"><i class="fas fa-sync-alt"></i></button>
+                                    </div>
+                                    <img id="img-thermal" src="/api/snapshot/thermal" class="stream-img"
+                                        alt="Thermal Snapshot"
+                                        onerror="this.src='https://placehold.co/640x480?text=Thermal+Offline'">
+                                    <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
+                                        id="time-thermal">Updating...</div>
                                 </div>
                             </div>
                         </div>
@@ -62,13 +128,21 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="stream-container">
-                                    <img src="/video/visual" class="stream-img" alt="Visual Stream" onerror="this.src='https://placehold.co/640x480?text=Visual+Offline'">
+                                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
+                                        <button class="btn btn-sm btn-light opacity-75"
+                                            onclick="refreshImage('visual')"><i class="fas fa-sync-alt"></i></button>
+                                    </div>
+                                    <img id="img-visual" src="/api/snapshot/visual" class="stream-img"
+                                        alt="Visual Snapshot"
+                                        onerror="this.src='https://placehold.co/640x480?text=Visual+Offline'">
+                                    <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
+                                        id="time-visual">Updating...</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Fusion Stream (Optional/Full Width) -->
                 <div class="row">
                     <div class="col-12">
@@ -78,7 +152,15 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="stream-container" style="padding-top: 56.25%;"> <!-- 16:9 -->
-                                    <img src="/video/fusion" class="stream-img" alt="Fusion Stream" onerror="this.src='https://placehold.co/800x450?text=Fusion+Offline'">
+                                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
+                                        <button class="btn btn-sm btn-light opacity-75"
+                                            onclick="refreshImage('fusion')"><i class="fas fa-sync-alt"></i></button>
+                                    </div>
+                                    <img id="img-fusion" src="/api/snapshot/fusion" class="stream-img"
+                                        alt="Fusion Snapshot"
+                                        onerror="this.src='https://placehold.co/800x450?text=Fusion+Offline'">
+                                    <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
+                                        id="time-fusion">Updating...</div>
                                 </div>
                             </div>
                         </div>
@@ -154,6 +236,9 @@
                         <button class="btn btn-primary w-100 mb-2" onclick="captureSnapshot()">
                             <i class="fas fa-camera me-2"></i>Take Snapshot
                         </button>
+                        <button class="btn btn-warning w-100" onclick="restartService()">
+                            <i class="fas fa-power-off me-2"></i>Restart Service
+                        </button>
                     </div>
                 </div>
             </div>
@@ -178,11 +263,12 @@
         // Fetch stats periodically
         async function fetchStats() {
             try {
+                // Fetch camera/system status
                 const response = await fetch('/api/status');
                 const data = await response.json();
-                
+
                 updateStatus(true);
-                
+
                 // Update Camera Stats
                 if (data.camera_stats) {
                     document.getElementById('motion-events').textContent = data.camera_stats.motion_events;
@@ -195,12 +281,12 @@
                 if (data.thermal_data) {
                     const rois = data.thermal_data.rois || [];
                     const listEl = document.getElementById('roi-list');
-                    
+
                     if (rois.length > 0) {
                         let html = '<ul class="list-group list-group-flush">';
                         rois.forEach(roi => {
-                            const badgeClass = roi.status === 'EMERGENCY' ? 'bg-danger' : 
-                                             roi.status === 'CRITICAL' ? 'bg-warning text-dark' : 'bg-success';
+                            const badgeClass = roi.status === 'EMERGENCY' ? 'bg-danger' :
+                                roi.status === 'CRITICAL' ? 'bg-warning text-dark' : 'bg-success';
                             html += `
                                 <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
                                     <span>${roi.name}</span>
@@ -217,6 +303,25 @@
                         listEl.innerHTML = '<p class="text-muted text-center">No ROIs configured</p>';
                     }
                 }
+
+                // Fetch System Health
+                try {
+                    const healthResp = await fetch('/api/health');
+                    const health = await healthResp.json();
+
+                    if (health.status === 'success') {
+                        document.getElementById('cpu-load').textContent = health.cpu.percent + '%';
+                        document.getElementById('disk-space').textContent = health.disk.percent + '%';
+                        // Use memory percentage for "CPU Temp" slot if not available, or rename UI element
+                        // But sticking to existing IDs:
+                        document.getElementById('temp-cpu').textContent = health.memory.percent + '%';
+                        document.querySelector('#temp-cpu + .stat-label').textContent = 'Mem Usage'; // Update label dynamically
+                        document.getElementById('uptime').textContent = health.uptime_hours.toFixed(1) + 'h';
+                    }
+                } catch (e) {
+                    console.error('Health fetch failed:', e);
+                }
+
             } catch (e) {
                 console.error('Failed to fetch stats:', e);
                 updateStatus(false);
@@ -230,26 +335,82 @@
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Capturing...';
-                
+
                 const response = await fetch('/api/snapshot');
                 const data = await response.json();
-                
+
                 if (data.success) {
                     alert('Snapshot saved to: ' + data.filepath);
                 } else {
                     alert('Error: ' + data.error);
                 }
-                
+
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             } catch (e) {
                 alert('Failed to trigger snapshot');
             }
         }
+        // Restart Service
+        async function restartService() {
+            if (!confirm('Are you sure you want to restart the service?')) return;
 
-        // Poll every 2 seconds
-        setInterval(fetchStats, 2000);
+            try {
+                const response = await fetch('/api/control/restart', { method: 'POST' });
+                const data = await response.json();
+                alert(data.message);
+            } catch (e) {
+                alert('Failed to restart service');
+            }
+        }
+
+        // Auto-refresh configuration
+        const refreshInterval = 30000; // 30 seconds
+
+        // Refresh a specific image
+        async function refreshImage(type) {
+            const img = document.getElementById(`img-${type}`);
+            const timeLabel = document.getElementById(`time-${type}`);
+            const btn = event ? event.target.closest('button') : null;
+
+            if (btn) btn.disabled = true;
+            if (timeLabel) timeLabel.textContent = 'Loading...';
+
+            // Add random query param to bypass browser cache
+            const timestamp = new Date().getTime();
+            const newSrc = `/api/snapshot/${type}?_=${timestamp}`;
+
+            // Create temp image to preload
+            const tempImg = new Image();
+            tempImg.onload = function () {
+                img.src = newSrc;
+                if (timeLabel) {
+                    const now = new Date();
+                    timeLabel.textContent = now.toLocaleTimeString();
+                }
+                if (btn) btn.disabled = false;
+            };
+            tempImg.onerror = function () {
+                if (timeLabel) timeLabel.textContent = 'Failed';
+                if (btn) btn.disabled = false;
+            };
+            tempImg.src = newSrc;
+        }
+
+        // Poll every 5 seconds for stats
+        setInterval(fetchStats, 5000);
+
+        // Refresh images every 30 seconds
+        setInterval(() => {
+            refreshImage('thermal');
+            refreshImage('visual');
+            refreshImage('fusion');
+        }, refreshInterval);
+
+        // Initial load
         fetchStats();
+        // Images load automatically from src attribute
     </script>
 </body>
+
 </html>

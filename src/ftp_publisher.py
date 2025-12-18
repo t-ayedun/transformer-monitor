@@ -33,8 +33,15 @@ class FTPPublisher:
         self.stats = {
             'uploads_success': 0,
             'uploads_failed': 0,
-            'bytes_uploaded': 0
+            'bytes_uploaded': 0,
+            'telemetry_batches': 0
         }
+        
+        # Telemetry buffer for batching
+        self.telemetry_buffer = []
+        self.buffer_lock = Lock()
+        self.last_batch_upload = 0
+        self.batch_interval = 300  # 5 minutes default
     
     def _connect(self):
         """Establish FTP connection"""
@@ -97,13 +104,80 @@ class FTPPublisher:
             except:
                 return self._connect()
     
-    def upload_data(self, data, filename=None):
+    def upload_telemetry_data(self, data: dict):
+        """
+        Queue and batch upload telemetry data
+        
+        Args:
+            data: Telemetry data dictionary
+        """
+        with self.buffer_lock:
+            self.telemetry_buffer.append(data)
+            
+            # Check if buffer is full or time interval reached
+            current_time = time.time()
+            if (len(self.telemetry_buffer) >= 50 or 
+                current_time - self.last_batch_upload >= self.batch_interval):
+                self._flush_telemetry_buffer()
+
+    def _flush_telemetry_buffer(self):
+        """Flush telemetry buffer to FTP"""
+        if not self.telemetry_buffer:
+            return
+
+        try:
+            # Create batch payload
+            timestamp = datetime.utcnow()
+            date_path = timestamp.strftime('%Y/%m/%d')
+            file_ts = timestamp.strftime('%Y%m%d_%H%M%S')
+            site_id = self.telemetry_buffer[0].get('site_id', 'UNKNOWN')
+            
+            # Take a snapshot of current buffer
+            current_batch = list(self.telemetry_buffer)
+            
+            batch_data = {
+                'batch_id': f"{site_id}_{file_ts}",
+                'timestamp': timestamp.isoformat() + 'Z',
+                'record_count': len(current_batch),
+                'records': current_batch
+            }
+            
+            # Generate remote path: /telemetry/YYYY/MM/DD/site_telemetry_timestamp.json
+            remote_path = f"/telemetry/{date_path}/{site_id}_telemetry_{file_ts}.json"
+            
+            # Upload
+            if self.upload_data(batch_data, remote_path, is_remote_path=True):
+                # Only clear buffer if upload succeeded
+                # Use slicing to remove only the items we just uploaded
+                # (in case new items were added during upload)
+                with self.buffer_lock:
+                    # Remove the items we just uploaded
+                    # This is a bit simplistic, assumes FIFO. 
+                    # For now just clear what we took.
+                    self.telemetry_buffer = [x for x in self.telemetry_buffer if x not in current_batch]
+                    
+                self.last_batch_upload = time.time()
+                self.stats['telemetry_batches'] += 1
+                self.logger.info(f"Uploaded telemetry batch: {remote_path} ({len(current_batch)} records)")
+            else:
+                self.logger.warning(f"Failed to upload telemetry batch, keeping {len(current_batch)} records in buffer")
+                # Optional: Limit buffer size to prevent OOM
+                with self.buffer_lock:
+                    if len(self.telemetry_buffer) > 1000:
+                        self.telemetry_buffer = self.telemetry_buffer[-1000:]
+                        self.logger.warning("Telemetry buffer trimmed to 1000 records")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to flush telemetry buffer: {e}")
+
+    def upload_data(self, data, filename=None, is_remote_path=False):
         """
         Upload JSON data to FTP server
         
         Args:
             data: Dictionary to upload as JSON
-            filename: Optional filename, auto-generated if not provided
+            filename: Filename or full remote path
+            is_remote_path: If True, treats filename as full path including directories
         """
         if not self._ensure_connection():
             self.stats['uploads_failed'] += 1
@@ -116,6 +190,24 @@ class FTPPublisher:
                 site_id = data.get('site_id', 'UNKNOWN')
                 filename = f"{site_id}_data_{timestamp}.json"
             
+            # Handle remote directory structure
+            target_file = filename
+            if is_remote_path and '/' in filename:
+                remote_dir = '/'.join(filename.split('/')[:-1])
+                target_file = filename.split('/')[-1]
+                
+                # Ensure directory exists
+                with self.connection_lock:
+                    self._create_remote_dir_from_path(remote_dir)
+                    try:
+                        self.ftp.cwd(self.remote_dir + remote_dir)
+                    except:
+                        # Try absolute if relative failed
+                        try:
+                            self.ftp.cwd(remote_dir)
+                        except:
+                            pass
+            
             # Convert data to JSON bytes
             json_str = json.dumps(data, indent=2)
             json_bytes = json_str.encode('utf-8')
@@ -123,14 +215,18 @@ class FTPPublisher:
             # Upload
             with self.connection_lock:
                 self.ftp.storbinary(
-                    f'STOR {filename}',
+                    f'STOR {target_file}',
                     io.BytesIO(json_bytes)
                 )
+                
+                # Return to base directory if we changed it
+                if is_remote_path:
+                    self.ftp.cwd(self.remote_dir)
             
             self.stats['uploads_success'] += 1
             self.stats['bytes_uploaded'] += len(json_bytes)
             
-            self.logger.info(f"Uploaded to FTP: {filename} ({len(json_bytes)} bytes)")
+            self.logger.debug(f"Uploaded to FTP: {filename}")
             return True
             
         except Exception as e:
@@ -141,11 +237,11 @@ class FTPPublisher:
     
     def upload_file(self, filepath, remote_filename=None):
         """
-        Upload a file to FTP server
+        Upload a file to FTP server with automatic directory creation
         
         Args:
             filepath: Local file path
-            remote_filename: Optional remote filename
+            remote_filename: Remote path (can include directories like /thermal/2025/12/15/file.png)
         """
         if not self._ensure_connection():
             self.stats['uploads_failed'] += 1
@@ -160,9 +256,35 @@ class FTPPublisher:
             if not remote_filename:
                 remote_filename = path.name
             
-            with open(filepath, 'rb') as f:
+            # If remote_filename contains directories, create them
+            if '/' in remote_filename:
+                # Extract directory path
+                remote_dir = '/'.join(remote_filename.split('/')[:-1])
+                remote_file = remote_filename.split('/')[-1]
+                
+                # Create directory structure
                 with self.connection_lock:
-                    self.ftp.storbinary(f'STOR {remote_filename}', f)
+                    self._create_remote_dir_from_path(remote_dir)
+                    
+                    # Change to target directory
+                    try:
+                        self.ftp.cwd(self.remote_dir + remote_dir)
+                    except:
+                        self.ftp.cwd(self.remote_dir)
+                        self._create_remote_dir_from_path(remote_dir)
+                        self.ftp.cwd(self.remote_dir + remote_dir)
+                    
+                    # Upload file
+                    with open(filepath, 'rb') as f:
+                        self.ftp.storbinary(f'STOR {remote_file}', f)
+                    
+                    # Return to base directory
+                    self.ftp.cwd(self.remote_dir)
+            else:
+                # Simple upload to base directory
+                with open(filepath, 'rb') as f:
+                    with self.connection_lock:
+                        self.ftp.storbinary(f'STOR {remote_filename}', f)
             
             file_size = path.stat().st_size
             self.stats['uploads_success'] += 1
@@ -176,6 +298,28 @@ class FTPPublisher:
             self.stats['uploads_failed'] += 1
             self.ftp = None
             return False
+    
+    def _create_remote_dir_from_path(self, path):
+        """
+        Create remote directory structure from path
+        
+        Args:
+            path: Path like /thermal/2025/12/15
+        """
+        if not path or path == '/':
+            return
+        
+        parts = path.strip('/').split('/')
+        current = ''
+        
+        for part in parts:
+            current += '/' + part
+            try:
+                self.ftp.mkd(current)
+                self.logger.debug(f"Created FTP directory: {current}")
+            except:
+                # Directory might already exist
+                pass
     
     def upload_batch(self, data_list, prefix='batch'):
         """

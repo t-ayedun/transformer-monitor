@@ -31,9 +31,16 @@ regions_of_interest:
       critical: 85.0
       emergency: 95.0
 
+transformer_detection:
+  enabled: true
+  method: "heatmap_threshold"
+  threshold_percentile: 90
+  min_region_size: 50
+  fallback_to_full_frame: true
+
 composite_temperature:
   method: "weighted_average"
-  enabled: true
+  enabled: false  # Deprecated, use transformer_detection
 
 # Pi Camera Configuration
 pi_camera:
@@ -66,7 +73,7 @@ pi_camera:
     auto_cleanup_days: 7
     
   live_view:
-    enabled: true
+    enabled: false  # Disable by default to save bandwidth
     port: 5000
     require_auth: false  # Disable for testing
     username: "admin"
@@ -78,12 +85,67 @@ data_capture:
   save_full_frame_interval: 10
   buffer_size: 100
 
-# Local Storage (NO AWS/FTP/MQTT YET)
+# Local Storage
 local_storage:
   enabled: true
   database_path: "/data/buffer/readings.db"
   max_size_mb: 500
   retention_days: 7
+
+# AWS IoT Core Configuration
+aws_iot:
+  enabled: false  # Set to true when ready to connect
+  endpoint: ""  # e.g., xxxxx-ats.iot.us-east-1.amazonaws.com
+  thing_name: ""  # e.g., transformer-monitor-SITE_001
+  certs_dir: "/data/certs"
+  telemetry_interval: 60  # seconds (1 minute)
+  heartbeat_interval: 300  # seconds (5 minutes)
+  compression: true  # Compress MQTT payloads (50-70% reduction)
+  bandwidth_limit_kbps: 50  # Bandwidth throttling limit
+
+# FTP Configuration
+ftp:
+  enabled: true
+  host: "ftp.example.com"
+  port: 21
+  username: "user"
+  password: "password"
+  remote_dir: "/transformer-data"
+  passive_mode: true
+    
+  # Upload intervals
+  thermal_image_interval: 600  # 10 minutes
+  telemetry_upload_interval: 300  # 5 minutes
+  batch_telemetry: true
+  organize_by_date: true
+  upload_on_alert: true
+
+# Web Interface Configuration
+web_interface:
+  enabled: true
+  live_streaming: false
+  on_demand_refresh_interval: 30
+  image_cache_duration: 10
+
+# Data Format Settings
+data_format:
+  timestamp_format: "iso8601"
+  timezone: "UTC"
+
+# Media Settings
+media:
+  thermal_images:
+    colormap: "hot"  # Options: hot, jet, inferno, turbo, rainbow
+    resolution: [640, 480]  # Upscaled from 32x24
+    quality: 90  # JPEG quality (0-100)
+    
+  visual_images:
+    quality: 85
+    add_timestamp: true
+    
+  videos:
+    upload_after_recording: true
+    keep_local_days: 1  # Delete after 1 day if uploaded successfully
 
 # Network (for testing)
 network:

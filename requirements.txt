@@ -14,9 +14,8 @@ opencv-python
 numpy
 scipy
 
-# AWS
+# AWS IoT (MQTT only, no S3)
 AWSIoTPythonSDK
-boto3
 
 # MQTT
 paho-mqtt
@@ -24,9 +23,6 @@ paho-mqtt
 # Web interface
 Flask
 Werkzeug
-
-# Data handling
-pandas
 
 # System monitoring
 psutil

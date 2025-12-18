@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Gallery - Transformer Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #ffffff;
+            --accent-color: #007bff;
+            --accent-hover: #0056b3;
+            --border-color: #404040;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .nav-btn {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #404040;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .media-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .media-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .media-preview {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background-color: #000;
+        }
+
+        .video-preview {
+            position: relative;
+        }
+
+        .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+        }
+
+        .media-info {
+            padding: 15px;
+        }
+
+        .media-name {
+            font-size: 14px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .media-meta {
+            font-size: 12px;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .media-actions {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .action-btn:hover {
+            color: var(--text-color);
+        }
+
+        .action-btn.download:hover {
+            color: var(--accent-color);
+        }
+
+        .action-btn.delete:hover {
+            color: #dc3545;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Media Gallery</h1>
+        <a href="/" class="nav-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </div>
+
+    <div class="controls">
+        <button class="filter-btn active" onclick="loadGallery('all')">All</button>
+        <button class="filter-btn" onclick="loadGallery('thermal')">Thermal</button>
+        <button class="filter-btn" onclick="loadGallery('visual')">Visual</button>
+        <button class="filter-btn" onclick="loadGallery('video')">Videos</button>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid">
+        <div class="loading">Loading media...</div>
+    </div>
+
+    <script>
+        let currentFilter = 'all';
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        async function loadGallery(type) {
+            currentFilter = type;
+
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().includes(type) || (type === 'all' && btn.textContent === 'All'));
+            });
+
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '<div class="loading">Loading media...</div>';
+
+            try {
+                const response = await fetch(`/api/gallery?type=${type}`);
+                const data = await response.json();
+
+                grid.innerHTML = '';
+
+                if (data.items.length === 0) {
+                    grid.innerHTML = '<div class="loading">No media found</div>';
+                    return;
+                }
+
+                data.items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'media-card';
+
+                    let preview = '';
+                    if (item.type === 'video') {
+                        preview = `
+                            <div class="video-preview">
+                                <video class="media-preview" src="${item.path}" preload="metadata"></video>
+                                <i class="fas fa-play-circle play-icon"></i>
+                            </div>`;
+                    } else {
+                        preview = `<img class="media-preview" src="${item.path}" alt="${item.name}" loading="lazy">`;
+                    }
+
+                    card.innerHTML = `
+                        ${preview}
+                        <div class="media-info">
+                            <div class="media-name" title="${item.name}">${item.name}</div>
+                            <div class="media-meta">
+                                <span>${item.date}</span>
+                                <span>${formatSize(item.size)}</span>
+                            </div>
+                            <div class="media-actions">
+                                <a href="${item.path}" download class="action-btn download" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+
+            } catch (error) {
+                grid.innerHTML = `<div class="loading">Error loading gallery: ${error.message}</div>`;
+            }
+        }
+
+        // Initial load
+        loadGallery('all');
+    </script>
+</body>
+
+</html>

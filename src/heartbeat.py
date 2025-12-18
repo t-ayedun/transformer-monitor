@@ -13,10 +13,11 @@ from threading import Thread, Event
 class HeartbeatMonitor:
     """Monitors system health and sends periodic heartbeat"""
     
-    def __init__(self, interval: int, aws_publisher, config):
+    def __init__(self, interval: int, aws_publisher, config, ftp_publisher=None):
         self.logger = logging.getLogger(__name__)
         self.interval = interval
         self.aws_publisher = aws_publisher
+        self.ftp_publisher = ftp_publisher
         self.config = config
         
         self.running = False
@@ -68,8 +69,19 @@ class HeartbeatMonitor:
             'system': self._get_system_stats()
         }
         
+        # Send to AWS
         if self.aws_publisher:
             self.aws_publisher.publish_heartbeat(heartbeat_data)
+            
+        # Send to FTP (as heartbeat.json)
+        if self.ftp_publisher:
+            try:
+                self.ftp_publisher.upload_data(
+                    heartbeat_data, 
+                    filename='heartbeat.json'
+                )
+            except Exception as e:
+                self.logger.warning(f"FTP heartbeat failed: {e}")
     
     def _get_system_stats(self) -> dict:
         """Collect system statistics"""

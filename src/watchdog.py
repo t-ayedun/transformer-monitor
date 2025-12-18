@@ -30,28 +30,13 @@ class WatchdogTimer:
             self.logger.warning(f"Failed to load watchdog module: {e}")
     
     def start(self):
-        """Start watchdog petting thread"""
-        if self.running:
-            return
-        
+        """Start watchdog (no-op, uses manual petting)"""
         self.running = True
-        self.stop_event.clear()
-        self.thread = Thread(target=self._pet_loop, daemon=True)
-        self.thread.start()
-        
-        self.logger.info("Watchdog timer started")
+        self.logger.info("Watchdog timer active (waiting for manual petting)")
     
     def stop(self):
         """Stop watchdog"""
-        if not self.running:
-            return
-        
         self.running = False
-        self.stop_event.set()
-        
-        if self.thread:
-            self.thread.join(timeout=5)
-        
         self.logger.info("Watchdog timer stopped")
     
     def pet(self):
@@ -65,9 +50,3 @@ class WatchdogTimer:
             pass
         except Exception as e:
             self.logger.error(f"Failed to pet watchdog: {e}")
-    
-    def _pet_loop(self):
-        """Automatic petting loop (backup)"""
-        while self.running:
-            self.pet()
-            self.stop_event.wait(self.timeout // 2)

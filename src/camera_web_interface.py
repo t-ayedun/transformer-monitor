@@ -1,3 +1,4 @@
+
 """
 Camera Web Interface
 Provides live streaming, ROI visualization, and remote configuration
@@ -7,13 +8,16 @@ import io
 import logging
 import time
 import json
+import threading
+import psutil
+import shutil
 from datetime import datetime
 from pathlib import Path
 from threading import Thread, Lock, Event
 from collections import deque
 
 import numpy as np
-from flask import Flask, render_template, Response, request, jsonify, send_file
+from flask import Flask, render_template, Response, request, jsonify, send_file, send_from_directory
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 
@@ -42,9 +46,13 @@ class CameraWebInterface:
         self.latest_thermal_data = None
         self.roi_configs = []
 
-        # Frame buffers for streaming
-        self.thermal_frame_buffer = deque(maxlen=30)
-        self.video_frame_buffer = deque(maxlen=30)
+        # Image cache
+        self.image_cache = {
+            'thermal': {'data': None, 'timestamp': 0},
+            'visual': {'data': None, 'timestamp': 0},
+            'fusion': {'data': None, 'timestamp': 0}
+        }
+        self.cache_duration = self.config.get('web_interface.image_cache_duration', 10)
 
         # Setup routes
         self._setup_routes()
@@ -170,128 +178,115 @@ class CameraWebInterface:
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
 
-        @self.app.route('/video/thermal')
-        def thermal_stream():
-            """MJPEG stream of thermal camera with ROI overlay"""
-            return Response(
-                self._generate_thermal_stream(),
-                mimetype='multipart/x-mixed-replace; boundary=frame'
-            )
+        @self.app.route('/api/snapshot/<type>')
+        def get_snapshot(type):
+            """Get on-demand snapshot (thermal, visual, or fusion)"""
+            if type not in ['thermal', 'visual', 'fusion']:
+                return jsonify({'error': 'Invalid snapshot type'}), 400
 
-        @self.app.route('/video/visual')
-        def visual_stream():
-            """MJPEG stream of Pi camera"""
-            return Response(
-                self._generate_visual_stream(),
-                mimetype='multipart/x-mixed-replace; boundary=frame'
-            )
+            # Check cache
+            current_time = time.time()
+            if (self.image_cache[type]['data'] is not None and 
+                current_time - self.image_cache[type]['timestamp'] < self.cache_duration):
+                return send_file(
+                    io.BytesIO(self.image_cache[type]['data']),
+                    mimetype='image/jpeg'
+                )
 
-        @self.app.route('/video/fusion')
-        def fusion_stream():
-            """MJPEG stream of thermal+visual fusion"""
-            return Response(
-                self._generate_fusion_stream(),
-                mimetype='multipart/x-mixed-replace; boundary=frame'
-            )
-
-    def _generate_thermal_stream(self):
-        """Generate thermal camera stream with ROI overlays"""
-        while self.running:
+            # Generate new image
             try:
-                if self.latest_thermal_frame is None:
-                    time.sleep(0.1)
-                    continue
+                img_data = None
+                if type == 'thermal':
+                    img_data = self._generate_thermal_image()
+                elif type == 'visual':
+                    img_data = self._generate_visual_image()
+                elif type == 'fusion':
+                    img_data = self._generate_fusion_image()
 
-                with self.thermal_frame_lock:
-                    frame = self.latest_thermal_frame.copy()
-
-                # Convert thermal data to RGB image with colormap
-                img = self._thermal_to_rgb(frame)
-
-                # Draw ROI overlays
-                img = self._draw_roi_overlays(img, frame)
-
-                # Add metadata overlay
-                img = self._add_metadata_overlay(img)
-
-                # Encode as JPEG
-                _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                frame_bytes = buffer.tobytes()
-
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
-                time.sleep(0.033)  # ~30 FPS
+                if img_data:
+                    # Update cache
+                    self.image_cache[type]['data'] = img_data
+                    self.image_cache[type]['timestamp'] = current_time
+                    
+                    return send_file(
+                        io.BytesIO(img_data),
+                        mimetype='image/jpeg'
+                    )
+                else:
+                    return jsonify({'error': 'Failed to generate image'}), 503
 
             except Exception as e:
-                self.logger.error(f"Thermal stream error: {e}")
-                time.sleep(1)
+                self.logger.error(f"Snapshot error: {e}")
+                return jsonify({'error': str(e)}), 500
 
-    def _generate_visual_stream(self):
-        """Generate Pi camera stream"""
-        while self.running:
-            try:
-                if not self.smart_camera or not self.smart_camera.camera:
-                    time.sleep(0.1)
-                    continue
+    def _generate_thermal_image(self):
+        """Generate thermal image with overlays"""
+        if self.latest_thermal_frame is None:
+            return None
 
-                # Capture frame
-                frame = self.smart_camera.camera.capture_array("main")
+        with self.thermal_frame_lock:
+            frame = self.latest_thermal_frame.copy()
 
-                # Convert RGB to BGR for OpenCV
-                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        # Convert thermal data to RGB image with colormap
+        img = self._thermal_to_rgb(frame)
 
-                # Encode as JPEG
-                _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                frame_bytes = buffer.tobytes()
+        # Draw ROI overlays
+        img = self._draw_roi_overlays(img, frame)
 
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        # Add metadata overlay
+        img = self._add_metadata_overlay(img)
 
-                time.sleep(0.033)  # ~30 FPS
+        # Encode as JPEG
+        _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        return buffer.tobytes()
 
-            except Exception as e:
-                self.logger.error(f"Visual stream error: {e}")
-                time.sleep(1)
+    def _generate_visual_image(self):
+        """Generate visual image"""
+        if not self.smart_camera or not self.smart_camera.camera:
+            return None
 
-    def _generate_fusion_stream(self):
-        """Generate thermal+visual fusion stream"""
-        while self.running:
-            try:
-                if self.latest_thermal_frame is None or not self.smart_camera:
-                    time.sleep(0.1)
-                    continue
+        # Capture frame
+        frame = self.smart_camera.camera.capture_array("main")
 
-                # Get visual frame
-                visual_frame = self.smart_camera.camera.capture_array("main")
-                visual_frame = cv2.cvtColor(visual_frame, cv2.COLOR_RGB2BGR)
+        # Convert RGB to BGR for OpenCV
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        # Add metadata overlay
+        frame_bgr = self._add_metadata_overlay(frame_bgr)
 
-                # Get thermal frame
-                with self.thermal_frame_lock:
-                    thermal_frame = self.latest_thermal_frame.copy()
+        # Encode as JPEG
+        _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        return buffer.tobytes()
 
-                # Create thermal overlay
-                thermal_rgb = self._thermal_to_rgb(thermal_frame)
+    def _generate_fusion_image(self):
+        """Generate fusion image"""
+        if self.latest_thermal_frame is None or not self.smart_camera:
+            return None
 
-                # Resize thermal to match visual
-                h, w = visual_frame.shape[:2]
-                thermal_resized = cv2.resize(thermal_rgb, (w, h), interpolation=cv2.INTER_CUBIC)
+        # Get visual frame
+        visual_frame = self.smart_camera.camera.capture_array("main")
+        visual_frame = cv2.cvtColor(visual_frame, cv2.COLOR_RGB2BGR)
 
-                # Blend: 60% visual + 40% thermal
-                fusion = cv2.addWeighted(visual_frame, 0.6, thermal_resized, 0.4, 0)
+        # Get thermal frame
+        with self.thermal_frame_lock:
+            thermal_frame = self.latest_thermal_frame.copy()
 
-                # Encode as JPEG
-                _, buffer = cv2.imencode('.jpg', fusion, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                frame_bytes = buffer.tobytes()
+        # Create thermal overlay
+        thermal_rgb = self._thermal_to_rgb(thermal_frame)
 
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        # Resize thermal to match visual
+        h, w = visual_frame.shape[:2]
+        thermal_resized = cv2.resize(thermal_rgb, (w, h), interpolation=cv2.INTER_CUBIC)
 
-                time.sleep(0.033)  # ~30 FPS
+        # Blend: 60% visual + 40% thermal
+        fusion = cv2.addWeighted(visual_frame, 0.6, thermal_resized, 0.4, 0)
+        
+        # Add metadata overlay
+        fusion = self._add_metadata_overlay(fusion)
 
-            except Exception as e:
-                self.logger.error(f"Fusion stream error: {e}")
-                time.sleep(1)
+        # Encode as JPEG
+        _, buffer = cv2.imencode('.jpg', fusion, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        return buffer.tobytes()
 
     def _thermal_to_rgb(self, thermal_frame):
         """Convert thermal frame to RGB image with colormap"""
