@@ -2,16 +2,21 @@
 
 Real-time thermal monitoring system for distribution transformers using MLX90640 thermal camera and Raspberry Pi.
 
-## 🚀 Quick Start
+> [!IMPORTANT]
+> **Major Upgrade (Nov 2025)**: This system has been significantly upgraded for the Raspberry Pi 4 with advanced thermal processing, circular buffer recording, and network resilience.
+> See [UPGRADE_SUMMARY.md](UPGRADE_SUMMARY.md) for full details.
 
+## Quick Start
 **For complete deployment instructions, see:** [**DEPLOYMENT_MASTER_GUIDE.md**](DEPLOYMENT_MASTER_GUIDE.md)
 
-### Hardware Requirements
-- Raspberry Pi 4B or Pi 5 (4GB+ RAM)
-- MLX90640 Thermal Camera (I2C)
-- Raspberry Pi Camera Module 3
-- Teltonika Router with RMS Connect
-- 32GB+ microSD card
+## Key Features
+
+- **Advanced Thermal Processing**: Real-time denoising, hotspot tracking, and super-resolution.
+- **Smart Recording**: Circular buffer captures 10s *before* motion events.
+- **Network Resilience**: Store-and-forward with compression for unreliable connections.
+- **Web Interface**: Live thermal/visual streams and interactive ROI mapping.
+
+## Documentation
 
 ### Quick Setup
 
@@ -34,6 +39,19 @@ nano /data/config/site_config.yaml  # Edit site details
 
 # 5. Run
 python3 src/main.py
+```
+
+## Architecture
+
+```
+Raspberry Pi 4 (4GB+)
+├── MLX90640 Thermal Camera (I2C)
+├── Pi Camera Module (Official v2/v3)
+└── Network (Ethernet/WiFi) → Teltonika Router
+    └── AWS IoT Core (MQTT)
+        ├── S3 (images)
+        ├── Timestream (metrics)
+        └── SNS (alerts)
 ```
 
 ## 📚 Documentation
@@ -119,3 +137,4 @@ Proprietary - Smarterise Energy Solutions
 **Version:** 1.0  
 **Compatible with:** Raspberry Pi 4B, Raspberry Pi 5  
 **Last Updated:** December 2024
+Current: v1.1.0 (Reflecting recently completed upgrades)

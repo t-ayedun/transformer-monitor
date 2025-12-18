@@ -60,10 +60,17 @@ class SmartCamera:
     - Real-time statistics
     """
 
+<<<<<<< HEAD
     def __init__(self, config, aws_publisher=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
         self.aws_publisher = aws_publisher
+=======
+    def __init__(self, config, media_uploader=None):
+        self.logger = logging.getLogger(__name__)
+        self.config = config
+        self.media_uploader = media_uploader
+>>>>>>> fix/pi4-mlx90640
 
         # Camera settings
         self.resolution = tuple(config.get('pi_camera.resolution', [1920, 1080]))
@@ -672,10 +679,12 @@ class SmartCamera:
                 Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
                 # Start recording to file (includes circular buffer content)
-                file_output = FileOutput(filepath)
-
+                # Picamera2 CircularOutput expects a file-like object or filename depending on usage.
+                # The error "Must pass io.BufferedIOBase" suggests it strictly wants an open file object.
+                self.output_file = open(filepath, "wb")
+                
                 # This writes the circular buffer content first, then continues with live frames
-                self.circular_output.fileoutput = file_output
+                self.circular_output.fileoutput = self.output_file
                 self.circular_output.start()
 
                 self.is_recording = True
@@ -721,11 +730,26 @@ class SmartCamera:
                     f"Recording stopped: {Path(self.current_recording_path).name} "
                     f"(duration: {duration:.1f}s)"
                 )
+                
+                # Upload video if configured
+                if self.media_uploader:
+                    metadata = {
+                        'site_id': self.config.get('site.id', 'UNKNOWN'),
+                        'timestamp': datetime.fromtimestamp(self.recording_start_time).isoformat(),
+                        'duration': duration,
+                        'trigger': 'motion'
+                    }
+                    self.media_uploader.queue_video(self.current_recording_path, metadata)
 
                 # Reset state
                 self.is_recording = False
                 self.current_recording_path = None
                 self.recording_start_time = None
+
+                # Close file if opened
+                if hasattr(self, 'output_file') and self.output_file:
+                    self.output_file.close()
+                    self.output_file = None
 
             except Exception as e:
                 self.logger.error(f"Failed to stop recording: {e}")
@@ -773,6 +797,15 @@ class SmartCamera:
 
             self.stats['snapshots_taken'] += 1
             self.logger.info(f"Snapshot captured: {filename}")
+            
+            # Upload visual snapshot
+            if self.media_uploader:
+                metadata = {
+                    'site_id': site_id,
+                    'timestamp': datetime.now().isoformat(),
+                    'type': 'snapshot'
+                }
+                self.media_uploader.queue_visual_image(filepath, metadata)
 
             return filepath
 

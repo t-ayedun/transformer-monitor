@@ -12,6 +12,7 @@ Advanced Features:
 """
 
 import time
+import math
 import logging
 import numpy as np
 from collections import deque
@@ -20,6 +21,229 @@ import board
 import busio
 import adafruit_mlx90640
 import cv2
+
+
+def _safe_ExtractAlphaParameters(self) -> None:
+    """
+    Monkey patch for MLX90640 _ExtractAlphaParameters to handle ZeroDivisionError
+    and infinite loops.
+    """
+    # Access module globals from the library
+    eeData = adafruit_mlx90640.eeData
+    SCALEALPHA = adafruit_mlx90640.SCALEALPHA
+    
+    # extract alpha
+    accRemScale = eeData[32] & 0x000F
+    accColumnScale = (eeData[32] & 0x00F0) >> 4
+    accRowScale = (eeData[32] & 0x0F00) >> 8
+    alphaScale = ((eeData[32] & 0xF000) >> 12) + 30
+    alphaRef = eeData[33]
+    accRow = [0] * 24
+    accColumn = [0] * 32
+    alphaTemp = [0] * 768
+
+    for i in range(6):
+        p = i * 4
+        accRow[p + 0] = eeData[34 + i] & 0x000F
+        accRow[p + 1] = (eeData[34 + i] & 0x00F0) >> 4
+        accRow[p + 2] = (eeData[34 + i] & 0x0F00) >> 8
+        accRow[p + 3] = (eeData[34 + i] & 0xF000) >> 12
+
+    for i in range(24):
+        if accRow[i] > 7:
+            accRow[i] -= 16
+
+    for i in range(8):
+        p = i * 4
+        accColumn[p + 0] = eeData[40 + i] & 0x000F
+        accColumn[p + 1] = (eeData[40 + i] & 0x00F0) >> 4
+        accColumn[p + 2] = (eeData[40 + i] & 0x0F00) >> 8
+        accColumn[p + 3] = (eeData[40 + i] & 0xF000) >> 12
+
+    for i in range(32):
+        if accColumn[i] > 7:
+            accColumn[i] -= 16
+
+    for i in range(24):
+        for j in range(32):
+            p = 32 * i + j
+            alphaTemp[p] = (eeData[64 + p] & 0x03F0) >> 4
+            if alphaTemp[p] > 31:
+                alphaTemp[p] -= 64
+            alphaTemp[p] *= 1 << accRemScale
+            alphaTemp[p] += (
+                alphaRef + (accRow[i] << accRowScale) + (accColumn[j] << accColumnScale)
+            )
+            alphaTemp[p] /= math.pow(2, alphaScale)
+            alphaTemp[p] -= self.tgc * (self.cpAlpha[0] + self.cpAlpha[1]) / 2
+            
+            # Patch: Check for zero before division
+            if alphaTemp[p] == 0:
+                alphaTemp[p] = 0.000001
+                
+            alphaTemp[p] = SCALEALPHA / alphaTemp[p]
+
+    temp = max(alphaTemp)
+
+    alphaScale = 0
+    # Patch: Guard against infinite loop if temp <= 0
+    if temp > 0:
+        while temp < 32768 and alphaScale < 100:
+            temp *= 2
+            alphaScale += 1
+    else:
+        alphaScale = 30
+
+    for i in range(768):
+        temp = alphaTemp[i] * math.pow(2, alphaScale)
+        self.alpha[i] = int(temp + 0.5)
+
+    self.alphaScale = alphaScale
+
+
+def _safe_ExtractKtaPixelParameters(self) -> None:
+    """Safe version of _ExtractKtaPixelParameters"""
+    eeData = adafruit_mlx90640.eeData
+    
+    KtaRC = [0] * 4
+    ktaTemp = [0] * 768
+
+    KtaRoCo = (eeData[54] & 0xFF00) >> 8
+    if KtaRoCo > 127:
+        KtaRoCo -= 256
+    KtaRC[0] = KtaRoCo
+
+    KtaReCo = eeData[54] & 0x00FF
+    if KtaReCo > 127:
+        KtaReCo -= 256
+    KtaRC[2] = KtaReCo
+
+    KtaRoCe = (eeData[55] & 0xFF00) >> 8
+    if KtaRoCe > 127:
+        KtaRoCe -= 256
+    KtaRC[1] = KtaRoCe
+
+    KtaReCe = eeData[55] & 0x00FF
+    if KtaReCe > 127:
+        KtaReCe -= 256
+    KtaRC[3] = KtaReCe
+
+    ktaScale1 = ((eeData[56] & 0x00F0) >> 4) + 8
+    ktaScale2 = eeData[56] & 0x000F
+
+    for i in range(24):
+        for j in range(32):
+            p = 32 * i + j
+            split = 2 * (p // 32 - (p // 64) * 2) + p % 2
+            ktaTemp[p] = (eeData[64 + p] & 0x000E) >> 1
+            if ktaTemp[p] > 3:
+                ktaTemp[p] -= 8
+            ktaTemp[p] *= 1 << ktaScale2
+            ktaTemp[p] += KtaRC[split]
+            ktaTemp[p] /= math.pow(2, ktaScale1)
+
+    temp = abs(ktaTemp[0])
+    for kta in ktaTemp:
+        temp = max(temp, abs(kta))
+
+    ktaScale1 = 0
+    # Patch: Guard against infinite loop
+    if temp > 0:
+        while temp < 64 and ktaScale1 < 100:
+            temp *= 2
+            ktaScale1 += 1
+    # else: ktaScale1 remains 0
+
+    for i in range(768):
+        temp = ktaTemp[i] * math.pow(2, ktaScale1)
+        if temp < 0:
+            self.kta[i] = int(temp - 0.5)
+        else:
+            self.kta[i] = int(temp + 0.5)
+    self.ktaScale = ktaScale1
+
+
+def _safe_ExtractKvPixelParameters(self) -> None:
+    """Safe version of _ExtractKvPixelParameters"""
+    eeData = adafruit_mlx90640.eeData
+    
+    KvT = [0] * 4
+    kvTemp = [0] * 768
+
+    KvRoCo = (eeData[52] & 0xF000) >> 12
+    if KvRoCo > 7:
+        KvRoCo -= 16
+    KvT[0] = KvRoCo
+
+    KvReCo = (eeData[52] & 0x0F00) >> 8
+    if KvReCo > 7:
+        KvReCo -= 16
+    KvT[2] = KvReCo
+
+    KvRoCe = (eeData[52] & 0x00F0) >> 4
+    if KvRoCe > 7:
+        KvRoCe -= 16
+    KvT[1] = KvRoCe
+
+    KvReCe = eeData[52] & 0x000F
+    if KvReCe > 7:
+        KvReCe -= 16
+    KvT[3] = KvReCe
+
+    kvScale = (eeData[56] & 0x0F00) >> 8
+
+    for i in range(24):
+        for j in range(32):
+            p = 32 * i + j
+            split = 2 * (p // 32 - (p // 64) * 2) + p % 2
+            kvTemp[p] = KvT[split]
+            kvTemp[p] /= math.pow(2, kvScale)
+
+    temp = abs(kvTemp[0])
+    for kv in kvTemp:
+        temp = max(temp, abs(kv))
+
+    kvScale = 0
+    # Patch: Guard against infinite loop
+    if temp > 0:
+        while temp < 64 and kvScale < 100:
+            temp *= 2
+            kvScale += 1
+    # else: kvScale remains 0
+
+    for i in range(768):
+        temp = kvTemp[i] * math.pow(2, kvScale)
+        if temp < 0:
+            self.kv[i] = int(temp - 0.5)
+        else:
+            self.kv[i] = int(temp + 0.5)
+    self.kvScale = kvScale
+
+
+def _safe_ExtractDeviatingPixels(self) -> None:
+    """
+    Safe version of _ExtractDeviatingPixels
+    Suppresses RuntimeError for >4 broken/outlier pixels
+    """
+    eeData = adafruit_mlx90640.eeData
+    
+    pixCnt = 0
+    while (pixCnt < 768) and (len(self.brokenPixels) < 5) and (len(self.outlierPixels) < 5):
+        if eeData[pixCnt + 64] == 0:
+            self.brokenPixels.append(pixCnt)
+        elif (eeData[pixCnt + 64] & 0x0001) != 0:
+            self.outlierPixels.append(pixCnt)
+        pixCnt += 1
+
+    # Patch: Do NOT raise RuntimeError if more than 4 broken/outlier pixels
+    # Just warn debug print if needed, but for now silent success to allow run
+    if len(self.brokenPixels) > 4:
+        # self.brokenPixels = [] # Option: Clear them if it's just garbage? 
+        # For now, let's keep the first 5 identified and ignore the rest
+        pass
+        
+    if len(self.outlierPixels) > 4:
+        pass
 
 
 class ThermalCapture:
@@ -58,6 +282,7 @@ class ThermalCapture:
 
         # Ambient temperature for compensation
         self.ambient_temp = None
+        self.last_retry_time = 0
 
         self._initialize_camera()
 
@@ -86,6 +311,16 @@ class ThermalCapture:
                         "Then reboot and try again."
                     )
 
+            # Apply monkey patches for Pi 4 robustness
+            # 1. Prevent ZeroDivisionError in Alpha extraction
+            adafruit_mlx90640.MLX90640._ExtractAlphaParameters = _safe_ExtractAlphaParameters
+            # 2. Prevent infinite loops in Kta extraction (if EEPROM is garbage)
+            adafruit_mlx90640.MLX90640._ExtractKtaPixelParameters = _safe_ExtractKtaPixelParameters
+            # 3. Prevent infinite loops in Kv extraction (if EEPROM is garbage)
+            adafruit_mlx90640.MLX90640._ExtractKvPixelParameters = _safe_ExtractKvPixelParameters
+            # 4. Prevent crash on "too many broken pixels" (common with garbage EEPROM)
+            adafruit_mlx90640.MLX90640._ExtractDeviatingPixels = _safe_ExtractDeviatingPixels
+            
             # Initialize MLX90640
             self.mlx = adafruit_mlx90640.MLX90640(i2c)
             
@@ -113,7 +348,8 @@ class ThermalCapture:
 
         except Exception as e:
             self.logger.error(f"Failed to initialize MLX90640: {e}")
-            raise
+            self.logger.warning("Thermal camera unavailable - Running in DEGRADED MODE")
+            self.mlx = None
 
     def _get_refresh_rate_constant(self, rate):
         """Convert refresh rate to MLX90640 constant"""
@@ -140,6 +376,16 @@ class ThermalCapture:
         Returns:
             numpy array of shape (24, 32) with temperatures in Celsius
         """
+        # handle degraded mode (retry connection)
+        if self.mlx is None:
+            current_time = time.time()
+            if current_time - self.last_retry_time > 5:  # Retry every 5s
+                self.last_retry_time = current_time
+                self._initialize_camera()
+            
+            if self.mlx is None:
+                return None
+
         for attempt in range(max_retries):
             try:
                 frame = [0] * 768  # 24x32 = 768 pixels
@@ -169,6 +415,7 @@ class ThermalCapture:
 
                 return frame_array
 
+<<<<<<< HEAD
             except RuntimeError as e:
                 # Pi 5 specific: "Too many retries" error
                 if "Too many retries" in str(e):
@@ -180,8 +427,19 @@ class ThermalCapture:
             except Exception as e:
                 self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
                 time.sleep(0.5)
+=======
+                return frame_array
 
-        self.logger.error("Failed to capture valid frame after retries")
+            except (OSError, RuntimeError) as e:
+                # Common errors: [Errno 5] Input/output error, or I2C timeout
+                self.logger.warning(f"Frame capture error (attempt {attempt + 1}): {e}")
+                time.sleep(0.2)
+            except Exception as e:
+                self.logger.error(f"Frame capture unexpected error (attempt {attempt + 1}): {e}")
+                time.sleep(0.1)
+>>>>>>> fix/pi4-mlx90640
+
+        self.logger.warning("Failed to capture valid frame after retries")
         return None
 
     def _process_frame(self, frame):

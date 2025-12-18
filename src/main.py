@@ -29,6 +29,13 @@ from network_monitor import NetworkMonitor
 from storage_manager import StorageManager
 from utils.logger import setup_logging
 
+# New components for simplified architecture
+from aws_iot_config import AWSIoTConfig
+from aws_publisher import AWSPublisher
+from ftp_publisher import FTPPublisher
+from media_uploader import MediaUploader
+from thermal_image_generator import ThermalImageGenerator
+
 
 class TransformerMonitor:
     """Main application class"""
@@ -49,6 +56,14 @@ class TransformerMonitor:
         self.storage_manager = None
         self.logger = None
         self.web_update_thread = None
+        
+        # New components
+        self.aws_iot_config = None
+        self.aws_publisher = None
+        self.ftp_publisher = None
+        self.media_uploader = None
+        self.thermal_image_gen = None
+        self.last_thermal_image_time = 0
         
     def initialize(self):
         """Initialize all components"""
@@ -88,8 +103,10 @@ class TransformerMonitor:
         self.logger.info("Initializing data processor...")
         self.data_processor = DataProcessor(
             rois=self.config.get('regions_of_interest'),
-            composite_config=self.config.get('composite_temperature')
+            composite_config=self.config.get('composite_temperature'),
+            transformer_detection_config=self.config.get('transformer_detection', {})
         )
+<<<<<<< HEAD
 
         # Initialize AWS publisher (optional - requires credentials)
         if self.config.get('aws.iot.enabled', False):
@@ -134,11 +151,44 @@ class TransformerMonitor:
                 self.aws_publisher = None
         else:
             self.logger.info("AWS IoT disabled - running in local-only mode")
+=======
+        
+        # Initialize FTP publisher (if configured)
+        ftp_enabled = self.config.get('ftp.enabled', False)
+        if ftp_enabled:
+            self.logger.info("FTP enabled, initializing publisher...")
+            try:
+                # Get password from env var or config
+                ftp_password = os.getenv('FTP_PASSWORD') or self.config.get('ftp.password', '')
+                
+                self.ftp_publisher = FTPPublisher(
+                    host=self.config.get('ftp.host'),
+                    username=self.config.get('ftp.username'),
+                    password=ftp_password,
+                    remote_dir=self.config.get('ftp.remote_dir', '/transformer-data'),
+                    port=self.config.get('ftp.port', 21),
+                    passive=self.config.get('ftp.passive_mode', True)
+                )
+                
+                # Initialize media uploader
+                self.media_uploader = MediaUploader(self.ftp_publisher, self.config)
+                self.media_uploader.start()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize FTP publisher: {e}")
+                self.ftp_publisher = None
+                self.media_uploader = None
+        else:
+            self.logger.info("FTP disabled or not configured")
+>>>>>>> fix/pi4-mlx90640
 
         # Initialize smart camera (if enabled)
         if self.config.get('pi_camera.enabled', False):
             self.logger.info("Initializing smart camera...")
+<<<<<<< HEAD
             self.smart_camera = SmartCamera(self.config, aws_publisher=self.aws_publisher)
+=======
+            self.smart_camera = SmartCamera(self.config, media_uploader=self.media_uploader)
+>>>>>>> fix/pi4-mlx90640
             self.smart_camera.start_monitoring()
             
             # Initialize web interface
@@ -177,11 +227,48 @@ class TransformerMonitor:
         self.storage_manager = StorageManager(self.config)
         self.storage_manager.start()
         
+        # Initialize AWS IoT (if configured)
+        self.logger.info("Checking AWS IoT configuration...")
+        self.aws_iot_config = AWSIoTConfig(self.config)
+        
+        if self.aws_iot_config.is_enabled():
+            self.logger.info("AWS IoT enabled, initializing publisher...")
+            try:
+                conn_params = self.aws_iot_config.get_connection_params()
+                self.aws_publisher = AWSPublisher(
+                    endpoint=conn_params['endpoint'],
+                    thing_name=conn_params['thing_name'],
+                    certs=conn_params['certs'],
+                    topics=conn_params['topics'],
+                    local_buffer=self.local_buffer,
+                    enable_compression=conn_params['enable_compression']
+                )
+                self.aws_publisher.max_bytes_per_second = conn_params['bandwidth_limit_kbps'] * 1024
+                self.aws_publisher.connect()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize AWS publisher: {e}")
+                self.aws_publisher = None
+        else:
+            self.logger.info("AWS IoT disabled or not configured")
+        
+
+        
+        # Initialize thermal image generator
+        self.logger.info("Initializing thermal image generator...")
+        colormap = self.config.get('media.thermal_images.colormap', 'hot')
+        resolution = tuple(self.config.get('media.thermal_images.resolution', [640, 480]))
+        self.thermal_image_gen = ThermalImageGenerator(colormap=colormap, output_resolution=resolution)
+        
         # Initialize heartbeat monitor
         self.logger.info("Initializing heartbeat monitor...")
         self.heartbeat = HeartbeatMonitor(
             interval=self.config.get('heartbeat.interval', 300),
+<<<<<<< HEAD
             aws_publisher=self.aws_publisher,  # Will be None if AWS not configured
+=======
+            aws_publisher=self.aws_publisher,
+            ftp_publisher=self.ftp_publisher,  # Pass FTP publisher
+>>>>>>> fix/pi4-mlx90640
             config=self.config
         )
         self.heartbeat.start()
@@ -301,9 +388,15 @@ class TransformerMonitor:
         processed_data['capture_count'] = capture_count
         processed_data['sensor_temp'] = self.thermal_camera.get_sensor_temp()
         
+        # Detect hotspots
+        hotspots = self.thermal_camera.detect_hotspots(thermal_frame)
+        if hotspots:
+            processed_data['hotspots'] = hotspots
+        
         # Save to local buffer
         self.local_buffer.store(processed_data)
 
+<<<<<<< HEAD
         # Update web interface with fully processed data (ROI analysis, etc.)
         # Note: Web interface also gets high-frequency updates from _web_frame_update_loop
         # This update provides detailed ROI data while the loop provides smooth live feed
@@ -322,11 +415,150 @@ class TransformerMonitor:
             f"Capture {capture_count}: "
             f"Composite={composite_temp:.1f}°C{status_msg}"
         )
+=======
+        # Publish to AWS IoT via MQTT (if enabled)
+        if self.aws_publisher:
+            try:
+                telemetry_payload = self._format_telemetry_payload(processed_data)
+                self.aws_publisher.publish_telemetry(telemetry_payload)
+            except Exception as e:
+                self.logger.error(f"Failed to publish telemetry: {e}")
+        
+        # Upload to FTP (if enabled)
+        if self.ftp_publisher:
+            try:
+                telemetry_payload = self._format_telemetry_payload(processed_data)
+                self.ftp_publisher.upload_telemetry_data(telemetry_payload)
+            except Exception as e:
+                self.logger.error(f"Failed to queue telemetry for FTP: {e}")
 
-        # Save full frame periodically
+        # Update web interface with thermal frame
+        if self.camera_web:
+            self.camera_web.update_thermal_frame(thermal_frame, processed_data)
+
+        # Generate and upload thermal image (if configured)
+        current_time = time.time()
+        thermal_image_interval = self.config.get('ftp.thermal_image_interval', 600)
+        upload_on_alert = self.config.get('ftp.upload_on_alert', True)
+        
+        # Check if we should generate thermal image
+        should_generate = False
+        is_priority = False
+        
+        # Check interval
+        if current_time - self.last_thermal_image_time >= thermal_image_interval:
+            should_generate = True
+        
+        # Check for alerts
+        if upload_on_alert and processed_data.get('regions'):
+            for region in processed_data['regions']:
+                alert_level = region.get('alert_level', 'normal')
+                if alert_level in ['warning', 'critical', 'emergency']:
+                    should_generate = True
+                    is_priority = True
+                    break
+        
+        if should_generate and self.thermal_image_gen and self.media_uploader:
+            try:
+                # Generate thermal image
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                site_id = self.config.get('site.id', 'UNKNOWN')
+                filename = f"{site_id}_thermal_{timestamp}.png"
+                filepath = f"/data/images/thermal/{filename}"
+                
+                # Ensure directory exists
+                Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+                
+                # Generate image with annotations
+                rois = self.config.get('regions_of_interest', [])
+                metadata = {
+                    'site_id': site_id,
+                    'timestamp': processed_data.get('timestamp')
+                }
+                
+                success = self.thermal_image_gen.generate_and_save(
+                    thermal_frame,
+                    filepath,
+                    rois=rois,
+                    hotspots=hotspots,
+                    metadata=metadata
+                )
+                
+                if success:
+                    # Queue for FTP upload
+                    self.media_uploader.queue_thermal_image(
+                        filepath,
+                        metadata,
+                        priority=is_priority
+                    )
+                    self.last_thermal_image_time = current_time
+                    
+            except Exception as e:
+                self.logger.error(f"Failed to generate/upload thermal image: {e}")
+>>>>>>> fix/pi4-mlx90640
+
+        # Log
+        comp_temp = processed_data.get('composite_temperature') or 0
+        status_parts = [f"Capture {capture_count}: Composite={comp_temp:.1f}°C"]
+        
+        if self.aws_publisher and self.aws_publisher.connected:
+            status_parts.append("[AWS: ✓]")
+        else:
+            status_parts.append("[Local only]")
+        
+        self.logger.info(" ".join(status_parts))
+
+        # Save full frame periodically (for debugging/analysis)
         save_interval = self.config.get('data_capture.save_full_frame_interval', 10)
         if capture_count % save_interval == 0:
             self.save_thermal_frame(thermal_frame, processed_data)
+    
+    def _format_telemetry_payload(self, processed_data: Dict) -> Dict:
+        """Format telemetry data for MQTT publishing (optimized payload)"""
+        payload = {
+            'timestamp': processed_data.get('timestamp'),
+            'site_id': processed_data.get('site_id'),
+            'device_type': 'thermal',
+            'data': {
+                'sensor_temp': processed_data.get('sensor_temp'),
+                'frame_stats': processed_data.get('frame_stats', {})
+            }
+        }
+        
+        # Add transformer detection data (new)
+        if processed_data.get('transformer_region'):
+            transformer = processed_data['transformer_region']
+            payload['data']['transformer'] = {
+                'min_temp': transformer.get('min_temp'),
+                'max_temp': transformer.get('max_temp'),
+                'avg_temp': transformer.get('avg_temp'),
+                'q1_temp': transformer.get('q1_temp'),
+                'q3_temp': transformer.get('q3_temp'),
+                'detection_confidence': transformer.get('detection_confidence')
+            }
+        else:
+            # Legacy: use composite temperature
+            payload['data']['composite_temp'] = processed_data.get('composite_temperature')
+        
+        # Add ROI data (simplified)
+        if processed_data.get('regions'):
+            payload['data']['hotspots'] = []
+            for region in processed_data['regions']:
+                payload['data']['hotspots'].append({
+                    'roi': region.get('name'),
+                    'min': region.get('min_temp'),
+                    'max': region.get('max_temp'),
+                    'avg': region.get('avg_temp'),
+                    'alert': region.get('alert_level', 'normal')
+                })
+        
+        # Add detected hotspots average
+        if processed_data.get('hotspots'):
+            hotspot_temps = [h.get('max_temp', 0) for h in processed_data['hotspots']]
+            if hotspot_temps:
+                payload['data']['hotspot_avg'] = sum(hotspot_temps) / len(hotspot_temps)
+        
+        return payload
     
     def save_thermal_frame(self, frame, metadata):
         """Save full thermal frame to file"""
@@ -495,6 +727,7 @@ class TransformerMonitor:
 
         if self.storage_manager:
             self.storage_manager.stop()
+<<<<<<< HEAD
 
         if self.ftp_cold_storage:
             self.ftp_cold_storage.stop()
@@ -502,6 +735,21 @@ class TransformerMonitor:
         if self.aws_publisher:
             self.aws_publisher.stop()
 
+=======
+        
+        # Stop media uploader
+        if self.media_uploader:
+            self.media_uploader.stop()
+        
+        # Disconnect AWS publisher
+        if self.aws_publisher:
+            self.aws_publisher.stop()
+        
+        # Close FTP publisher
+        if self.ftp_publisher:
+            self.ftp_publisher.close()
+        
+>>>>>>> fix/pi4-mlx90640
         if self.smart_camera:
             self.smart_camera.close()
 

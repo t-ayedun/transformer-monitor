@@ -186,26 +186,9 @@ class AWSPublisher:
             raise
 
     def _init_s3_client(self):
-        """Initialize S3 client with retry configuration"""
-        try:
-            from botocore.config import Config
-
-            # Configure retries and timeouts
-            config = Config(
-                retries={
-                    'max_attempts': 5,
-                    'mode': 'adaptive'
-                },
-                connect_timeout=10,
-                read_timeout=30
-            )
-
-            self.s3_client = boto3.client('s3', config=config)
-            self.logger.info("S3 client initialized with retry configuration")
-
-        except Exception as e:
-            self.logger.warning(f"S3 client initialization failed: {e}")
-            self.s3_client = None
+        """S3 client not used - using FTP for media uploads instead"""
+        self.s3_client = None
+        self.logger.info("S3 client disabled (using FTP for media)")
 
     def _start_network_monitor(self):
         """Start background thread to monitor network status"""
@@ -440,66 +423,12 @@ class AWSPublisher:
     def upload_image(self, filepath: str, image_type: str,
                      metadata: Dict = None, retry: bool = True) -> bool:
         """
-        Upload image to S3 with retry logic
-
-        Args:
-            filepath: Local file path
-            image_type: Type of image (thermal, visual, etc.)
-            metadata: Optional metadata
-            retry: Whether to add to retry queue on failure
-
-        Returns:
-            True if uploaded successfully
+        S3 upload disabled - using FTP for media uploads instead
+        
+        This method is kept for backward compatibility but does nothing.
+        Use FTP publisher via media_uploader for image uploads.
         """
-        if not self.s3_client:
-            self.logger.warning("S3 client not available")
-            return False
-
-        max_retries = 4
-        for attempt in range(max_retries):
-            try:
-                if attempt > 0:
-                    delay = NetworkResilience.exponential_backoff(attempt, base_delay=2.0, max_delay=16.0)
-                    self.logger.info(f"S3 upload retry {attempt}/{max_retries} (waiting {delay:.1f}s)")
-                    time.sleep(delay)
-
-                # Construct S3 key
-                filename = Path(filepath).name
-                s3_key = f"images/{image_type}/{filename}"
-
-                # Prepare metadata
-                s3_metadata = {
-                    'site-id': metadata.get('site_id', 'unknown') if metadata else 'unknown',
-                    'image-type': image_type
-                }
-
-                # Upload
-                bucket = self.topics.get('s3_bucket')
-                self.s3_client.upload_file(
-                    filepath,
-                    bucket,
-                    s3_key,
-                    ExtraArgs={'Metadata': s3_metadata}
-                )
-
-                self.stats['s3_uploads'] += 1
-                self.logger.info(f"Uploaded {filename} to S3: {s3_key}")
-                return True
-
-            except (ClientError, EndpointConnectionError, BotoCoreError) as e:
-                self.logger.error(f"S3 upload failed (attempt {attempt + 1}): {e}")
-
-        # All retries failed
-        self.stats['s3_failures'] += 1
-
-        if retry:
-            self.failed_upload_queue.append({
-                'type': 's3',
-                'filepath': filepath,
-                'image_type': image_type,
-                'metadata': metadata
-            })
-
+        self.logger.debug("S3 upload skipped (using FTP instead)")
         return False
 
     def _upload_buffered_data(self):
