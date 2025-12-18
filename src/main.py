@@ -260,12 +260,8 @@ class TransformerMonitor:
         self.logger.info("Initializing heartbeat monitor...")
         self.heartbeat = HeartbeatMonitor(
             interval=self.config.get('heartbeat.interval', 300),
-<<<<<<< HEAD
-            aws_publisher=self.aws_publisher,  # Will be None if AWS not configured
-=======
             aws_publisher=self.aws_publisher,
-            ftp_publisher=self.ftp_publisher,  # Pass FTP publisher
->>>>>>> fix/pi4-mlx90640
+            ftp_publisher=self.ftp_publisher,
             config=self.config
         )
         self.heartbeat.start()
