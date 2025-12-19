@@ -14,17 +14,17 @@ class DataProcessor:
     
     def __init__(self, rois: List[Dict], composite_config: Dict, transformer_detection_config: Dict = None):
         self.logger = logging.getLogger(__name__)
-        self.rois = rois
-        self.composite_config = composite_config
+        self.rois = rois or []
+        self.composite_config = composite_config or {}
         self.transformer_detection_config = transformer_detection_config or {}
         
         # Transformer detection settings
-        self.detection_enabled = self.transformer_detection_config.get('enabled', True)
+        self.detection_enabled = self.transformer_detection_config.get('enabled', False)
         self.threshold_percentile = self.transformer_detection_config.get('threshold_percentile', 90)
         self.min_region_size = self.transformer_detection_config.get('min_region_size', 50)
         self.fallback_to_full_frame = self.transformer_detection_config.get('fallback_to_full_frame', True)
         
-        self.logger.info(f"Initialized with {len(rois)} ROIs, transformer detection: {self.detection_enabled}")
+        self.logger.info(f"Initialized with {len(self.rois)} ROIs, transformer detection: {self.detection_enabled}")
     
     def process(self, thermal_frame: np.ndarray) -> Dict[str, Any]:
         """
