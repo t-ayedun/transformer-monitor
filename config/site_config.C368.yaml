@@ -137,10 +137,10 @@ local_storage:
 # FTP Cold Storage
 ftp_storage:
   enabled: true
-  host: "ftp.example.com"  # REPLACE WITH ACTUAL HOST
+  host: "ftp.smarterise.com"
   port: 21
-  username: "user"         # REPLACE WITH ACTUAL USERNAME
-  password: "password"     # REPLACE WITH ACTUAL PASSWORD
+  username: "t.ayedun@smarterise.com"
+  password: "Sm@rterise"
   remote_dir: "C368"  # SITE SPECIFIC FOLDER (Relative to FTP root)
   passive: true
 

@@ -171,10 +171,10 @@ local_storage:
 # FTP Cold Storage (for bulk data - videos, thermal frames, etc.)
 ftp_storage:
   enabled: true  # Enable FTP for cold storage
-  host: "{{FTP_HOST}}"
+  host: "ftp.smarterise.com"
   port: 21
-  username: "{{FTP_USERNAME}}"
-  password: "{{FTP_PASSWORD}}"
+  username: "t.ayedun@smarterise.com"
+  password: "Sm@rterise"
   remote_dir: "/transformer_data/{{SITE_ID}}"
   passive: true
 
