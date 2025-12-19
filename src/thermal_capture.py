@@ -415,7 +415,6 @@ class ThermalCapture:
 
                 return frame_array
 
-<<<<<<< HEAD
             except RuntimeError as e:
                 # Pi 5 specific: "Too many retries" error
                 if "Too many retries" in str(e):
@@ -424,20 +423,13 @@ class ThermalCapture:
                 else:
                     self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
                     time.sleep(0.5)
-            except Exception as e:
-                self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
-                time.sleep(0.5)
-=======
-                return frame_array
-
-            except (OSError, RuntimeError) as e:
-                # Common errors: [Errno 5] Input/output error, or I2C timeout
-                self.logger.warning(f"Frame capture error (attempt {attempt + 1}): {e}")
+            except OSError as e:
+                # Common errors: [Errno 5] Input/output error
+                self.logger.warning(f"Frame capture I/O error (attempt {attempt + 1}): {e}")
                 time.sleep(0.2)
             except Exception as e:
                 self.logger.error(f"Frame capture unexpected error (attempt {attempt + 1}): {e}")
-                time.sleep(0.1)
->>>>>>> fix/pi4-mlx90640
+                time.sleep(0.5)
 
         self.logger.warning("Failed to capture valid frame after retries")
         return None
