@@ -32,11 +32,11 @@ from utils.logger import setup_logging
 
 # New components for simplified architecture
 from aws_iot_config import AWSIoTConfig
-from aws_publisher import AWSPublisher
 from ftp_publisher import FTPPublisher
 from media_uploader import MediaUploader
 from thermal_image_generator import ThermalImageGenerator
 from temperature_data_collector import TemperatureDataCollector
+
 
 
 class TransformerMonitor:
