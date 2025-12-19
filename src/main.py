@@ -68,13 +68,13 @@ class TransformerMonitor:
         
     def initialize(self):
         """Initialize all components"""
-        print("Initializing Transformer Monitor (TEST MODE)...")
+        print("Initializing Transformer Monitor...")
         
         # Setup logging
         setup_logging()
         self.logger = logging.getLogger(__name__)
         self.logger.info("="*50)
-        self.logger.info("Transformer Monitor Starting (TEST MODE)")
+        self.logger.info("Transformer Monitor Starting")
         self.logger.info("="*50)
         
         # Load configuration
@@ -107,50 +107,31 @@ class TransformerMonitor:
             composite_config=self.config.get('composite_temperature'),
             transformer_detection_config=self.config.get('transformer_detection', {})
         )
-        # Initialize AWS publisher (optional - requires credentials)
-        if self.config.get('aws.iot.enabled', False):
+
+        # Initialize AWS IoT (New Architecture)
+        self.logger.info("Checking AWS IoT configuration...")
+        self.aws_iot_config = AWSIoTConfig(self.config)
+        
+        if self.aws_iot_config.is_enabled():
+            self.logger.info("AWS IoT enabled, initializing publisher...")
             try:
-                # Check if certificate files exist
-                ca_cert = self.config.get('aws.iot.certificates.ca_cert')
-                device_cert = self.config.get('aws.iot.certificates.device_cert')
-                private_key = self.config.get('aws.iot.certificates.private_key')
-
-                if ca_cert and device_cert and private_key:
-                    certs_exist = (
-                        Path(ca_cert).exists() and
-                        Path(device_cert).exists() and
-                        Path(private_key).exists()
-                    )
-
-                    if certs_exist:
-                        self.logger.info("Initializing AWS IoT publisher...")
-                        self.aws_publisher = AWSPublisher(
-                            endpoint=self.config.get('aws.iot.endpoint'),
-                            thing_name=self.config.get('aws.iot.thing_name'),
-                            certs={
-                                'ca_cert': ca_cert,
-                                'device_cert': device_cert,
-                                'private_key': private_key
-                            },
-                            topics=self.config.get('aws.iot.topics'),
-                            local_buffer=self.local_buffer,
-                            enable_compression=True
-                        )
-                        self.aws_publisher.connect()
-                        self.logger.info("AWS IoT publisher connected")
-                    else:
-                        self.logger.warning(
-                            "AWS IoT enabled but certificates not found. "
-                            "System will run in local-only mode."
-                        )
-                else:
-                    self.logger.warning("AWS IoT enabled but certificate paths not configured")
+                conn_params = self.aws_iot_config.get_connection_params()
+                self.aws_publisher = AWSPublisher(
+                    endpoint=conn_params['endpoint'],
+                    thing_name=conn_params['thing_name'],
+                    certs=conn_params['certs'],
+                    topics=conn_params['topics'],
+                    local_buffer=self.local_buffer,
+                    enable_compression=conn_params['enable_compression']
+                )
+                self.aws_publisher.max_bytes_per_second = conn_params['bandwidth_limit_kbps'] * 1024
+                self.aws_publisher.connect()
             except Exception as e:
-                self.logger.warning(f"AWS IoT initialization failed: {e}. Running in local-only mode.")
+                self.logger.error(f"Failed to initialize AWS publisher: {e}")
                 self.aws_publisher = None
         else:
-            self.logger.info("AWS IoT disabled - running in local-only mode")
-        
+            self.logger.info("AWS IoT disabled or not configured")
+
         # Initialize FTP publisher (if configured)
         ftp_enabled = self.config.get('ftp.enabled', False)
         if ftp_enabled:
@@ -177,6 +158,12 @@ class TransformerMonitor:
                 self.media_uploader = None
         else:
             self.logger.info("FTP disabled or not configured")
+        
+        # Initialize thermal image generator
+        self.logger.info("Initializing thermal image generator...")
+        colormap = self.config.get('media.thermal_images.colormap', 'hot')
+        resolution = tuple(self.config.get('media.thermal_images.resolution', [640, 480]))
+        self.thermal_image_gen = ThermalImageGenerator(colormap=colormap, output_resolution=resolution)
 
         # Initialize smart camera (if enabled)
         if self.config.get('pi_camera.enabled', False):
@@ -201,61 +188,6 @@ class TransformerMonitor:
                 )
                 self.camera_web.start()
 
-        # Initialize FTP cold storage (optional - for SD card space management)
-        if self.config.get('ftp_storage.enabled', False):
-            try:
-                self.logger.info("Initializing FTP cold storage...")
-                self.ftp_cold_storage = FTPColdStorage(self.config)
-                self.ftp_cold_storage.start()
-                self.logger.info("FTP cold storage started - will upload old files to free SD card space")
-            except Exception as e:
-                self.logger.warning(f"FTP cold storage initialization failed: {e}. SD card may fill up.")
-                self.ftp_cold_storage = None
-        else:
-            self.logger.info("FTP cold storage disabled - all data stored locally only")
-
-        # Initialize network monitor
-        self.logger.info("Initializing network monitor...")
-        self.network_monitor = NetworkMonitor(self.config)
-        self.network_monitor.start()
-        
-        # Initialize storage manager
-        self.logger.info("Initializing storage manager...")
-        self.storage_manager = StorageManager(self.config)
-        self.storage_manager.start()
-        
-        # Initialize AWS IoT (if configured)
-        self.logger.info("Checking AWS IoT configuration...")
-        self.aws_iot_config = AWSIoTConfig(self.config)
-        
-        if self.aws_iot_config.is_enabled():
-            self.logger.info("AWS IoT enabled, initializing publisher...")
-            try:
-                conn_params = self.aws_iot_config.get_connection_params()
-                self.aws_publisher = AWSPublisher(
-                    endpoint=conn_params['endpoint'],
-                    thing_name=conn_params['thing_name'],
-                    certs=conn_params['certs'],
-                    topics=conn_params['topics'],
-                    local_buffer=self.local_buffer,
-                    enable_compression=conn_params['enable_compression']
-                )
-                self.aws_publisher.max_bytes_per_second = conn_params['bandwidth_limit_kbps'] * 1024
-                self.aws_publisher.connect()
-            except Exception as e:
-                self.logger.error(f"Failed to initialize AWS publisher: {e}")
-                self.aws_publisher = None
-        else:
-            self.logger.info("AWS IoT disabled or not configured")
-        
-
-        
-        # Initialize thermal image generator
-        self.logger.info("Initializing thermal image generator...")
-        colormap = self.config.get('media.thermal_images.colormap', 'hot')
-        resolution = tuple(self.config.get('media.thermal_images.resolution', [640, 480]))
-        self.thermal_image_gen = ThermalImageGenerator(colormap=colormap, output_resolution=resolution)
-        
         # Initialize heartbeat monitor
         self.logger.info("Initializing heartbeat monitor...")
         self.heartbeat = HeartbeatMonitor(
@@ -271,6 +203,16 @@ class TransformerMonitor:
         self.watchdog = WatchdogTimer()
         self.watchdog.start()
 
+        # Initialize network monitor
+        self.logger.info("Initializing network monitor...")
+        self.network_monitor = NetworkMonitor(self.config)
+        self.network_monitor.start()
+        
+        # Initialize storage manager
+        self.logger.info("Initializing storage manager...")
+        self.storage_manager = StorageManager(self.config)
+        self.storage_manager.start()
+
         # Start web frame update thread (if web interface enabled)
         if self.camera_web:
             self.logger.info("Starting web interface frame update thread (8 Hz)...")
@@ -278,6 +220,7 @@ class TransformerMonitor:
             self.web_update_thread.start()
 
         self.logger.info("Initialization complete!")
+
 
     def _web_frame_update_loop(self):
         """
@@ -389,26 +332,6 @@ class TransformerMonitor:
         # Save to local buffer
         self.local_buffer.store(processed_data)
 
-<<<<<<< HEAD
-        # Update web interface with fully processed data (ROI analysis, etc.)
-        # Note: Web interface also gets high-frequency updates from _web_frame_update_loop
-        # This update provides detailed ROI data while the loop provides smooth live feed
-        if self.camera_web:
-            self.camera_web.update_thermal_frame(thermal_frame, processed_data)
-
-        # Publish thermal telemetry to AWS IoT Core (if configured)
-        self._publish_thermal_telemetry(processed_data, thermal_frame)
-
-        # Log
-        composite_temp = processed_data.get('composite_temperature') or 0
-        alert_status = self._get_highest_alert_level(processed_data)
-        status_msg = f" [ALERT: {alert_status}]" if alert_status != 'normal' else ""
-
-        self.logger.info(
-            f"Capture {capture_count}: "
-            f"Composite={composite_temp:.1f}°C{status_msg}"
-        )
-=======
         # Publish to AWS IoT via MQTT (if enabled)
         if self.aws_publisher:
             try:
@@ -488,7 +411,6 @@ class TransformerMonitor:
                     
             except Exception as e:
                 self.logger.error(f"Failed to generate/upload thermal image: {e}")
->>>>>>> fix/pi4-mlx90640
 
         # Log
         comp_temp = processed_data.get('composite_temperature') or 0
@@ -568,141 +490,7 @@ class TransformerMonitor:
 
         self.logger.debug(f"Saved thermal frame: {filename}")
 
-    def _get_highest_alert_level(self, processed_data):
-        """
-        Get the highest alert level from all ROIs
 
-        Returns:
-            str: 'emergency', 'critical', 'warning', or 'normal'
-        """
-        alert_priority = {'emergency': 4, 'critical': 3, 'warning': 2, 'normal': 1}
-        highest = 'normal'
-        highest_priority = 1
-
-        for region in processed_data.get('regions', []):
-            alert_level = region.get('alert_level', 'normal')
-            priority = alert_priority.get(alert_level, 1)
-            if priority > highest_priority:
-                highest = alert_level
-                highest_priority = priority
-
-        return highest
-
-    def _publish_thermal_telemetry(self, processed_data, thermal_frame):
-        """
-        Publish thermal telemetry to AWS IoT Core (if configured)
-
-        Publishes:
-        - Periodic telemetry every minute
-        - Immediate alerts when temperature thresholds exceeded
-        - Thermal images to S3 on critical/emergency alerts
-
-        Graceful degradation: Returns immediately if AWS not configured
-        """
-        if not self.aws_publisher:
-            return
-
-        if not self.config.get('thermal_publishing.enabled', True):
-            return
-
-        try:
-            # Check for alerts
-            alert_level = self._get_highest_alert_level(processed_data)
-            is_alert = alert_level in ['warning', 'critical', 'emergency']
-
-            # Determine if we should publish
-            publish_interval = self.config.get('thermal_publishing.telemetry.publish_interval', 60)
-            capture_interval = self.config.get('data_capture.interval', 60)
-            publish_immediately = self.config.get('thermal_publishing.alerts.publish_immediately', True)
-
-            should_publish = False
-            if is_alert and publish_immediately:
-                # Alert - publish immediately
-                alert_levels = self.config.get('thermal_publishing.alerts.alert_levels', [])
-                if alert_level in alert_levels:
-                    should_publish = True
-            elif processed_data.get('capture_count', 0) % (publish_interval // capture_interval) == 0:
-                # Periodic publish
-                should_publish = True
-
-            if not should_publish:
-                return
-
-            # Prepare telemetry payload
-            telemetry_data = {
-                'timestamp': processed_data.get('timestamp'),
-                'site_id': processed_data.get('site_id'),
-                'composite_temperature': processed_data.get('composite_temperature'),
-                'sensor_temp': processed_data.get('sensor_temp'),
-                'alert_level': alert_level,
-                'is_alert': is_alert
-            }
-
-            # Include ROI details if configured
-            if self.config.get('thermal_publishing.telemetry.include_roi_details', True):
-                telemetry_data['regions'] = processed_data.get('regions', [])
-
-            # Include frame stats if configured
-            if self.config.get('thermal_publishing.telemetry.include_frame_stats', False):
-                telemetry_data['frame_stats'] = processed_data.get('frame_stats', {})
-
-            # Publish to AWS IoT Core
-            success = self.aws_publisher.publish_telemetry(telemetry_data)
-
-            if success:
-                log_msg = f"Published thermal telemetry to AWS"
-                if is_alert:
-                    log_msg += f" [ALERT: {alert_level}]"
-                self.logger.info(log_msg)
-            else:
-                self.logger.warning("Failed to publish thermal telemetry (will retry)")
-
-            # Upload thermal image to S3 on critical alerts
-            if is_alert and self.config.get('thermal_publishing.thermal_images.upload_to_s3', True):
-                upload_on_alert = self.config.get('thermal_publishing.thermal_images.upload_on_alert', True)
-                alert_levels_for_upload = self.config.get('thermal_publishing.thermal_images.alert_levels', [])
-
-                if upload_on_alert and alert_level in alert_levels_for_upload:
-                    # Save thermal frame temporarily
-                    import numpy as np
-                    from datetime import datetime
-
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    site_id = self.config.get('site.id')
-                    filename = f"{site_id}_thermal_alert_{alert_level}_{timestamp}.npy"
-                    temp_path = f"/tmp/{filename}"
-
-                    np.save(temp_path, thermal_frame)
-
-                    # Upload to S3
-                    metadata = {
-                        'site_id': site_id,
-                        'alert_level': alert_level,
-                        'composite_temp': str(processed_data.get('composite_temperature', 0)),
-                        'timestamp': processed_data.get('timestamp')
-                    }
-
-                    success = self.aws_publisher.upload_image(
-                        temp_path,
-                        f'thermal_alert_{alert_level}',
-                        metadata
-                    )
-
-                    if success:
-                        self.logger.info(f"Uploaded thermal alert image to S3 [{alert_level}]")
-                    else:
-                        self.logger.warning(f"Failed to upload thermal image (will retry)")
-
-                    # Clean up temp file
-                    try:
-                        Path(temp_path).unlink()
-                    except:
-                        pass
-
-        except Exception as e:
-            # Graceful error handling - log but don't crash
-            self.logger.error(f"Thermal telemetry publishing error: {e}", exc_info=True)
-            self.logger.info("Thermal data saved locally, cloud publishing failed")
 
     def cleanup(self):
         """Cleanup resources"""
@@ -720,16 +508,6 @@ class TransformerMonitor:
 
         if self.storage_manager:
             self.storage_manager.stop()
-<<<<<<< HEAD
-
-        if self.ftp_cold_storage:
-            self.ftp_cold_storage.stop()
-
-        if self.aws_publisher:
-            self.aws_publisher.stop()
-
-=======
-        
         # Stop media uploader
         if self.media_uploader:
             self.media_uploader.stop()
@@ -741,8 +519,6 @@ class TransformerMonitor:
         # Close FTP publisher
         if self.ftp_publisher:
             self.ftp_publisher.close()
-        
->>>>>>> fix/pi4-mlx90640
         if self.smart_camera:
             self.smart_camera.close()
 
