@@ -14,7 +14,7 @@ from typing import List, Dict, Any, Optional
 class EventLogger:
     """Simple event logger for camera surveillance events"""
 
-    def __init__(self, db_path: str = "/data/buffer/camera_events.db"):
+    def __init__(self, db_path: str = "/home/smartie/transformer_monitor_data/buffer/camera_events.db"):
         """
         Initialize event logger
 

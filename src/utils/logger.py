@@ -14,7 +14,7 @@ def setup_logging():
     config_path = Path('/app/config/logging_config.yaml')
     
     # Ensure log directory exists
-    Path('/data/logs').mkdir(parents=True, exist_ok=True)
+    Path('/home/smartie/transformer_monitor_data/logs').mkdir(parents=True, exist_ok=True)
     
     if config_path.exists():
         with open(config_path) as f:
@@ -27,7 +27,7 @@ def setup_logging():
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.StreamHandler(),
-                logging.FileHandler('/data/logs/monitor.log')
+                logging.FileHandler('/home/smartie/transformer_monitor_data/logs/monitor.log')
             ]
         )
     

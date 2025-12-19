@@ -51,7 +51,7 @@ class EventClassifier:
     ERRATIC_MOTION_THRESHOLD = 0.6  # Direction changes per second
     SUSTAINED_MOTION_DURATION = 3.0  # Seconds for initial pattern detection
 
-    def __init__(self, config, db_path="/data/events.db"):
+    def __init__(self, config, db_path="/home/smartie/transformer_monitor_data/events.db"):
         """
         Initialize event classifier
 

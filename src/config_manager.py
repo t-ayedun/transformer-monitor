@@ -19,7 +19,7 @@ class ConfigManager:
         
         # Configuration file paths
         self.config_dir = Path('/app/config')
-        self.data_config_dir = Path('/data/config')
+        self.data_config_dir = Path('/home/smartie/transformer_monitor_data/config')
         self.data_config_dir.mkdir(parents=True, exist_ok=True)
         
     def load_configs(self):

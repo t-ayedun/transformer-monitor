@@ -57,7 +57,7 @@ class AWSIoTConfig:
                 return
             
             # Load certificate paths
-            certs_dir = self.config.get('aws_iot.certs_dir', '/data/certs')
+            certs_dir = self.config.get('aws_iot.certs_dir', '/home/smartie/transformer_monitor_data/certs')
             
             self.certs = {
                 'ca_cert': os.path.join(certs_dir, 'AmazonRootCA1.pem'),

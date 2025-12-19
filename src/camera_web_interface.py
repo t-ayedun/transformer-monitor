@@ -350,7 +350,7 @@ class CameraWebInterface:
                 }
 
                 # Get recent recordings (videos)
-                video_dir = Path('/data/videos')
+                video_dir = Path('/home/smartie/transformer_monitor_data/videos')
                 if video_dir.exists():
                     video_files = sorted(video_dir.glob('*.h264'), key=lambda p: p.stat().st_mtime, reverse=True)
                     recent_files['recordings'] = [
@@ -364,7 +364,7 @@ class CameraWebInterface:
                     ]
 
                 # Get recent snapshots (images)
-                image_dir = Path('/data/images')
+                image_dir = Path('/home/smartie/transformer_monitor_data/images')
                 if image_dir.exists():
                     image_files = sorted(image_dir.glob('*.jpg'), key=lambda p: p.stat().st_mtime, reverse=True)
                     recent_files['snapshots'] = [
@@ -387,7 +387,7 @@ class CameraWebInterface:
             """Serve captured snapshot images"""
             try:
                 # Snapshots are stored in /data/images or local path
-                snapshot_dir = Path('/data/images') if Path('/data/images').exists() else Path('.')
+                snapshot_dir = Path('/home/smartie/transformer_monitor_data/images') if Path('/home/smartie/transformer_monitor_data/images').exists() else Path('.')
                 filepath = snapshot_dir / filename
 
                 if filepath.exists():

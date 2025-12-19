@@ -667,7 +667,7 @@ class SmartCamera:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 site_id = self.config.get('site.id', 'UNKNOWN')
                 filename = f"{site_id}_video_{trigger_type}_{timestamp}.h264"
-                filepath = f"/data/videos/{filename}"
+                filepath = f"/home/smartie/transformer_monitor_data/videos/{filename}"
 
                 # Ensure directory exists
                 Path(filepath).parent.mkdir(parents=True, exist_ok=True)
@@ -776,7 +776,7 @@ class SmartCamera:
             else:
                 filename = f"{site_id}_snapshot_{timestamp}.jpg"
 
-            filepath = f"/data/images/{filename}"
+            filepath = f"/home/smartie/transformer_monitor_data/images/{filename}"
             Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
             # Capture to temporary file

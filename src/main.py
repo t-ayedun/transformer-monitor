@@ -90,7 +90,7 @@ class TransformerMonitor:
         # Initialize local buffer first
         self.logger.info("Initializing local buffer...")
         self.local_buffer = LocalBuffer(
-            db_path=self.config.get('local_storage.database_path', '/data/buffer/readings.db'),
+            db_path=self.config.get('local_storage.database_path', '/home/smartie/transformer_monitor_data/buffer/readings.db'),
             max_size_mb=self.config.get('local_storage.max_size_mb', 500)
         )
         
@@ -178,7 +178,7 @@ class TransformerMonitor:
         if temp_export_enabled:
             self.logger.info("Initializing temperature data collector...")
             try:
-                base_dir = self.config.get('temperature_export.base_dir', '/data/temperature')
+                base_dir = self.config.get('temperature_export.base_dir', '/home/smartie/transformer_monitor_data/temperature')
                 self.temp_data_collector = TemperatureDataCollector(self.config, base_dir=base_dir)
             except Exception as e:
                 self.logger.error(f"Failed to initialize temperature data collector: {e}")
@@ -416,7 +416,7 @@ class TransformerMonitor:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 site_id = self.config.get('site.id', 'UNKNOWN')
                 filename = f"{site_id}_thermal_{timestamp}.png"
-                filepath = f"/data/images/thermal/{filename}"
+                filepath = f"/home/smartie/transformer_monitor_data/images/thermal/{filename}"
                 
                 # Ensure directory exists
                 Path(filepath).parent.mkdir(parents=True, exist_ok=True)
@@ -519,7 +519,7 @@ class TransformerMonitor:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         site_id = self.config.get('site.id')
         filename = f"{site_id}_thermal_{timestamp}.npy"
-        filepath = f"/data/images/{filename}"
+        filepath = f"/home/smartie/transformer_monitor_data/images/{filename}"
         
         Path(filepath).parent.mkdir(parents=True, exist_ok=True)
         np.save(filepath, frame)

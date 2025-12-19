@@ -26,8 +26,8 @@ class CameraSnapshot:
     """
 
     # Storage paths
-    BASE_IMAGE_PATH = "/data/images"
-    EVENT_IMAGE_PATH = "/data/images/events"
+    BASE_IMAGE_PATH = "/home/smartie/transformer_monitor_data/images"
+    EVENT_IMAGE_PATH = "/home/smartie/transformer_monitor_data/images/events"
 
     # Image settings
     MAX_IMAGE_SIZE_KB = 500
