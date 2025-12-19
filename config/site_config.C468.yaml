@@ -130,7 +130,7 @@ thermal_publishing:
 # Local Storage
 local_storage:
   enabled: true
-  database_path: "/data/buffer/readings.db"
+  database_path: "/home/smartie/transformer_monitor_data/buffer/readings.db"
   max_size_mb: 500
   retention_days: 2
 
@@ -191,14 +191,14 @@ temperature_export:
   enabled: true
   export_format: "csv"
   export_interval: 60
-  base_dir: "/data/temperature"
+  base_dir: "/home/smartie/transformer_monitor_data/temperature"
 
 # AWS IoT Core
 aws_iot:
   enabled: false
   endpoint: ""
   thing_name: "transformer-monitor-C468"
-  certs_dir: "/data/certs"
+  certs_dir: "/home/smartie/transformer_monitor_data/certs"
   telemetry_interval: 60
   heartbeat_interval: 300
   compression: true

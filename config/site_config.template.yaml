@@ -164,7 +164,7 @@ thermal_publishing:
 # Local Storage
 local_storage:
   enabled: true
-  database_path: "/data/buffer/readings.db"
+  database_path: "/home/smartie/transformer_monitor_data/buffer/readings.db"
   max_size_mb: 500
   retention_days: 2  # Keep only 2 days locally (rest goes to FTP)
 
@@ -227,7 +227,7 @@ temperature_export:
   enabled: true
   export_format: "csv"
   export_interval: 60  # seconds (1 minute - aligns with data capture)
-  base_dir: "/data/temperature"
+  base_dir: "/home/smartie/transformer_monitor_data/temperature"
 
 
 # AWS IoT Core Configuration
@@ -235,7 +235,7 @@ aws_iot:
   enabled: false  # Set to true when ready to connect
   endpoint: ""  # e.g., xxxxx-ats.iot.us-east-1.amazonaws.com
   thing_name: ""  # e.g., transformer-monitor-SITE_001
-  certs_dir: "/data/certs"
+  certs_dir: "/home/smartie/transformer_monitor_data/certs"
   telemetry_interval: 60  # seconds (1 minute)
   heartbeat_interval: 300  # seconds (5 minutes)
   compression: true  # Compress MQTT payloads (50-70% reduction)

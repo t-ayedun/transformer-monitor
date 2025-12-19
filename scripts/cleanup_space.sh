@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Configuration
-DATA_DIR="/home/pi/transformer_monitor_data/videos"
-WIFI_MODE_DIR="/home/pi/pi-camera-stream-flask/static/recordings"
+DATA_DIR="/home/smartie/transformer_monitor_data/videos"
+WIFI_MODE_DIR="/home/smartie/pi-camera-stream-flask/static/recordings"
 DAYS_TO_KEEP=1
 
 echo "Starts cleanup of video files..."

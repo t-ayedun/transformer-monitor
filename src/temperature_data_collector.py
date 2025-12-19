@@ -14,10 +14,13 @@ import pytz
 class TemperatureDataCollector:
     """Collects and exports temperature data to CSV files"""
     
-    def __init__(self, config, base_dir='/data/temperature'):
+    def __init__(self, config, base_dir=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
-        self.base_dir = Path(base_dir)
+        if base_dir:
+            self.base_dir = Path(base_dir)
+        else:
+            self.base_dir = Path.home() / 'transformer_monitor_data' / 'temperature'
         self.buffer: List[Dict] = []
         self.current_hour = None
         self.current_csv_path = None

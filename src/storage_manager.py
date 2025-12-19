@@ -18,8 +18,9 @@ class StorageManager:
         self.logger = logging.getLogger(__name__)
         self.config = config
         
-        self.video_dir = Path('/data/videos')
-        self.image_dir = Path('/data/images')
+        base_path = Path.home() / 'transformer_monitor_data'
+        self.video_dir = base_path / 'videos'
+        self.image_dir = base_path / 'images'
 
         # For 32GB SD card: Reserve ~20GB for recordings
         # (leaving space for OS, logs, database, temp files)
