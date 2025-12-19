@@ -182,7 +182,7 @@ ftp_storage:
   upload_rules:
     videos:
       enabled: true
-      upload_after_hours: 2  # Upload videos after 2 hours (free up SD card fast)
+      upload_after_hours: 0.25  # Upload videos after 15 minutes (fast testing)
       delete_after_upload: true  # Delete local copy after successful upload
       retention_days: 30  # Keep on FTP for 30 days
 
@@ -201,7 +201,7 @@ ftp_storage:
 
     periodic_snapshots:
       enabled: true
-      upload_after_hours: 12  # Upload snapshots after 12 hours
+      upload_after_hours: 0.25  # Upload snapshots after 15 minutes
       delete_after_upload: true
       retention_days: 30  # Keep on FTP for 30 days
 
@@ -213,12 +213,12 @@ ftp_storage:
     
     temperature_csv:
       enabled: true
-      upload_after_hours: 1  # Upload completed hourly CSV files after 1 hour
+      upload_after_hours: 0.083  # Upload completed hourly CSV files after 5 minutes
       delete_after_upload: true
       retention_days: 90  # Keep on FTP for 90 days
 
   # Upload scheduling
-  upload_interval: 300  # Check for files to upload every 5 minutes
+  upload_interval: 60  # Check for files to upload every 1 minute
   max_upload_retries: 3
   retry_delay: 60  # Retry after 60 seconds on failure
 

@@ -147,7 +147,7 @@ ftp_storage:
   upload_rules:
     videos:
       enabled: true
-      upload_after_hours: 2
+      upload_after_hours: 0.25
       delete_after_upload: true
       retention_days: 30
 
@@ -166,7 +166,7 @@ ftp_storage:
 
     periodic_snapshots:
       enabled: true
-      upload_after_hours: 12
+      upload_after_hours: 0.25
       delete_after_upload: true
       retention_days: 30
 
@@ -178,11 +178,11 @@ ftp_storage:
     
     temperature_csv:
       enabled: true
-      upload_after_hours: 1
+      upload_after_hours: 0.083
       delete_after_upload: true
       retention_days: 90
 
-  upload_interval: 300
+  upload_interval: 60
   max_upload_retries: 3
   retry_delay: 60
 
