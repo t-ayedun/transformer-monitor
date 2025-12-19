@@ -135,20 +135,29 @@ class TransformerMonitor:
             self.logger.info("AWS IoT disabled or not configured")
 
         # Initialize FTP publisher (if configured)
-        ftp_enabled = self.config.get('ftp.enabled', False)
+        # Check new config key 'ftp_storage' first, fallback to legacy 'ftp'
+        ftp_enabled = self.config.get('ftp_storage.enabled', False) or self.config.get('ftp.enabled', False)
+        
         if ftp_enabled:
             self.logger.info("FTP enabled, initializing publisher...")
+            
+            # Determine which config section to use
+            if self.config.get('ftp_storage.enabled'):
+                ftp_config_prefix = 'ftp_storage'
+            else:
+                ftp_config_prefix = 'ftp'
+                
             try:
                 # Get password from env var or config
-                ftp_password = os.getenv('FTP_PASSWORD') or self.config.get('ftp.password', '')
+                ftp_password = os.getenv('FTP_PASSWORD') or self.config.get(f'{ftp_config_prefix}.password', '')
                 
                 self.ftp_publisher = FTPPublisher(
-                    host=self.config.get('ftp.host'),
-                    username=self.config.get('ftp.username'),
+                    host=self.config.get(f'{ftp_config_prefix}.host'),
+                    username=self.config.get(f'{ftp_config_prefix}.username'),
                     password=ftp_password,
-                    remote_dir=self.config.get('ftp.remote_dir', '/transformer-data'),
-                    port=self.config.get('ftp.port', 21),
-                    passive=self.config.get('ftp.passive_mode', True)
+                    remote_dir=self.config.get(f'{ftp_config_prefix}.remote_dir', '/transformer-data'),
+                    port=self.config.get(f'{ftp_config_prefix}.port', 21),
+                    passive=self.config.get(f'{ftp_config_prefix}.passive', True)
                 )
                 
                 # Initialize media uploader

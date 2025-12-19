@@ -127,6 +127,29 @@ thermal_publishing:
     upload_periodic: false
     alert_levels: ["critical", "emergency"]
 
+# Regions of Interest
+regions_of_interest:
+  - id: "transformer_body"
+    name: "Transformer Body"
+    type: "rectangle"
+    coordinates: [8, 6, 24, 18]  # [x, y, w, h] for 32x24 camera
+    threshold_warning: 60
+    threshold_critical: 80
+  - id: "bushing_hv"
+    name: "HV Bushings"
+    type: "rectangle"
+    coordinates: [10, 2, 12, 4]
+    threshold_warning: 70
+    threshold_critical: 90
+
+# Composite Temperature Config
+composite_temperature:
+  enabled: true
+  method: "max"  # max, average, or weighted
+  weights:
+    transformer_body: 0.6
+    bushing_hv: 0.4
+
 # Local Storage
 local_storage:
   enabled: true
@@ -205,19 +228,10 @@ aws_iot:
   bandwidth_limit_kbps: 50
 
 # FTP (Legacy/Redundant - kept for compatibility if needed)
-ftp:
-  enabled: true
-  host: "ftp.smarterise.com"
-  port: 21
-  username: "t.ayedun@smarterise.com"
-  password: "Sm@rterise"
-  remote_dir: "C368"
-  passive_mode: true
-  thermal_image_interval: 600
-  telemetry_upload_interval: 300
-  batch_telemetry: true
-  organize_by_date: true
-  upload_on_alert: true
+# FTP (Legacy/Redundant - REMOVED)
+# ftp:
+#   enabled: true
+#   ... (Legacy FTP settings removed to prevent confusion)
 
 # Web Interface
 web_interface:
