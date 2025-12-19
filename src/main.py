@@ -202,18 +202,20 @@ class TransformerMonitor:
             )
             self.smart_camera.start_monitoring()
             
-            # Initialize web interface
-            if self.config.get('pi_camera.live_view.enabled', True):
-                self.logger.info("Initializing camera web interface...")
-                self.camera_web = CameraWebInterface(
-                    smart_camera=self.smart_camera,
-                    config=self.config,
-                    thermal_capture=self.thermal_camera,
-                    data_processor=self.data_processor,
-                    aws_publisher=self.aws_publisher,
-                    port=5000
-                )
-                self.camera_web.start()
+            # Initialize web interface (always enable if camera is enabled, live_view config controls streaming)
+            self.logger.info("Initializing camera web interface...")
+            live_view_config = self.config.get('pi_camera.live_view', {})
+            port = live_view_config.get('port', 5000)
+            
+            self.camera_web = CameraWebInterface(
+                smart_camera=self.smart_camera,
+                config=self.config,
+                thermal_capture=self.thermal_camera,
+                data_processor=self.data_processor,
+                aws_publisher=self.aws_publisher,
+                port=port
+            )
+            self.camera_web.start()
 
         # Initialize heartbeat monitor
         self.logger.info("Initializing heartbeat monitor...")

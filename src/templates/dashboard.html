@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<<<<<<< HEAD
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -70,8 +70,15 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(-30px, -30px) scale(1.1); }
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translate(-30px, -30px) scale(1.1);
+            }
         }
 
         .navbar {
@@ -118,8 +125,15 @@
         }
 
         @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px var(--glow-blue); }
-            50% { box-shadow: 0 0 30px var(--glow-purple); }
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px var(--glow-blue);
+            }
+
+            50% {
+                box-shadow: 0 0 30px var(--glow-purple);
+            }
         }
 
         .nav-links {
@@ -312,10 +326,25 @@
             opacity: 1;
         }
 
-        .status-icon.camera { background: rgba(0, 112, 243, 0.1); color: var(--accent-primary); }
-        .status-icon.temp { background: rgba(255, 170, 0, 0.1); color: var(--warning); }
-        .status-icon.system { background: rgba(0, 255, 136, 0.1); color: var(--success); }
-        .status-icon.cloud { background: rgba(121, 40, 202, 0.1); color: var(--accent-secondary); }
+        .status-icon.camera {
+            background: rgba(0, 112, 243, 0.1);
+            color: var(--accent-primary);
+        }
+
+        .status-icon.temp {
+            background: rgba(255, 170, 0, 0.1);
+            color: var(--warning);
+        }
+
+        .status-icon.system {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+        }
+
+        .status-icon.cloud {
+            background: rgba(121, 40, 202, 0.1);
+            color: var(--accent-secondary);
+        }
 
         .status-card-value {
             font-size: 2rem;
@@ -365,8 +394,15 @@
         }
 
         @keyframes pulse-online {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
 
         /* Main Layout: Hero + Sidebar */
@@ -459,10 +495,13 @@
         }
 
         @keyframes pulse-live {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 1;
                 box-shadow: 0 0 20px var(--error);
             }
+
             50% {
                 opacity: 0.8;
                 box-shadow: 0 0 30px var(--error);
@@ -472,7 +511,8 @@
         .video-container {
             position: relative;
             width: 100%;
-            padding-bottom: 56.25%; /* 16:9 */
+            padding-bottom: 56.25%;
+            /* 16:9 */
             background: #000;
             border-radius: 12px;
             overflow: hidden;
@@ -480,50 +520,11 @@
         }
 
         .video-container.primary {
-            padding-bottom: 75%; /* Larger for hero */
+            padding-bottom: 75%;
+            /* Larger for hero */
         }
 
         .video-container img {
-=======
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformer Monitor | {{ site_id }}</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-
-        .card {
-            background-color: #1e1e1e;
-            border: 1px solid #333;
-            margin-bottom: 20px;
-        }
-
-        .card-header {
-            background-color: #252525;
-            border-bottom: 1px solid #333;
-            font-weight: bold;
-        }
-
-        .stream-container {
-            position: relative;
-            width: 100%;
-            padding-top: 75%;
-            /* 4:3 Aspect Ratio */
-            overflow: hidden;
-            background: #000;
-            border-radius: 4px;
-        }
-
-        .stream-img {
->>>>>>> fix/pi4-mlx90640
             position: absolute;
             top: 0;
             left: 0;
@@ -532,7 +533,6 @@
             object-fit: contain;
         }
 
-<<<<<<< HEAD
         .video-card-footer {
             font-size: 0.85rem;
             color: var(--text-secondary);
@@ -550,7 +550,8 @@
         }
 
         .sidebar .video-container {
-            padding-bottom: 100%; /* Square-ish for sidebar */
+            padding-bottom: 100%;
+            /* Square-ish for sidebar */
         }
 
         /* ROI Section */
@@ -659,9 +660,17 @@
             font-weight: 600;
         }
 
-        .roi-status.ok { color: var(--success); }
-        .roi-status.warning { color: var(--warning); }
-        .roi-status.critical { color: var(--error); }
+        .roi-status.ok {
+            color: var(--success);
+        }
+
+        .roi-status.warning {
+            color: var(--warning);
+        }
+
+        .roi-status.critical {
+            color: var(--error);
+        }
 
         .roi-temp {
             font-size: 1.5rem;
@@ -706,8 +715,13 @@
         }
 
         @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
         }
 
         .roi-progress-bar.ok {
@@ -751,8 +765,13 @@
         }
 
         @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         /* Responsive */
@@ -927,13 +946,29 @@
             font-weight: 600;
         }
 
-        .metric-trend.up { color: var(--error); }
-        .metric-trend.down { color: var(--success); }
-        .metric-trend.stable { color: var(--text-secondary); }
+        .metric-trend.up {
+            color: var(--error);
+        }
 
-        .metric-value.cold { color: var(--accent-primary); }
-        .metric-value.warm { color: var(--warning); }
-        .metric-value.hot { color: var(--error); }
+        .metric-trend.down {
+            color: var(--success);
+        }
+
+        .metric-trend.stable {
+            color: var(--text-secondary);
+        }
+
+        .metric-value.cold {
+            color: var(--accent-primary);
+        }
+
+        .metric-value.warm {
+            color: var(--warning);
+        }
+
+        .metric-value.hot {
+            color: var(--error);
+        }
 
         .chart-container {
             background: rgba(10, 10, 10, 0.8);
@@ -982,6 +1017,7 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
+
 <body>
     <nav class="navbar">
         <div class="navbar-content">
@@ -995,647 +1031,707 @@
             </div>
             <div class="quick-toolbar">
                 <button class="toolbar-btn" onclick="refreshAll()">Refresh Data</button>
-                <button class="toolbar-btn toolbar-btn-primary" onclick="captureSnapshot()">Capture Thermal Snapshot</button>
-=======
-        .status-badge {
-            font-size: 0.8em;
-            padding: 5px 10px;
-            border-radius: 12px;
-        }
+                <button class="toolbar-btn toolbar-btn-primary" onclick="captureSnapshot()">Capture Thermal
+                    Snapshot</button>
+                =======
+                .status-badge {
+                font-size: 0.8em;
+                padding: 5px 10px;
+                border-radius: 12px;
+                }
 
-        .status-ok {
-            background-color: #198754;
-            color: white;
-        }
+                .status-ok {
+                background-color: #198754;
+                color: white;
+                }
 
-        .status-warn {
-            background-color: #ffc107;
-            color: black;
-        }
+                .status-warn {
+                background-color: #ffc107;
+                color: black;
+                }
 
-        .status-err {
-            background-color: #dc3545;
-            color: white;
-        }
+                .status-err {
+                background-color: #dc3545;
+                color: white;
+                }
 
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
+                .stat-value {
+                font-size: 1.5rem;
+                font-weight: bold;
+                }
 
-        .stat-label {
-            font-size: 0.9rem;
-            color: #aaa;
-        }
-    </style>
-</head>
+                .stat-label {
+                font-size: 0.9rem;
+                color: #aaa;
+                }
+                </style>
+                </head>
 
-<body>
-    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">
-                <i class="fas fa-bolt me-2 text-warning"></i>Transformer Monitor
-                <span class="badge bg-secondary ms-2" id="site-id">{{ site_id }}</span>
-            </span>
-            <div class="d-flex align-items-center gap-3">
-                <a href="/gallery" class="btn btn-outline-light btn-sm"><i class="fas fa-images me-2"></i>Gallery</a>
-                <span id="connection-status" class="badge bg-danger">Disconnected</span>
->>>>>>> fix/pi4-mlx90640
-            </div>
-        </div>
-    </nav>
-
-<<<<<<< HEAD
-    <div class="container">
-        <div class="alert-banner">
-            <strong>Transformer Monitoring Configuration</strong> — Configure thermal monitoring zones, set temperature thresholds, and calibrate cameras. Thermal data and events are automatically published to AWS IoT Core.
-        </div>
-
-        <!-- Status Cards -->
-        <div class="status-grid">
-            <div class="status-card">
-                <div class="status-card-header">
-                    <div>
-                        <div class="status-card-title">Dual-Camera System</div>
-                    </div>
-                    <div class="status-icon camera">📷</div>
-                </div>
-                <div class="status-card-value" id="cameraCount">--</div>
-                <div class="status-card-meta">
-                    <div class="status-indicator">
-                        <span class="status-dot online" id="thermalDot"></span>
-                        <span id="thermalText">Thermal Camera</span>
-                    </div>
-                    <div class="status-indicator">
-                        <span class="status-dot online" id="visualDot"></span>
-                        <span id="visualText">Visual Camera</span>
-=======
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Left Column: Video Streams -->
-            <div class="col-lg-8">
-                <div class="row">
-                    <!-- Thermal Stream -->
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-temperature-high me-2 text-warning"></i>Thermal Feed</span>
-                                <span class="badge bg-primary" id="temp-range">--°C</span>
+                <body>
+                    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+                        <div class="container-fluid">
+                            <span class="navbar-brand mb-0 h1">
+                                <i class="fas fa-bolt me-2 text-warning"></i>Transformer Monitor
+                                <span class="badge bg-secondary ms-2" id="site-id">{{ site_id }}</span>
+                            </span>
+                            <div class="d-flex align-items-center gap-3">
+                                <a href="/gallery" class="btn btn-outline-light btn-sm"><i
+                                        class="fas fa-images me-2"></i>Gallery</a>
+                                <span id="connection-status" class="badge bg-danger">Disconnected</span>
+                                >>>>>>> fix/pi4-mlx90640
                             </div>
-                            <div class="card-body p-0">
-                                <div class="stream-container">
-                                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
-                                        <button class="btn btn-sm btn-light opacity-75"
-                                            onclick="refreshImage('thermal')"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </nav>
+
+                    <<<<<<< HEAD <div class="container">
+                        <div class="alert-banner">
+                            <strong>Transformer Monitoring Configuration</strong> — Configure thermal monitoring zones,
+                            set temperature thresholds, and calibrate cameras. Thermal data and events are automatically
+                            published to AWS IoT Core.
+                        </div>
+
+                        <!-- Status Cards -->
+                        <div class="status-grid">
+                            <div class="status-card">
+                                <div class="status-card-header">
+                                    <div>
+                                        <div class="status-card-title">Dual-Camera System</div>
                                     </div>
-                                    <img id="img-thermal" src="/api/snapshot/thermal" class="stream-img"
-                                        alt="Thermal Snapshot"
-                                        onerror="this.src='https://placehold.co/640x480?text=Thermal+Offline'">
-                                    <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
-                                        id="time-thermal">Updating...</div>
+                                    <div class="status-icon camera">📷</div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Visual Stream -->
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <i class="fas fa-video me-2 text-info"></i>Visual Feed
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="stream-container">
-                                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
-                                        <button class="btn btn-sm btn-light opacity-75"
-                                            onclick="refreshImage('visual')"><i class="fas fa-sync-alt"></i></button>
+                                <div class="status-card-value" id="cameraCount">--</div>
+                                <div class="status-card-meta">
+                                    <div class="status-indicator">
+                                        <span class="status-dot online" id="thermalDot"></span>
+                                        <span id="thermalText">Thermal Camera</span>
                                     </div>
-                                    <img id="img-visual" src="/api/snapshot/visual" class="stream-img"
-                                        alt="Visual Snapshot"
-                                        onerror="this.src='https://placehold.co/640x480?text=Visual+Offline'">
-                                    <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
-                                        id="time-visual">Updating...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                    <div class="status-indicator">
+                                        <span class="status-dot online" id="visualDot"></span>
+                                        <span id="visualText">Visual Camera</span>
+                                        =======
+                                        <div class="container-fluid">
+                                            <div class="row">
+                                                <!-- Left Column: Video Streams -->
+                                                <div class="col-lg-8">
+                                                    <div class="row">
+                                                        <!-- Thermal Stream -->
+                                                        <div class="col-md-6">
+                                                            <div class="card">
+                                                                <div
+                                                                    class="card-header d-flex justify-content-between align-items-center">
+                                                                    <span><i
+                                                                            class="fas fa-temperature-high me-2 text-warning"></i>Thermal
+                                                                        Feed</span>
+                                                                    <span class="badge bg-primary"
+                                                                        id="temp-range">--°C</span>
+                                                                </div>
+                                                                <div class="card-body p-0">
+                                                                    <div class="stream-container">
+                                                                        <div class="position-absolute top-0 end-0 p-2"
+                                                                            style="z-index: 10;">
+                                                                            <button
+                                                                                class="btn btn-sm btn-light opacity-75"
+                                                                                onclick="refreshImage('thermal')"><i
+                                                                                    class="fas fa-sync-alt"></i></button>
+                                                                        </div>
+                                                                        <img id="img-thermal"
+                                                                            src="/api/snapshot/thermal"
+                                                                            class="stream-img" alt="Thermal Snapshot"
+                                                                            onerror="this.src='https://placehold.co/640x480?text=Thermal+Offline'">
+                                                                        <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
+                                                                            id="time-thermal">Updating...</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Visual Stream -->
+                                                        <div class="col-md-6">
+                                                            <div class="card">
+                                                                <div class="card-header">
+                                                                    <i class="fas fa-video me-2 text-info"></i>Visual
+                                                                    Feed
+                                                                </div>
+                                                                <div class="card-body p-0">
+                                                                    <div class="stream-container">
+                                                                        <div class="position-absolute top-0 end-0 p-2"
+                                                                            style="z-index: 10;">
+                                                                            <button
+                                                                                class="btn btn-sm btn-light opacity-75"
+                                                                                onclick="refreshImage('visual')"><i
+                                                                                    class="fas fa-sync-alt"></i></button>
+                                                                        </div>
+                                                                        <img id="img-visual" src="/api/snapshot/visual"
+                                                                            class="stream-img" alt="Visual Snapshot"
+                                                                            onerror="this.src='https://placehold.co/640x480?text=Visual+Offline'">
+                                                                        <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
+                                                                            id="time-visual">Updating...</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                <!-- Fusion Stream (Optional/Full Width) -->
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <i class="fas fa-layer-group me-2 text-success"></i>Fusion View
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="stream-container" style="padding-top: 56.25%;"> <!-- 16:9 -->
-                                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
-                                        <button class="btn btn-sm btn-light opacity-75"
-                                            onclick="refreshImage('fusion')"><i class="fas fa-sync-alt"></i></button>
-                                    </div>
-                                    <img id="img-fusion" src="/api/snapshot/fusion" class="stream-img"
-                                        alt="Fusion Snapshot"
-                                        onerror="this.src='https://placehold.co/800x450?text=Fusion+Offline'">
-                                    <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
-                                        id="time-fusion">Updating...</div>
-                                </div>
-                            </div>
-                        </div>
->>>>>>> fix/pi4-mlx90640
-                    </div>
-                </div>
-            </div>
+                                                    <!-- Fusion Stream (Optional/Full Width) -->
+                                                    <div class="row">
+                                                        <div class="col-12">
+                                                            <div class="card">
+                                                                <div class="card-header">
+                                                                    <i
+                                                                        class="fas fa-layer-group me-2 text-success"></i>Fusion
+                                                                    View
+                                                                </div>
+                                                                <div class="card-body p-0">
+                                                                    <div class="stream-container"
+                                                                        style="padding-top: 56.25%;"> <!-- 16:9 -->
+                                                                        <div class="position-absolute top-0 end-0 p-2"
+                                                                            style="z-index: 10;">
+                                                                            <button
+                                                                                class="btn btn-sm btn-light opacity-75"
+                                                                                onclick="refreshImage('fusion')"><i
+                                                                                    class="fas fa-sync-alt"></i></button>
+                                                                        </div>
+                                                                        <img id="img-fusion" src="/api/snapshot/fusion"
+                                                                            class="stream-img" alt="Fusion Snapshot"
+                                                                            onerror="this.src='https://placehold.co/800x450?text=Fusion+Offline'">
+                                                                        <div class="position-absolute bottom-0 start-0 p-1 bg-dark bg-opacity-75 text-white small"
+                                                                            id="time-fusion">Updating...</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            >>>>>>> fix/pi4-mlx90640
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-<<<<<<< HEAD
-            <div class="status-card">
-                <div class="status-card-header">
-                    <div>
-                        <div class="status-card-title">Transformer Temperature</div>
-                    </div>
-                    <div class="status-icon temp">🌡️</div>
-                </div>
-                <div class="status-card-value" id="currentTemp">--°C</div>
-                <div class="status-card-meta">
-                    <span>Min Temp: <strong id="minTemp">--</strong></span>
-                    <span>Max Temp: <strong id="maxTemp">--</strong></span>
-                </div>
-            </div>
+                                                <<<<<<< HEAD <div class="status-card">
+                                                    <div class="status-card-header">
+                                                        <div>
+                                                            <div class="status-card-title">Transformer Temperature</div>
+                                                        </div>
+                                                        <div class="status-icon temp">🌡️</div>
+                                                    </div>
+                                                    <div class="status-card-value" id="currentTemp">--°C</div>
+                                                    <div class="status-card-meta">
+                                                        <span>Min Temp: <strong id="minTemp">--</strong></span>
+                                                        <span>Max Temp: <strong id="maxTemp">--</strong></span>
+                                                    </div>
+                                            </div>
 
-            <div class="status-card">
-                <div class="status-card-header">
-                    <div>
-                        <div class="status-card-title">Monitor System</div>
-                    </div>
-                    <div class="status-icon system">💻</div>
-                </div>
-                <div class="status-card-value" id="systemStatus">Online</div>
-                <div class="status-card-meta">
-                    <span>System Uptime: <strong id="uptime">--</strong></span>
-                </div>
-            </div>
+                                            <div class="status-card">
+                                                <div class="status-card-header">
+                                                    <div>
+                                                        <div class="status-card-title">Monitor System</div>
+                                                    </div>
+                                                    <div class="status-icon system">💻</div>
+                                                </div>
+                                                <div class="status-card-value" id="systemStatus">Online</div>
+                                                <div class="status-card-meta">
+                                                    <span>System Uptime: <strong id="uptime">--</strong></span>
+                                                </div>
+                                            </div>
 
-            <div class="status-card">
-                <div class="status-card-header">
-                    <div>
-                        <div class="status-card-title">AWS Cloud Status</div>
-                    </div>
-                    <div class="status-icon cloud">☁️</div>
-                </div>
-                <div class="status-card-value" id="awsStatus" style="color: #71717a;">Checking...</div>
-                <div class="status-card-meta">
-                    <span>Last AWS Sync: <strong id="lastSync">--</strong></span>
-                </div>
-            </div>
+                                            <div class="status-card">
+                                                <div class="status-card-header">
+                                                    <div>
+                                                        <div class="status-card-title">AWS Cloud Status</div>
+                                                    </div>
+                                                    <div class="status-icon cloud">☁️</div>
+                                                </div>
+                                                <div class="status-card-value" id="awsStatus" style="color: #71717a;">
+                                                    Checking...</div>
+                                                <div class="status-card-meta">
+                                                    <span>Last AWS Sync: <strong id="lastSync">--</strong></span>
+                                                </div>
+                                            </div>
 
-            <div class="status-card">
-                <div class="status-card-header">
-                    <div>
-                        <div class="status-card-title">Motion Detection</div>
-                    </div>
-                    <div class="status-icon system">👁️</div>
-                </div>
-                <div class="status-card-value" id="motionStatus" style="color: #71717a;">No Motion</div>
-                <div class="status-card-meta">
-                    <div class="status-indicator">
-                        <span class="status-dot" id="motionDot"></span>
-                        <span id="motionText">Monitoring</span>
-                    </div>
-                    <span id="motionDetails">Last: <strong id="lastMotion">Never</strong></span>
-                </div>
-            </div>
-        </div>
+                                            <div class="status-card">
+                                                <div class="status-card-header">
+                                                    <div>
+                                                        <div class="status-card-title">Motion Detection</div>
+                                                    </div>
+                                                    <div class="status-icon system">👁️</div>
+                                                </div>
+                                                <div class="status-card-value" id="motionStatus"
+                                                    style="color: #71717a;">No Motion</div>
+                                                <div class="status-card-meta">
+                                                    <div class="status-indicator">
+                                                        <span class="status-dot" id="motionDot"></span>
+                                                        <span id="motionText">Monitoring</span>
+                                                    </div>
+                                                    <span id="motionDetails">Last: <strong
+                                                            id="lastMotion">Never</strong></span>
+                                                </div>
+                                            </div>
+                                        </div>
 
-        <!-- Temperature Metrics Dashboard -->
-        <div class="metrics-section">
-            <div class="metrics-header">
-                <h2>Transformer Temperature Trends</h2>
-                <div class="time-range-selector">
-                    <button class="time-range-btn active" onclick="setTimeRange('1h')" id="btn-1h">1h</button>
-                    <button class="time-range-btn" onclick="setTimeRange('6h')" id="btn-6h">6h</button>
-                    <button class="time-range-btn" onclick="setTimeRange('24h')" id="btn-24h">24h</button>
-                    <button class="time-range-btn" onclick="setTimeRange('7d')" id="btn-7d">7d</button>
-                </div>
-            </div>
-            <div class="metrics-content">
-                <div class="metric-card">
-                    <div class="metric-label">Minimum</div>
-                    <div class="metric-value cold" id="metricMin">
-                        <span id="metricMinValue">--</span>
-                        <span class="metric-trend stable" id="metricMinTrend">→</span>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Maximum</div>
-                    <div class="metric-value hot" id="metricMax">
-                        <span id="metricMaxValue">--</span>
-                        <span class="metric-trend stable" id="metricMaxTrend">→</span>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Average</div>
-                    <div class="metric-value warm" id="metricAvg">
-                        <span id="metricAvgValue">--</span>
-                        <span class="metric-trend stable" id="metricAvgTrend">→</span>
-                    </div>
-                </div>
-                <div class="chart-container">
-                    <canvas id="tempChart"></canvas>
-                </div>
-            </div>
-        </div>
+                                        <!-- Temperature Metrics Dashboard -->
+                                        <div class="metrics-section">
+                                            <div class="metrics-header">
+                                                <h2>Transformer Temperature Trends</h2>
+                                                <div class="time-range-selector">
+                                                    <button class="time-range-btn active" onclick="setTimeRange('1h')"
+                                                        id="btn-1h">1h</button>
+                                                    <button class="time-range-btn" onclick="setTimeRange('6h')"
+                                                        id="btn-6h">6h</button>
+                                                    <button class="time-range-btn" onclick="setTimeRange('24h')"
+                                                        id="btn-24h">24h</button>
+                                                    <button class="time-range-btn" onclick="setTimeRange('7d')"
+                                                        id="btn-7d">7d</button>
+                                                </div>
+                                            </div>
+                                            <div class="metrics-content">
+                                                <div class="metric-card">
+                                                    <div class="metric-label">Minimum</div>
+                                                    <div class="metric-value cold" id="metricMin">
+                                                        <span id="metricMinValue">--</span>
+                                                        <span class="metric-trend stable" id="metricMinTrend">→</span>
+                                                    </div>
+                                                </div>
+                                                <div class="metric-card">
+                                                    <div class="metric-label">Maximum</div>
+                                                    <div class="metric-value hot" id="metricMax">
+                                                        <span id="metricMaxValue">--</span>
+                                                        <span class="metric-trend stable" id="metricMaxTrend">→</span>
+                                                    </div>
+                                                </div>
+                                                <div class="metric-card">
+                                                    <div class="metric-label">Average</div>
+                                                    <div class="metric-value warm" id="metricAvg">
+                                                        <span id="metricAvgValue">--</span>
+                                                        <span class="metric-trend stable" id="metricAvgTrend">→</span>
+                                                    </div>
+                                                </div>
+                                                <div class="chart-container">
+                                                    <canvas id="tempChart"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
 
-        <!-- Main Content: Hero + Sidebar -->
-        <div class="main-layout">
-            <div class="hero-section">
-                <div class="video-card primary">
-                    <div class="video-card-header">
-                        <h2>Live Thermal View</h2>
-                        <span class="live-badge">LIVE</span>
-                    </div>
-                    <div class="video-container primary">
-                        <img src="/video/thermal" alt="Thermal Camera Feed">
-                    </div>
-                    <div class="video-card-footer">
-                        Real-time transformer thermal imaging (32×24) with zone markers and temperature overlays
-                    </div>
-                </div>
-            </div>
+                                        <!-- Main Content: Hero + Sidebar -->
+                                        <div class="main-layout">
+                                            <div class="hero-section">
+                                                <div class="video-card primary">
+                                                    <div class="video-card-header">
+                                                        <h2>Live Thermal View</h2>
+                                                        <span class="live-badge">LIVE</span>
+                                                    </div>
+                                                    <div class="video-container primary">
+                                                        <img id="thermal-feed" src="/api/snapshot/thermal"
+                                                            alt="Thermal Camera Feed">
+                                                    </div>
+                                                    <div class="video-card-footer">
+                                                        Real-time transformer thermal imaging (32×24) with zone markers
+                                                        and temperature overlays
+                                                    </div>
+                                                </div>
+                                            </div>
 
-            <div class="sidebar">
-                <div class="video-card">
-                    <div class="video-card-header">
-                        <h2>Live Visual Camera</h2>
-                        <span class="live-badge">LIVE</span>
-                    </div>
-                    <div class="video-container">
-                        <img src="/video/visual" alt="Visual Camera Feed">
-                    </div>
-                    <div class="video-card-footer">
-                        High-resolution visual context (1920×1080) for incident investigation
-                    </div>
-                </div>
-            </div>
-        </div>
+                                            <div class="sidebar">
+                                                <div class="video-card">
+                                                    <div class="video-card-header">
+                                                        <h2>Visual Camera</h2>
+                                                        <span class="live-badge">ACTIVE</span>
+                                                    </div>
+                                                    <div class="video-container">
+                                                        <img id="visual-feed" src="/api/snapshot/visual"
+                                                            alt="Visual Camera Feed">
+                                                    </div>
+                                                    <div class="video-card-footer">
+                                                        High-resolution visual context (1920×1080) for incident
+                                                        investigation
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-        <!-- ROI Section -->
-        <div class="roi-section">
-            <div class="roi-header">
-                <h2>Transformer Monitoring Zones</h2>
-                <span class="roi-timestamp" id="roiTimestamp">Last updated: --</span>
-            </div>
-            <div class="roi-grid" id="roiGrid">
-                <div class="empty-state">
-                    <h3>No Monitoring Zones Configured</h3>
-                    <p>Configure thermal monitoring zones for transformer components like windings, bushings, tap changers, and cooling radiators</p>
-                    <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
-                        Configure Monitoring Zones
-                    </button>
-                </div>
-            </div>
-        </div>
+                                        <!-- ROI Section -->
+                                        <div class="roi-section">
+                                            <div class="roi-header">
+                                                <h2>Transformer Monitoring Zones</h2>
+                                                <span class="roi-timestamp" id="roiTimestamp">Last updated: --</span>
+                                            </div>
+                                            <div class="roi-grid" id="roiGrid">
+                                                <div class="empty-state">
+                                                    <h3>No Monitoring Zones Configured</h3>
+                                                    <p>Configure thermal monitoring zones for transformer components
+                                                        like windings, bushings, tap changers, and cooling radiators</p>
+                                                    <button class="toolbar-btn toolbar-btn-primary"
+                                                        onclick="window.location.href='/smart-roi-mapper'">
+                                                        Configure Monitoring Zones
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
 
-        <!-- Recent Files Section -->
-        <div class="roi-section" style="margin-top: 2rem;">
-            <div class="roi-header">
-                <h2>Recent Recordings & Snapshots</h2>
-                <span class="roi-timestamp" id="filesTimestamp">Last updated: --</span>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                <!-- Recent Recordings -->
-                <div>
-                    <h3 style="color: #e7e9ea; margin-bottom: 1rem; font-size: 1.1rem;">Recent Recordings</h3>
-                    <div id="recentRecordings" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <div style="text-align: center; color: #8b98a5; padding: 2rem;">No recordings yet</div>
-                    </div>
-                </div>
-                <!-- Recent Snapshots -->
-                <div>
-                    <h3 style="color: #e7e9ea; margin-bottom: 1rem; font-size: 1.1rem;">Recent Snapshots</h3>
-                    <div id="recentSnapshots" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <div style="text-align: center; color: #8b98a5; padding: 2rem;">No snapshots yet</div>
-=======
-            <!-- Right Column: Stats & Controls -->
-            <div class="col-lg-4">
-                <!-- System Health -->
-                <div class="card">
-                    <div class="card-header"><i class="fas fa-heartbeat me-2"></i>System Health</div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-6 mb-3">
-                                <div class="stat-value" id="cpu-load">--%</div>
-                                <div class="stat-label">CPU Load</div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="stat-value" id="disk-space">--%</div>
-                                <div class="stat-label">Disk Usage</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="stat-value" id="temp-cpu">--°C</div>
-                                <div class="stat-label">CPU Temp</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="stat-value" id="uptime">--</div>
-                                <div class="stat-label">Uptime</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                        <!-- Recent Files Section -->
+                                        <div class="roi-section" style="margin-top: 2rem;">
+                                            <div class="roi-header">
+                                                <h2>Recent Recordings & Snapshots</h2>
+                                                <span class="roi-timestamp" id="filesTimestamp">Last updated: --</span>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                                <!-- Recent Recordings -->
+                                                <div>
+                                                    <h3 style="color: #e7e9ea; margin-bottom: 1rem; font-size: 1.1rem;">
+                                                        Recent Recordings</h3>
+                                                    <div id="recentRecordings"
+                                                        style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                                        <div style="text-align: center; color: #8b98a5; padding: 2rem;">
+                                                            No recordings yet</div>
+                                                    </div>
+                                                </div>
+                                                <!-- Recent Snapshots -->
+                                                <div>
+                                                    <h3 style="color: #e7e9ea; margin-bottom: 1rem; font-size: 1.1rem;">
+                                                        Recent Snapshots</h3>
+                                                    <div id="recentSnapshots"
+                                                        style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                                        <div style="text-align: center; color: #8b98a5; padding: 2rem;">
+                                                            No snapshots yet</div>
+                                                        =======
+                                                        <!-- Right Column: Stats & Controls -->
+                                                        <div class="col-lg-4">
+                                                            <!-- System Health -->
+                                                            <div class="card">
+                                                                <div class="card-header"><i
+                                                                        class="fas fa-heartbeat me-2"></i>System Health
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div class="row text-center">
+                                                                        <div class="col-6 mb-3">
+                                                                            <div class="stat-value" id="cpu-load">--%
+                                                                            </div>
+                                                                            <div class="stat-label">CPU Load</div>
+                                                                        </div>
+                                                                        <div class="col-6 mb-3">
+                                                                            <div class="stat-value" id="disk-space">--%
+                                                                            </div>
+                                                                            <div class="stat-label">Disk Usage</div>
+                                                                        </div>
+                                                                        <div class="col-6">
+                                                                            <div class="stat-value" id="temp-cpu">--°C
+                                                                            </div>
+                                                                            <div class="stat-label">CPU Temp</div>
+                                                                        </div>
+                                                                        <div class="col-6">
+                                                                            <div class="stat-value" id="uptime">--</div>
+                                                                            <div class="stat-label">Uptime</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
 
-                <!-- Camera Stats -->
-                <div class="card">
-                    <div class="card-header"><i class="fas fa-camera me-2"></i>Camera Stats</div>
-                    <ul class="list-group list-group-flush bg-dark text-white">
-                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
-                            <span>Motion Events</span>
-                            <span class="badge bg-primary rounded-pill" id="motion-events">0</span>
-                        </li>
-                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
-                            <span>Recordings Saved</span>
-                            <span class="badge bg-success rounded-pill" id="recordings-saved">0</span>
-                        </li>
-                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
-                            <span>Snapshots</span>
-                            <span class="badge bg-info rounded-pill" id="snapshots-taken">0</span>
-                        </li>
-                        <li class="list-group-item bg-dark text-white d-flex justify-content-between">
-                            <span>Buffer Usage</span>
-                            <span class="badge bg-secondary rounded-pill" id="buffer-usage">0 MB</span>
-                        </li>
-                    </ul>
-                </div>
+                                                            <!-- Camera Stats -->
+                                                            <div class="card">
+                                                                <div class="card-header"><i
+                                                                        class="fas fa-camera me-2"></i>Camera Stats
+                                                                </div>
+                                                                <ul
+                                                                    class="list-group list-group-flush bg-dark text-white">
+                                                                    <li
+                                                                        class="list-group-item bg-dark text-white d-flex justify-content-between">
+                                                                        <span>Motion Events</span>
+                                                                        <span class="badge bg-primary rounded-pill"
+                                                                            id="motion-events">0</span>
+                                                                    </li>
+                                                                    <li
+                                                                        class="list-group-item bg-dark text-white d-flex justify-content-between">
+                                                                        <span>Recordings Saved</span>
+                                                                        <span class="badge bg-success rounded-pill"
+                                                                            id="recordings-saved">0</span>
+                                                                    </li>
+                                                                    <li
+                                                                        class="list-group-item bg-dark text-white d-flex justify-content-between">
+                                                                        <span>Snapshots</span>
+                                                                        <span class="badge bg-info rounded-pill"
+                                                                            id="snapshots-taken">0</span>
+                                                                    </li>
+                                                                    <li
+                                                                        class="list-group-item bg-dark text-white d-flex justify-content-between">
+                                                                        <span>Buffer Usage</span>
+                                                                        <span class="badge bg-secondary rounded-pill"
+                                                                            id="buffer-usage">0 MB</span>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
 
-                <!-- ROI Status -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-vector-square me-2"></i>Regions of Interest</span>
-                        <a href="/roi-mapper" class="btn btn-sm btn-outline-light">Edit</a>
-                    </div>
-                    <div class="card-body" id="roi-list">
-                        <p class="text-muted text-center">Loading ROIs...</p>
-                    </div>
-                </div>
+                                                            <!-- ROI Status -->
+                                                            <div class="card">
+                                                                <div
+                                                                    class="card-header d-flex justify-content-between align-items-center">
+                                                                    <span><i
+                                                                            class="fas fa-vector-square me-2"></i>Regions
+                                                                        of Interest</span>
+                                                                    <a href="/roi-mapper"
+                                                                        class="btn btn-sm btn-outline-light">Edit</a>
+                                                                </div>
+                                                                <div class="card-body" id="roi-list">
+                                                                    <p class="text-muted text-center">Loading ROIs...
+                                                                    </p>
+                                                                </div>
+                                                            </div>
 
-                <!-- Controls -->
-                <div class="card">
-                    <div class="card-header"><i class="fas fa-cogs me-2"></i>Controls</div>
-                    <div class="card-body">
-                        <button class="btn btn-primary w-100 mb-2" onclick="captureSnapshot()">
-                            <i class="fas fa-camera me-2"></i>Take Snapshot
-                        </button>
-                        <button class="btn btn-warning w-100" onclick="restartService()">
-                            <i class="fas fa-power-off me-2"></i>Restart Service
-                        </button>
->>>>>>> fix/pi4-mlx90640
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                                                            <!-- Controls -->
+                                                            <div class="card">
+                                                                <div class="card-header"><i
+                                                                        class="fas fa-cogs me-2"></i>Controls</div>
+                                                                <div class="card-body">
+                                                                    <button class="btn btn-primary w-100 mb-2"
+                                                                        onclick="captureSnapshot()">
+                                                                        <i class="fas fa-camera me-2"></i>Take Snapshot
+                                                                    </button>
+                                                                    <button class="btn btn-warning w-100"
+                                                                        onclick="restartService()">
+                                                                        <i class="fas fa-power-off me-2"></i>Restart
+                                                                        Service
+                                                                    </button>
+                                                                    >>>>>>> fix/pi4-mlx90640
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-<<<<<<< HEAD
-    <script>
-        let statusUpdateInterval;
-        let roiUpdateInterval;
-        let metricsUpdateInterval;
-        let startTime = Date.now();
-        let tempChart = null;
-        let currentTimeRange = '1h';
-        let temperatureHistory = [];
+                                                <<<<<<< HEAD <script>
+                                                    let statusUpdateInterval;
+                                                    let roiUpdateInterval;
+                                                    let metricsUpdateInterval;
+                                                    let startTime = Date.now();
+                                                    let tempChart = null;
+                                                    let currentTimeRange = '1h';
+                                                    let temperatureHistory = [];
 
-        async function refreshStatus() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
+                                                    async function refreshStatus() {
+                                                    try {
+                                                    const response = await fetch('/api/status');
+                                                    const data = await response.json();
 
-                // Update camera status
-                const thermalOnline = data.thermal_data !== null;
-                const visualOnline = data.camera_stats !== null;
-                const onlineCount = (thermalOnline ? 1 : 0) + (visualOnline ? 1 : 0);
+                                                    // Update camera status
+                                                    const thermalOnline = data.thermal_data !== null;
+                                                    const visualOnline = data.camera_stats !== null;
+                                                    const onlineCount = (thermalOnline ? 1 : 0) + (visualOnline ? 1 :
+                                                    0);
 
-                document.getElementById('cameraCount').textContent = `${onlineCount}/2`;
+                                                    document.getElementById('cameraCount').textContent =
+                                                    `${onlineCount}/2`;
 
-                const thermalDot = document.getElementById('thermalDot');
-                thermalDot.className = `status-dot ${thermalOnline ? 'online' : 'offline'}`;
+                                                    const thermalDot = document.getElementById('thermalDot');
+                                                    thermalDot.className = `status-dot ${thermalOnline ? 'online' :
+                                                    'offline'}`;
 
-                const visualDot = document.getElementById('visualDot');
-                visualDot.className = `status-dot ${visualOnline ? 'online' : 'offline'}`;
+                                                    const visualDot = document.getElementById('visualDot');
+                                                    visualDot.className = `status-dot ${visualOnline ? 'online' :
+                                                    'offline'}`;
 
-                // Update temperature
-                if (data.thermal_data) {
-                    // Try composite_temperature first, then sensor_temp, then frame_stats.avg_temp
-                    const temp = data.thermal_data.composite_temperature ||
-                                data.thermal_data.sensor_temp ||
-                                (data.thermal_data.frame_stats && data.thermal_data.frame_stats.avg_temp);
+                                                    // Update temperature
+                                                    if (data.thermal_data) {
+                                                    // Try composite_temperature first, then sensor_temp, then
+                                                    frame_stats.avg_temp
+                                                    const temp = data.thermal_data.composite_temperature ||
+                                                    data.thermal_data.sensor_temp ||
+                                                    (data.thermal_data.frame_stats &&
+                                                    data.thermal_data.frame_stats.avg_temp);
 
-                    if (temp) {
-                        document.getElementById('currentTemp').textContent = `${temp.toFixed(1)}°C`;
+                                                    if (temp) {
+                                                    document.getElementById('currentTemp').textContent =
+                                                    `${temp.toFixed(1)}°C`;
 
-                        // Use frame stats if available, otherwise mock
-                        const minTemp = (data.thermal_data.frame_stats && data.thermal_data.frame_stats.min_temp) || (temp - 2);
-                        const maxTemp = (data.thermal_data.frame_stats && data.thermal_data.frame_stats.max_temp) || (temp + 3);
+                                                    // Use frame stats if available, otherwise mock
+                                                    const minTemp = (data.thermal_data.frame_stats &&
+                                                    data.thermal_data.frame_stats.min_temp) || (temp - 2);
+                                                    const maxTemp = (data.thermal_data.frame_stats &&
+                                                    data.thermal_data.frame_stats.max_temp) || (temp + 3);
 
-                        document.getElementById('minTemp').textContent = `${minTemp.toFixed(1)}°C`;
-                        document.getElementById('maxTemp').textContent = `${maxTemp.toFixed(1)}°C`;
-                    }
-                }
+                                                    document.getElementById('minTemp').textContent =
+                                                    `${minTemp.toFixed(1)}°C`;
+                                                    document.getElementById('maxTemp').textContent =
+                                                    `${maxTemp.toFixed(1)}°C`;
+                                                    }
+                                                    }
 
-                // Update uptime
-                const uptime = Math.floor((Date.now() - startTime) / 1000);
-                const hours = Math.floor(uptime / 3600);
-                const minutes = Math.floor((uptime % 3600) / 60);
-                document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+                                                    // Update uptime
+                                                    const uptime = Math.floor((Date.now() - startTime) / 1000);
+                                                    const hours = Math.floor(uptime / 3600);
+                                                    const minutes = Math.floor((uptime % 3600) / 60);
+                                                    document.getElementById('uptime').textContent = `${hours}h
+                                                    ${minutes}m`;
 
-                // Update AWS connection status
-                const awsStatusEl = document.getElementById('awsStatus');
-                if (data.aws_enabled) {
-                    if (data.aws_connected) {
-                        awsStatusEl.textContent = 'Connected';
-                        awsStatusEl.style.color = '#00ff88'; // Green for connected
-                    } else {
-                        awsStatusEl.textContent = 'Disconnected';
-                        awsStatusEl.style.color = '#ffaa00'; // Orange for disconnected
-                    }
-                } else {
-                    awsStatusEl.textContent = 'Disabled';
-                    awsStatusEl.style.color = '#71717a'; // Gray for disabled
-                }
+                                                    // Update AWS connection status
+                                                    const awsStatusEl = document.getElementById('awsStatus');
+                                                    if (data.aws_enabled) {
+                                                    if (data.aws_connected) {
+                                                    awsStatusEl.textContent = 'Connected';
+                                                    awsStatusEl.style.color = '#00ff88'; // Green for connected
+                                                    } else {
+                                                    awsStatusEl.textContent = 'Disconnected';
+                                                    awsStatusEl.style.color = '#ffaa00'; // Orange for disconnected
+                                                    }
+                                                    } else {
+                                                    awsStatusEl.textContent = 'Disabled';
+                                                    awsStatusEl.style.color = '#71717a'; // Gray for disabled
+                                                    }
 
-                // Update last sync
-                const now = new Date();
-                document.getElementById('lastSync').textContent = data.aws_connected ? now.toLocaleTimeString() : 'N/A';
+                                                    // Update last sync
+                                                    const now = new Date();
+                                                    document.getElementById('lastSync').textContent = data.aws_connected
+                                                    ? now.toLocaleTimeString() : 'N/A';
 
-                // Update motion detection status
-                const motionStatusEl = document.getElementById('motionStatus');
-                const motionDotEl = document.getElementById('motionDot');
-                const motionTextEl = document.getElementById('motionText');
-                const lastMotionEl = document.getElementById('lastMotion');
+                                                    // Update motion detection status
+                                                    const motionStatusEl = document.getElementById('motionStatus');
+                                                    const motionDotEl = document.getElementById('motionDot');
+                                                    const motionTextEl = document.getElementById('motionText');
+                                                    const lastMotionEl = document.getElementById('lastMotion');
 
-                if (data.camera_stats) {
-                    const lastMotion = data.camera_stats.last_motion;
-                    const currentEventType = data.camera_stats.current_event_type;
-                    const isRecording = data.camera_stats.is_recording;
+                                                    if (data.camera_stats) {
+                                                    const lastMotion = data.camera_stats.last_motion;
+                                                    const currentEventType = data.camera_stats.current_event_type;
+                                                    const isRecording = data.camera_stats.is_recording;
 
-                    // Check if motion was detected recently (within last 10 seconds)
-                    let motionActive = false;
-                    let timeSinceMotion = null;
+                                                    // Check if motion was detected recently (within last 10 seconds)
+                                                    let motionActive = false;
+                                                    let timeSinceMotion = null;
 
-                    if (lastMotion) {
-                        const lastMotionTime = new Date(lastMotion);
-                        timeSinceMotion = Math.floor((Date.now() - lastMotionTime.getTime()) / 1000);
-                        motionActive = timeSinceMotion < 10; // Motion is "active" if within last 10 seconds
+                                                    if (lastMotion) {
+                                                    const lastMotionTime = new Date(lastMotion);
+                                                    timeSinceMotion = Math.floor((Date.now() - lastMotionTime.getTime())
+                                                    / 1000);
+                                                    motionActive = timeSinceMotion < 10; // Motion is "active" if within
+                                                        last 10 seconds // Format time since last motion if
+                                                        (timeSinceMotion < 60) {
+                                                        lastMotionEl.textContent=`${timeSinceMotion}s ago`; } else if
+                                                        (timeSinceMotion < 3600) {
+                                                        lastMotionEl.textContent=`${Math.floor(timeSinceMotion / 60)}m
+                                                        ago`; } else {
+                                                        lastMotionEl.textContent=`${Math.floor(timeSinceMotion / 3600)}h
+                                                        ago`; } } else { lastMotionEl.textContent='Never' ; } // Update
+                                                        motion status display if (motionActive) {
+                                                        motionDotEl.className='status-dot online' ;
+                                                        motionStatusEl.style.color='#00ff88' ; if (currentEventType) {
+                                                        motionStatusEl.textContent=`${currentEventType}`;
+                                                        motionTextEl.textContent=isRecording ? 'Recording' : 'Detected'
+                                                        ; } else { motionStatusEl.textContent='Motion Detected' ;
+                                                        motionTextEl.textContent=isRecording ? 'Recording' : 'Active' ;
+                                                        } } else { motionDotEl.className='status-dot offline' ;
+                                                        motionStatusEl.style.color='#71717a' ;
+                                                        motionStatusEl.textContent='No Motion' ;
+                                                        motionTextEl.textContent='Monitoring' ; } } else { // Camera
+                                                        offline motionDotEl.className='status-dot offline' ;
+                                                        motionStatusEl.style.color='#71717a' ;
+                                                        motionStatusEl.textContent='Offline' ;
+                                                        motionTextEl.textContent='Camera Offline' ;
+                                                        lastMotionEl.textContent='N/A' ; } } catch (error) {
+                                                        console.error('Failed to fetch status:', error); } } async
+                                                        function loadROIs() { try { const response=await
+                                                        fetch('/api/rois'); const data=await response.json(); const
+                                                        roiGrid=document.getElementById('roiGrid'); const
+                                                        roiTimestamp=document.getElementById('roiTimestamp'); const
+                                                        now=new Date(); roiTimestamp.textContent=`Last updated:
+                                                        ${now.toLocaleTimeString()}`; if (data.rois && data.rois.length>
+                                                        0) {
+                                                        roiGrid.innerHTML = data.rois.map((roi, index) => {
+                                                        // Mock temperature for ROI (in real implementation, get from
+                                                        thermal data)
+                                                        const mockTemp = 25 + Math.random() * 50;
+                                                        const warning = roi.thresholds?.warning || 75;
+                                                        const critical = roi.thresholds?.critical || 85;
+                                                        const emergency = roi.thresholds?.emergency || 95;
 
-                        // Format time since last motion
-                        if (timeSinceMotion < 60) {
-                            lastMotionEl.textContent = `${timeSinceMotion}s ago`;
-                        } else if (timeSinceMotion < 3600) {
-                            lastMotionEl.textContent = `${Math.floor(timeSinceMotion / 60)}m ago`;
-                        } else {
-                            lastMotionEl.textContent = `${Math.floor(timeSinceMotion / 3600)}h ago`;
-                        }
-                    } else {
-                        lastMotionEl.textContent = 'Never';
-                    }
+                                                        let status = 'ok';
+                                                        let statusText = 'Normal';
+                                                        let percentage = (mockTemp / emergency) * 100;
 
-                    // Update motion status display
-                    if (motionActive) {
-                        motionDotEl.className = 'status-dot online';
-                        motionStatusEl.style.color = '#00ff88';
-                        if (currentEventType) {
-                            motionStatusEl.textContent = `${currentEventType}`;
-                            motionTextEl.textContent = isRecording ? 'Recording' : 'Detected';
-                        } else {
-                            motionStatusEl.textContent = 'Motion Detected';
-                            motionTextEl.textContent = isRecording ? 'Recording' : 'Active';
-                        }
-                    } else {
-                        motionDotEl.className = 'status-dot offline';
-                        motionStatusEl.style.color = '#71717a';
-                        motionStatusEl.textContent = 'No Motion';
-                        motionTextEl.textContent = 'Monitoring';
-                    }
-                } else {
-                    // Camera offline
-                    motionDotEl.className = 'status-dot offline';
-                    motionStatusEl.style.color = '#71717a';
-                    motionStatusEl.textContent = 'Offline';
-                    motionTextEl.textContent = 'Camera Offline';
-                    lastMotionEl.textContent = 'N/A';
-                }
+                                                        if (mockTemp >= critical) {
+                                                        status = 'critical';
+                                                        statusText = 'Critical';
+                                                        } else if (mockTemp >= warning) {
+                                                        status = 'warning';
+                                                        statusText = 'Warning';
+                                                        }
 
-            } catch (error) {
-                console.error('Failed to fetch status:', error);
-            }
-        }
+                                                        return `
+                                                        <div class="roi-card ${status}">
+                                                            <div class="roi-card-header">
+                                                                <div class="roi-name">${roi.name}</div>
+                                                                <div class="roi-status ${status}">${statusText}</div>
+                                                            </div>
+                                                            <div class="roi-temp">${mockTemp.toFixed(1)}°C</div>
+                                                            <div class="roi-thresholds">
+                                                                Warning: ${warning}°C | Critical: ${critical}°C |
+                                                                Emergency: ${emergency}°C
+                                                            </div>
+                                                            <div class="roi-progress">
+                                                                <div class="roi-progress-bar ${status}"
+                                                                    style="width: ${Math.min(percentage, 100)}%"></div>
+                                                            </div>
+                                                        </div>
+                                                        `;
+                                                        }).join('');
+                                                        } else {
+                                                        roiGrid.innerHTML = `
+                                                        <div class="empty-state">
+                                                            <h3>No Monitoring Zones Configured</h3>
+                                                            <p>Configure thermal monitoring zones for transformer
+                                                                components like windings, bushings, tap changers, and
+                                                                cooling radiators</p>
+                                                            <button class="toolbar-btn toolbar-btn-primary"
+                                                                onclick="window.location.href='/smart-roi-mapper'">
+                                                                Configure Monitoring Zones
+                                                            </button>
+                                                        </div>
+                                                        `;
+                                                        }
+                                                        } catch (error) {
+                                                        console.error('Failed to load ROIs:', error);
+                                                        }
+                                                        }
 
-        async function loadROIs() {
-            try {
-                const response = await fetch('/api/rois');
-                const data = await response.json();
+                                                        async function captureSnapshot() {
+                                                        try {
+                                                        =======
+                                                        <!-- Scripts -->
+                                                        <script
+                                                            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                                                        <script>
+                                                            // Update connection status
+                                                            function updateStatus(connected) {
+                                                                const el = document.getElementById('connection-status');
+                                                                if (connected) {
+                                                                    el.className = 'badge bg-success shadow-none';
+                                                                    el.textContent = 'Connected';
+                                                                } else {
+                                                                    el.className = 'badge bg-danger shadow-none';
+                                                                    el.textContent = 'Disconnected';
+                                                                }
+                                                            }
 
-                const roiGrid = document.getElementById('roiGrid');
-                const roiTimestamp = document.getElementById('roiTimestamp');
+                                                            // Fetch stats periodically
+                                                            async function fetchStats() {
+                                                                try {
+                                                                    // Fetch camera/system status
+                                                                    const response = await fetch('/api/status');
+                                                                    const data = await response.json();
 
-                const now = new Date();
-                roiTimestamp.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+                                                                    updateStatus(true);
 
-                if (data.rois && data.rois.length > 0) {
-                    roiGrid.innerHTML = data.rois.map((roi, index) => {
-                        // Mock temperature for ROI (in real implementation, get from thermal data)
-                        const mockTemp = 25 + Math.random() * 50;
-                        const warning = roi.thresholds?.warning || 75;
-                        const critical = roi.thresholds?.critical || 85;
-                        const emergency = roi.thresholds?.emergency || 95;
+                                                                    // Update Camera Stats
+                                                                    if (data.camera_stats) {
+                                                                        document.getElementById('motion-events').textContent = data.camera_stats.motion_events;
+                                                                        document.getElementById('recordings-saved').textContent = data.camera_stats.recordings_saved;
+                                                                        document.getElementById('snapshots-taken').textContent = data.camera_stats.snapshots_taken;
+                                                                        document.getElementById('buffer-usage').textContent = data.camera_stats.buffer_size_mb + ' MB';
+                                                                    }
 
-                        let status = 'ok';
-                        let statusText = 'Normal';
-                        let percentage = (mockTemp / emergency) * 100;
+                                                                    // Update Thermal Data & ROIs
+                                                                    if (data.thermal_data) {
+                                                                        const rois = data.thermal_data.rois || [];
+                                                                        const listEl = document.getElementById('roi-list');
 
-                        if (mockTemp >= critical) {
-                            status = 'critical';
-                            statusText = 'Critical';
-                        } else if (mockTemp >= warning) {
-                            status = 'warning';
-                            statusText = 'Warning';
-                        }
-
-                        return `
-                            <div class="roi-card ${status}">
-                                <div class="roi-card-header">
-                                    <div class="roi-name">${roi.name}</div>
-                                    <div class="roi-status ${status}">${statusText}</div>
-                                </div>
-                                <div class="roi-temp">${mockTemp.toFixed(1)}°C</div>
-                                <div class="roi-thresholds">
-                                    Warning: ${warning}°C | Critical: ${critical}°C | Emergency: ${emergency}°C
-                                </div>
-                                <div class="roi-progress">
-                                    <div class="roi-progress-bar ${status}" style="width: ${Math.min(percentage, 100)}%"></div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    roiGrid.innerHTML = `
-                        <div class="empty-state">
-                            <h3>No Monitoring Zones Configured</h3>
-                            <p>Configure thermal monitoring zones for transformer components like windings, bushings, tap changers, and cooling radiators</p>
-                            <button class="toolbar-btn toolbar-btn-primary" onclick="window.location.href='/smart-roi-mapper'">
-                                Configure Monitoring Zones
-                            </button>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Failed to load ROIs:', error);
-            }
-        }
-
-        async function captureSnapshot() {
-            try {
-=======
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Update connection status
-        function updateStatus(connected) {
-            const el = document.getElementById('connection-status');
-            if (connected) {
-                el.className = 'badge bg-success shadow-none';
-                el.textContent = 'Connected';
-            } else {
-                el.className = 'badge bg-danger shadow-none';
-                el.textContent = 'Disconnected';
-            }
-        }
-
-        // Fetch stats periodically
-        async function fetchStats() {
-            try {
-                // Fetch camera/system status
-                const response = await fetch('/api/status');
-                const data = await response.json();
-
-                updateStatus(true);
-
-                // Update Camera Stats
-                if (data.camera_stats) {
-                    document.getElementById('motion-events').textContent = data.camera_stats.motion_events;
-                    document.getElementById('recordings-saved').textContent = data.camera_stats.recordings_saved;
-                    document.getElementById('snapshots-taken').textContent = data.camera_stats.snapshots_taken;
-                    document.getElementById('buffer-usage').textContent = data.camera_stats.buffer_size_mb + ' MB';
-                }
-
-                // Update Thermal Data & ROIs
-                if (data.thermal_data) {
-                    const rois = data.thermal_data.rois || [];
-                    const listEl = document.getElementById('roi-list');
-
-                    if (rois.length > 0) {
-                        let html = '<ul class="list-group list-group-flush">';
-                        rois.forEach(roi => {
-                            const badgeClass = roi.status === 'EMERGENCY' ? 'bg-danger' :
-                                roi.status === 'CRITICAL' ? 'bg-warning text-dark' : 'bg-success';
-                            html += `
+                                                                        if (rois.length > 0) {
+                                                                            let html = '<ul class="list-group list-group-flush">';
+                                                                            rois.forEach(roi => {
+                                                                                const badgeClass = roi.status === 'EMERGENCY' ? 'bg-danger' :
+                                                                                    roi.status === 'CRITICAL' ? 'bg-warning text-dark' : 'bg-success';
+                                                                                html += `
                                 <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
                                     <span>${roi.name}</span>
                                     <span>
@@ -1644,393 +1740,356 @@
                                     </span>
                                 </li>
                             `;
-                        });
-                        html += '</ul>';
-                        listEl.innerHTML = html;
-                    } else {
-                        listEl.innerHTML = '<p class="text-muted text-center">No ROIs configured</p>';
-                    }
-                }
+                                                                            });
+                                                                            html += '</ul>';
+                                                                            listEl.innerHTML = html;
+                                                                        } else {
+                                                                            listEl.innerHTML = '<p class="text-muted text-center">No ROIs configured</p>';
+                                                                        }
+                                                                    }
 
-                // Fetch System Health
-                try {
-                    const healthResp = await fetch('/api/health');
-                    const health = await healthResp.json();
+                                                                    // Fetch System Health
+                                                                    try {
+                                                                        const healthResp = await fetch('/api/health');
+                                                                        const health = await healthResp.json();
 
-                    if (health.status === 'success') {
-                        document.getElementById('cpu-load').textContent = health.cpu.percent + '%';
-                        document.getElementById('disk-space').textContent = health.disk.percent + '%';
-                        // Use memory percentage for "CPU Temp" slot if not available, or rename UI element
-                        // But sticking to existing IDs:
-                        document.getElementById('temp-cpu').textContent = health.memory.percent + '%';
-                        document.querySelector('#temp-cpu + .stat-label').textContent = 'Mem Usage'; // Update label dynamically
-                        document.getElementById('uptime').textContent = health.uptime_hours.toFixed(1) + 'h';
-                    }
-                } catch (e) {
-                    console.error('Health fetch failed:', e);
-                }
+                                                                        if (health.status === 'success') {
+                                                                            document.getElementById('cpu-load').textContent = health.cpu.percent + '%';
+                                                                            document.getElementById('disk-space').textContent = health.disk.percent + '%';
+                                                                            // Use memory percentage for "CPU Temp" slot if not available, or rename UI element
+                                                                            // But sticking to existing IDs:
+                                                                            document.getElementById('temp-cpu').textContent = health.memory.percent + '%';
+                                                                            document.querySelector('#temp-cpu + .stat-label').textContent = 'Mem Usage'; // Update label dynamically
+                                                                            document.getElementById('uptime').textContent = health.uptime_hours.toFixed(1) + 'h';
+                                                                        }
+                                                                    } catch (e) {
+                                                                        console.error('Health fetch failed:', e);
+                                                                    }
 
-            } catch (e) {
-                console.error('Failed to fetch stats:', e);
-                updateStatus(false);
-            }
-        }
+                                                                } catch (e) {
+                                                                    console.error('Failed to fetch stats:', e);
+                                                                    updateStatus(false);
+                                                                }
+                                                            }
 
-        // Capture snapshot
-        async function captureSnapshot() {
-            try {
-                const btn = event.target.closest('button');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Capturing...';
+                                                            // Capture snapshot
+                                                            async function captureSnapshot() {
+                                                                try {
+                                                                    const btn = event.target.closest('button');
+                                                                    const originalText = btn.innerHTML;
+                                                                    btn.disabled = true;
+                                                                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Capturing...';
 
 >>>>>>> fix/pi4-mlx90640
-                const response = await fetch('/api/snapshot');
-                const data = await response.json();
+                                                                    const response = await fetch('/api/snapshot');
+                                                                    const data = await response.json();
 
-                if (data.success) {
+                                                                    if (data.success) {
 <<<<<<< HEAD
-                    alert('Thermal snapshot captured successfully!\n\nFile: ' + data.filepath);
-                } else {
-                    alert('Failed to capture thermal snapshot: ' + data.error);
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        }
+                                                                        alert('Thermal snapshot captured successfully!\n\nFile: ' + data.filepath);
+                                                                    } else {
+                                                                        alert('Failed to capture thermal snapshot: ' + data.error);
+                                                                    }
+                                                                } catch (error) {
+                                                                    alert('Error: ' + error.message);
+                                                                }
+                                                            }
 
-        function refreshAll() {
-            refreshStatus();
-            loadROIs();
-            refreshMetrics();
-        }
+                                                            function refreshAll() {
+                                                                refreshStatus();
+                                                                loadROIs();
+                                                                refreshMetrics();
+                                                            }
 
-        function initChart() {
-            const ctx = document.getElementById('tempChart').getContext('2d');
-            tempChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Temperature (°C)',
-                        data: [],
-                        borderColor: '#1d9bf0',
-                        backgroundColor: 'rgba(29, 155, 240, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                        pointHoverBackgroundColor: '#1d9bf0',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: '#1e2732',
-                            titleColor: '#e7e9ea',
-                            bodyColor: '#e7e9ea',
-                            borderColor: '#38444d',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y.toFixed(1) + '°C';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            display: true,
-                            grid: {
-                                display: false,
-                                color: '#38444d'
-                            },
-                            ticks: {
-                                color: '#8b98a5',
-                                maxTicksLimit: 8
-                            }
-                        },
-                        y: {
-                            display: true,
-                            grid: {
-                                color: '#38444d',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#8b98a5',
-                                callback: function(value) {
-                                    return value + '°C';
-                                }
-                            }
-                        }
-                    },
-                    interaction: {
-                        mode: 'nearest',
-                        axis: 'x',
-                        intersect: false
-                    }
-                }
-            });
-        }
+                                                            function initChart() {
+                                                                const ctx = document.getElementById('tempChart').getContext('2d');
+                                                                tempChart = new Chart(ctx, {
+                                                                    type: 'line',
+                                                                    data: {
+                                                                        labels: [],
+                                                                        datasets: [{
+                                                                            label: 'Temperature (°C)',
+                                                                            data: [],
+                                                                            borderColor: '#1d9bf0',
+                                                                            backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                                            borderWidth: 2,
+                                                                            fill: true,
+                                                                            tension: 0.4,
+                                                                            pointRadius: 0,
+                                                                            pointHoverRadius: 4,
+                                                                            pointHoverBackgroundColor: '#1d9bf0',
+                                                                            pointHoverBorderColor: '#fff',
+                                                                            pointHoverBorderWidth: 2
+                                                                        }]
+                                                                    },
+                                                                    options: {
+                                                                        responsive: true,
+                                                                        maintainAspectRatio: false,
+                                                                        plugins: {
+                                                                            legend: {
+                                                                                display: false
+                                                                            },
+                                                                            tooltip: {
+                                                                                mode: 'index',
+                                                                                intersect: false,
+                                                                                backgroundColor: '#1e2732',
+                                                                                titleColor: '#e7e9ea',
+                                                                                bodyColor: '#e7e9ea',
+                                                                                borderColor: '#38444d',
+                                                                                borderWidth: 1,
+                                                                                padding: 12,
+                                                                                displayColors: false,
+                                                                                callbacks: {
+                                                                                    label: function (context) {
+                                                                                        return context.parsed.y.toFixed(1) + '°C';
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        scales: {
+                                                                            x: {
+                                                                                display: true,
+                                                                                grid: {
+                                                                                    display: false,
+                                                                                    color: '#38444d'
+                                                                                },
+                                                                                ticks: {
+                                                                                    color: '#8b98a5',
+                                                                                    maxTicksLimit: 8
+                                                                                }
+                                                                            },
+                                                                            y: {
+                                                                                display: true,
+                                                                                grid: {
+                                                                                    color: '#38444d',
+                                                                                    drawBorder: false
+                                                                                },
+                                                                                ticks: {
+                                                                                    color: '#8b98a5',
+                                                                                    callback: function (value) {
+                                                                                        return value + '°C';
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        interaction: {
+                                                                            mode: 'nearest',
+                                                                            axis: 'x',
+                                                                            intersect: false
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }
 
-        async function refreshMetrics() {
-            try {
-                const response = await fetch(`/api/temperature-history?range=${currentTimeRange}`);
-                const data = await response.json();
+                                                            async function refreshMetrics() {
+                                                                try {
+                                                                    const response = await fetch(`/api/temperature-history?range=${currentTimeRange}`);
+                                                                    const data = await response.json();
 
-                if (data.history && data.history.length > 0) {
-                    // Update chart
-                    const labels = data.history.map(point => {
-                        const date = new Date(point.timestamp);
-                        if (currentTimeRange === '1h') {
-                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        } else if (currentTimeRange === '6h') {
-                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        } else if (currentTimeRange === '24h') {
-                            return date.toLocaleTimeString([], { hour: '2-digit' });
-                        } else {
-                            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                        }
-                    });
-                    const temps = data.history.map(point => point.temperature);
+                                                                    if (data.history && data.history.length > 0) {
+                                                                        // Update chart
+                                                                        const labels = data.history.map(point => {
+                                                                            const date = new Date(point.timestamp);
+                                                                            if (currentTimeRange === '1h') {
+                                                                                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                                            } else if (currentTimeRange === '6h') {
+                                                                                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                                            } else if (currentTimeRange === '24h') {
+                                                                                return date.toLocaleTimeString([], { hour: '2-digit' });
+                                                                            } else {
+                                                                                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                                                                            }
+                                                                        });
+                                                                        const temps = data.history.map(point => point.temperature);
 
-                    tempChart.data.labels = labels;
-                    tempChart.data.datasets[0].data = temps;
-                    tempChart.update('none');
+                                                                        tempChart.data.labels = labels;
+                                                                        tempChart.data.datasets[0].data = temps;
+                                                                        tempChart.update('none');
 
-                    // Calculate metrics
-                    const min = Math.min(...temps);
-                    const max = Math.max(...temps);
-                    const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+                                                                        // Calculate metrics
+                                                                        const min = Math.min(...temps);
+                                                                        const max = Math.max(...temps);
+                                                                        const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
 
-                    // Update metric cards
-                    document.getElementById('metricMinValue').textContent = min.toFixed(1) + '°C';
-                    document.getElementById('metricMaxValue').textContent = max.toFixed(1) + '°C';
-                    document.getElementById('metricAvgValue').textContent = avg.toFixed(1) + '°C';
+                                                                        // Update metric cards
+                                                                        document.getElementById('metricMinValue').textContent = min.toFixed(1) + '°C';
+                                                                        document.getElementById('metricMaxValue').textContent = max.toFixed(1) + '°C';
+                                                                        document.getElementById('metricAvgValue').textContent = avg.toFixed(1) + '°C';
 
-                    // Calculate trends (comparing first half to second half)
-                    const midpoint = Math.floor(temps.length / 2);
-                    const firstHalf = temps.slice(0, midpoint);
-                    const secondHalf = temps.slice(midpoint);
-                    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
-                    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
-                    const diff = secondAvg - firstAvg;
+                                                                        // Calculate trends (comparing first half to second half)
+                                                                        const midpoint = Math.floor(temps.length / 2);
+                                                                        const firstHalf = temps.slice(0, midpoint);
+                                                                        const secondHalf = temps.slice(midpoint);
+                                                                        const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+                                                                        const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+                                                                        const diff = secondAvg - firstAvg;
 
-                    // Update trend indicators
-                    const updateTrend = (elementId, diff) => {
-                        const element = document.getElementById(elementId);
-                        if (Math.abs(diff) < 0.5) {
-                            element.textContent = '→';
-                            element.className = 'metric-trend stable';
-                        } else if (diff > 0) {
-                            element.textContent = '↑';
-                            element.className = 'metric-trend up';
-                        } else {
-                            element.textContent = '↓';
-                            element.className = 'metric-trend down';
-                        }
-                    };
+                                                                        // Update trend indicators
+                                                                        const updateTrend = (elementId, diff) => {
+                                                                            const element = document.getElementById(elementId);
+                                                                            if (Math.abs(diff) < 0.5) {
+                                                                                element.textContent = '→';
+                                                                                element.className = 'metric-trend stable';
+                                                                            } else if (diff > 0) {
+                                                                                element.textContent = '↑';
+                                                                                element.className = 'metric-trend up';
+                                                                            } else {
+                                                                                element.textContent = '↓';
+                                                                                element.className = 'metric-trend down';
+                                                                            }
+                                                                        };
 
-                    updateTrend('metricMinTrend', diff);
-                    updateTrend('metricMaxTrend', diff);
-                    updateTrend('metricAvgTrend', diff);
-                }
-            } catch (error) {
-                console.error('Failed to fetch temperature metrics:', error);
-            }
-        }
+                                                                        updateTrend('metricMinTrend', diff);
+                                                                        updateTrend('metricMaxTrend', diff);
+                                                                        updateTrend('metricAvgTrend', diff);
+                                                                    }
+                                                                } catch (error) {
+                                                                    console.error('Failed to fetch temperature metrics:', error);
+                                                                }
+                                                            }
 
-        function setTimeRange(range) {
-            currentTimeRange = range;
+                                                            function setTimeRange(range) {
+                                                                currentTimeRange = range;
 
-            // Update button states
-            document.querySelectorAll('.time-range-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.getElementById(`btn-${range}`).classList.add('active');
+                                                                // Update button states
+                                                                document.querySelectorAll('.time-range-btn').forEach(btn => {
+                                                                    btn.classList.remove('active');
+                                                                });
+                                                                document.getElementById(`btn-${range}`).classList.add('active');
 
-            // Refresh metrics with new time range
-            refreshMetrics();
-        }
+                                                                // Refresh metrics with new time range
+                                                                refreshMetrics();
+                                                            }
 
-        async function loadRecentFiles() {
-            try {
-                const response = await fetch('/api/recent-files');
-                const data = await response.json();
+                                                            async function captureSnapshot() {
+                                                                const btn = document.querySelector('button[onclick="captureSnapshot()"]');
+                                                                const originalText = btn ? btn.innerHTML : 'Capture Snapshot';
+                                                                if (btn) {
+                                                                    btn.disabled = true;
+                                                                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturing...';
+                                                                }
 
-                const now = new Date();
-                document.getElementById('filesTimestamp').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+                                                                try {
+                                                                    const response = await fetch('/api/snapshot/visual');
+                                                                    const data = await response.json();
+                                                                    if (data.success) {
+                                                                        alert('Snapshot saved: ' + data.filename);
+                                                                        loadRecentFiles();
+                                                                    } else {
+                                                                        alert('Error: ' + (data.error || 'Unknown error'));
+                                                                    }
+                                                                } catch (error) {
+                                                                    console.error('Snapshot failed:', error);
+                                                                    alert('Snapshot failed');
+                                                                } finally {
+                                                                    if (btn) {
+                                                                        btn.disabled = false;
+                                                                        btn.innerHTML = originalText;
+                                                                    }
+                                                                }
+                                                            }
 
-                // Format file size
-                const formatSize = (bytes) => {
-                    if (bytes < 1024) return bytes + ' B';
-                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-                };
+                                                            async function restartService() {
+                                                                if (!confirm('Are you sure you want to restart the service?')) return;
+                                                                try {
+                                                                    const response = await fetch('/api/control/restart', { method: 'POST' });
+                                                                    const data = await response.json();
+                                                                    alert(data.message);
+                                                                } catch (error) {
+                                                                    alert('Failed to restart service');
+                                                                }
+                                                            }
 
-                // Format timestamp
-                const formatTime = (timestamp) => {
-                    const date = new Date(timestamp * 1000);
-                    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-                    if (diff < 60) return `${diff}s ago`;
-                    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-                    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-                    return date.toLocaleDateString();
-                };
+                                                            async function loadRecentFiles() {
+                                                                try {
+                                                                    const response = await fetch('/api/recent-files');
+                                                                    const data = await response.json();
 
-                // Update recordings
-                const recordingsDiv = document.getElementById('recentRecordings');
-                if (data.recordings && data.recordings.length > 0) {
-                    recordingsDiv.innerHTML = data.recordings.map(file => `
-                        <div style="background: #15202b; padding: 1rem; border-radius: 8px; border: 1px solid #38444d; transition: all 0.2s;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <span style="color: #e7e9ea; font-weight: 600; font-size: 0.9rem;">${file.filename}</span>
-                                <span style="color: #1d9bf0; font-size: 0.85rem;">${formatSize(file.size)}</span>
-                            </div>
-                            <div style="color: #8b98a5; font-size: 0.85rem;">${formatTime(file.timestamp)}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    recordingsDiv.innerHTML = '<div style="text-align: center; color: #8b98a5; padding: 2rem;">No recordings yet</div>';
-                }
+                                                                    // Update recordings
+                                                                    const recordingsDiv = document.getElementById('recentRecordings');
+                                                                    if (recordingsDiv) {
+                                                                        if (data.recordings && data.recordings.length > 0) {
+                                                                            recordingsDiv.innerHTML = data.recordings.map(file => `
+                                                                            <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--border-primary); cursor: pointer;" onclick="window.open('${file.url}', '_blank')">
+                                                                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                                                                    <span style="color: var(--text-primary); font-weight: 500;">${file.filename}</span>
+                                                                                    <span style="color: var(--accent-primary); font-size: 0.8rem;">${formatSize(file.size)}</span>
+                                                                                </div>
+                                                                                <div style="color: var(--text-secondary); font-size: 0.8rem;">${formatTime(file.timestamp)}</div>
+                                                                            </div>
+                                                                        `).join('');
+                                                                        } else {
+                                                                            recordingsDiv.innerHTML = '<div class="empty-state" style="padding: 1rem;">No recordings yet</div>';
+                                                                        }
+                                                                    }
 
-                // Update snapshots
-                const snapshotsDiv = document.getElementById('recentSnapshots');
-                if (data.snapshots && data.snapshots.length > 0) {
-                    snapshotsDiv.innerHTML = data.snapshots.map(file => `
-                        <div style="background: #15202b; padding: 1rem; border-radius: 8px; border: 1px solid #38444d; transition: all 0.2s; cursor: pointer;" onclick="window.open('${file.url}', '_blank')">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <span style="color: #e7e9ea; font-weight: 600; font-size: 0.9rem;">${file.filename}</span>
-                                <span style="color: #1d9bf0; font-size: 0.85rem;">${formatSize(file.size)}</span>
-                            </div>
-                            <div style="color: #8b98a5; font-size: 0.85rem;">${formatTime(file.timestamp)}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    snapshotsDiv.innerHTML = '<div style="text-align: center; color: #8b98a5; padding: 2rem;">No snapshots yet</div>';
-                }
-            } catch (error) {
-                console.error('Failed to load recent files:', error);
-            }
-        }
+                                                                    // Update snapshots
+                                                                    const snapshotsDiv = document.getElementById('recentSnapshots');
+                                                                    if (snapshotsDiv) {
+                                                                        if (data.snapshots && data.snapshots.length > 0) {
+                                                                            snapshotsDiv.innerHTML = data.snapshots.map(file => `
+                                                                            <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--border-primary); cursor: pointer;" onclick="window.open('${file.url}', '_blank')">
+                                                                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                                                                    <span style="color: var(--text-primary); font-weight: 500;">${file.filename}</span>
+                                                                                    <span style="color: var(--accent-primary); font-size: 0.8rem;">${formatSize(file.size)}</span>
+                                                                                </div>
+                                                                                <div style="color: var(--text-secondary); font-size: 0.8rem;">${formatTime(file.timestamp)}</div>
+                                                                            </div>
+                                                                        `).join('');
+                                                                        } else {
+                                                                            snapshotsDiv.innerHTML = '<div class="empty-state" style="padding: 1rem;">No snapshots yet</div>';
+                                                                        }
+                                                                    }
+                                                                } catch (error) {
+                                                                    console.error('Failed to load recent files:', error);
+                                                                }
+                                                            }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            refreshStatus();
-            loadROIs();
-            loadRecentFiles();
+                                                            function formatSize(bytes) {
+                                                                if (bytes === 0) return '0 B';
+                                                                const k = 1024;
+                                                                const sizes = ['B', 'KB', 'MB', 'GB'];
+                                                                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                                                                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                                                            }
 
-            // Initialize chart
-            initChart();
-            refreshMetrics();
+                                                            function formatTime(isoString) {
+                                                                const date = new Date(isoString);
+                                                                return date.toLocaleString();
+                                                            }
 
-            // Update status every 5 seconds
-            statusUpdateInterval = setInterval(refreshStatus, 5000);
+                                                            // Low Bandwidth Image Refresh
+                                                            function refreshImages() {
+                                                                const timestamp = new Date().getTime();
 
-            // Update ROIs every 10 seconds
-            roiUpdateInterval = setInterval(loadROIs, 10000);
+                                                                // Update main feeds if they exist
+                                                                const thermalFeed = document.getElementById('thermal-feed');
+                                                                if (thermalFeed) thermalFeed.src = `/api/snapshot/thermal?_=${timestamp}`;
 
-            // Update metrics every 30 seconds
-            metricsUpdateInterval = setInterval(refreshMetrics, 30000);
+                                                                const visualFeed = document.getElementById('visual-feed');
+                                                                if (visualFeed) visualFeed.src = `/api/snapshot/visual?_=${timestamp}`;
+                                                            }
 
-            // Update recent files every 15 seconds
-            setInterval(loadRecentFiles, 15000);
-        });
+                                                            // Initialize
+                                                            document.addEventListener('DOMContentLoaded', () => {
+                                                                refreshStatus();
+                                                                loadROIs();
+                                                                loadRecentFiles();
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (statusUpdateInterval) clearInterval(statusUpdateInterval);
-            if (roiUpdateInterval) clearInterval(roiUpdateInterval);
-            if (metricsUpdateInterval) clearInterval(metricsUpdateInterval);
-        });
-    </script>
-</body>
-</html>
-=======
-                    alert('Snapshot saved to: ' + data.filepath);
-                } else {
-                    alert('Error: ' + data.error);
-                }
+                                                                // Init chart if exists
+                                                                if (typeof initChart === 'function') initChart();
+                                                                if (typeof refreshMetrics === 'function') refreshMetrics();
 
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            } catch (e) {
-                alert('Failed to trigger snapshot');
-            }
-        }
-        // Restart Service
-        async function restartService() {
-            if (!confirm('Are you sure you want to restart the service?')) return;
+                                                                // Intervals
+                                                                setInterval(refreshStatus, 5000);
+                                                                setInterval(loadROIs, 10000);
+                                                                setInterval(loadRecentFiles, 30000);
+                                                                if (typeof refreshMetrics === 'function') setInterval(refreshMetrics, 30000);
 
-            try {
-                const response = await fetch('/api/control/restart', { method: 'POST' });
-                const data = await response.json();
-                alert(data.message);
-            } catch (e) {
-                alert('Failed to restart service');
-            }
-        }
-
-        // Auto-refresh configuration
-        const refreshInterval = 30000; // 30 seconds
-
-        // Refresh a specific image
-        async function refreshImage(type) {
-            const img = document.getElementById(`img-${type}`);
-            const timeLabel = document.getElementById(`time-${type}`);
-            const btn = event ? event.target.closest('button') : null;
-
-            if (btn) btn.disabled = true;
-            if (timeLabel) timeLabel.textContent = 'Loading...';
-
-            // Add random query param to bypass browser cache
-            const timestamp = new Date().getTime();
-            const newSrc = `/api/snapshot/${type}?_=${timestamp}`;
-
-            // Create temp image to preload
-            const tempImg = new Image();
-            tempImg.onload = function () {
-                img.src = newSrc;
-                if (timeLabel) {
-                    const now = new Date();
-                    timeLabel.textContent = now.toLocaleTimeString();
-                }
-                if (btn) btn.disabled = false;
-            };
-            tempImg.onerror = function () {
-                if (timeLabel) timeLabel.textContent = 'Failed';
-                if (btn) btn.disabled = false;
-            };
-            tempImg.src = newSrc;
-        }
-
-        // Poll every 5 seconds for stats
-        setInterval(fetchStats, 5000);
-
-        // Refresh images every 30 seconds
-        setInterval(() => {
-            refreshImage('thermal');
-            refreshImage('visual');
-            refreshImage('fusion');
-        }, refreshInterval);
-
-        // Initial load
-        fetchStats();
-        // Images load automatically from src attribute
-    </script>
-</body>
+                                                                // Image refresh (Low Bandwidth Mode) - every 2 seconds
+                                                                setInterval(refreshImages, 2000);
+                                                            });
+                                                        </script>
+                </body>
 
 </html>
->>>>>>> fix/pi4-mlx90640
