@@ -340,7 +340,6 @@ class CameraWebInterface:
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
 
-<<<<<<< HEAD
         @self.app.route('/api/recent-files')
         def get_recent_files():
             """Get list of recent recordings and snapshots"""
@@ -426,24 +425,6 @@ class CameraWebInterface:
     def _generate_thermal_stream(self):
         """Generate thermal camera stream with ROI overlays"""
         while self.running:
-=======
-        @self.app.route('/api/snapshot/<type>')
-        def get_snapshot(type):
-            """Get on-demand snapshot (thermal, visual, or fusion)"""
-            if type not in ['thermal', 'visual', 'fusion']:
-                return jsonify({'error': 'Invalid snapshot type'}), 400
-
-            # Check cache
-            current_time = time.time()
-            if (self.image_cache[type]['data'] is not None and 
-                current_time - self.image_cache[type]['timestamp'] < self.cache_duration):
-                return send_file(
-                    io.BytesIO(self.image_cache[type]['data']),
-                    mimetype='image/jpeg'
-                )
-
-            # Generate new image
->>>>>>> fix/pi4-mlx90640
             try:
                 img_data = None
                 if type == 'thermal':
@@ -495,52 +476,7 @@ class CameraWebInterface:
         if not self.smart_camera or not self.smart_camera.camera:
             return None
 
-<<<<<<< HEAD
-=======
-        # Capture frame
-        frame = self.smart_camera.camera.capture_array("main")
 
-        # Convert RGB to BGR for OpenCV
-        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        
-        # Add metadata overlay
-        frame_bgr = self._add_metadata_overlay(frame_bgr)
-
-        # Encode as JPEG
-        _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        return buffer.tobytes()
-
-    def _generate_fusion_image(self):
-        """Generate fusion image"""
-        if self.latest_thermal_frame is None or not self.smart_camera:
-            return None
-
-        # Get visual frame
-        visual_frame = self.smart_camera.camera.capture_array("main")
-        visual_frame = cv2.cvtColor(visual_frame, cv2.COLOR_RGB2BGR)
-
-        # Get thermal frame
-        with self.thermal_frame_lock:
-            thermal_frame = self.latest_thermal_frame.copy()
-
-        # Create thermal overlay
-        thermal_rgb = self._thermal_to_rgb(thermal_frame)
-
-        # Resize thermal to match visual
-        h, w = visual_frame.shape[:2]
-        thermal_resized = cv2.resize(thermal_rgb, (w, h), interpolation=cv2.INTER_CUBIC)
-
-        # Blend: 60% visual + 40% thermal
-        fusion = cv2.addWeighted(visual_frame, 0.6, thermal_resized, 0.4, 0)
-        
-        # Add metadata overlay
-        fusion = self._add_metadata_overlay(fusion)
-
-        # Encode as JPEG
-        _, buffer = cv2.imencode('.jpg', fusion, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        return buffer.tobytes()
-
->>>>>>> fix/pi4-mlx90640
     def _thermal_to_rgb(self, thermal_frame):
         """Convert thermal frame to RGB image with colormap"""
         # Normalize to 0-255
