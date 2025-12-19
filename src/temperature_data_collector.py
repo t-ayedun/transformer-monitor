@@ -63,6 +63,8 @@ class TemperatureDataCollector:
             if reading:
                 self.buffer.append(reading)
                 self.logger.debug(f"Recorded temperature reading: {reading['timestamp']}")
+                # Flush immediately to ensure data persistence and visibility
+                self.flush_to_csv()
             else:
                 self.logger.warning("Failed to extract temperature data from processed_data")
                 
