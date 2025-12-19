@@ -10,6 +10,13 @@ transformer:
   type: "Distribution Unit"
   rating_kva: 500
 
+# Automatic Transformer Detection
+transformer_detection:
+  enabled: true
+  threshold_percentile: 90
+  min_region_size: 10
+  fallback_to_full_frame: true
+
 thermal_camera:
   model: "MLX90640"
   i2c_address: 0x33
