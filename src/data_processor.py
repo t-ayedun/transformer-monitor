@@ -36,7 +36,8 @@ class DataProcessor:
         Returns:
             Dictionary with processed data
         """
-        timestamp = datetime.utcnow().isoformat() + 'Z'
+        # Use simple local time format as requested
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         result = {
             'timestamp': timestamp,
@@ -75,7 +76,24 @@ class DataProcessor:
                 method=self.composite_config.get('method', 'weighted_average')
             )
         
-        return result
+        # Sanitize result for JSON serialization (convert Numpy types)
+        return self._sanitize_for_json(result)
+
+    def _sanitize_for_json(self, obj):
+        """Recursively convert Numpy types to Python native types"""
+        if isinstance(obj, dict):
+            return {k: self._sanitize_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._sanitize_for_json(v) for v in obj]
+        elif isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
+                            np.int16, np.int32, np.int64, np.uint8,
+                            np.uint16, np.uint32, np.uint64)):
+            return int(obj)
+        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
+            return float(obj)
+        elif isinstance(obj, (np.ndarray,)):
+            return self._sanitize_for_json(obj.tolist())
+        return obj
     
     def _process_roi(self, frame: np.ndarray, roi_config: Dict) -> Dict[str, Any]:
         """Process a single region of interest"""

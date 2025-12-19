@@ -212,8 +212,8 @@ class MediaUploader:
         except:
             dt = datetime.now()
         
-        # Build path: /thermal/2025/12/15/filename.png
-        remote_path = f"/{media_type}/{dt.year:04d}/{dt.month:02d}/{dt.day:02d}/{filename}"
+        # Build path: thermal/2025/12/15/filename.png (Relative path)
+        remote_path = f"{media_type}/{dt.year:04d}/{dt.month:02d}/{dt.day:02d}/{filename}"
         
         return remote_path
     
