@@ -159,6 +159,18 @@ class TransformerMonitor:
         else:
             self.logger.info("FTP disabled or not configured")
         
+        # Initialize FTP Cold Storage (if FTP is enabled)
+        if self.ftp_publisher:
+            try:
+                from ftp_cold_storage import FTPColdStorage
+                self.ftp_cold_storage = FTPColdStorage(self.config)
+                self.ftp_cold_storage.start()
+                self.logger.info("FTP cold storage started - automatic file uploads enabled")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize FTP cold storage: {e}")
+                self.ftp_cold_storage = None
+
+        
         # Initialize thermal image generator
         self.logger.info("Initializing thermal image generator...")
         colormap = self.config.get('media.thermal_images.colormap', 'hot')
@@ -508,6 +520,11 @@ class TransformerMonitor:
 
         if self.storage_manager:
             self.storage_manager.stop()
+        
+        # Stop FTP cold storage
+        if self.ftp_cold_storage:
+            self.ftp_cold_storage.stop()
+        
         # Stop media uploader
         if self.media_uploader:
             self.media_uploader.stop()

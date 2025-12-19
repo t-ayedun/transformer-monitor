@@ -141,7 +141,7 @@ data_capture:
   save_full_frame_interval: 10
   buffer_size: 100
 
-<<<<<<< HEAD
+
 # Thermal Data Publishing to AWS
 thermal_publishing:
   enabled: true  # Enable publishing thermal data to AWS IoT Core
@@ -161,8 +161,6 @@ thermal_publishing:
     upload_periodic: false  # Don't upload periodic frames (saves bandwidth)
     alert_levels: ["critical", "emergency"]  # Only upload for these levels
 
-=======
->>>>>>> fix/pi4-mlx90640
 # Local Storage
 local_storage:
   enabled: true
