@@ -256,39 +256,25 @@ class FTPPublisher:
             # Use path.name if remote_path not provided
             target_path = remote_path if remote_path else path.name
             
-            # If target_path contains directories, create them
+            # If target_path contains directories, ensure they exist
             if '/' in target_path:
                 # Extract directory path
                 remote_dir = '/'.join(target_path.split('/')[:-1])
-                remote_file = target_path.split('/')[-1]
                 
-                # Create directory structure
+                # Create directory structure relative to current dir (self.remote_dir)
                 with self.connection_lock:
                     self._create_remote_dir_from_path(remote_dir)
                     
-                    # Change to target directory
-                    try:
-                        self.ftp.cwd(self.remote_dir + remote_dir)
-                    except:
-                        self.ftp.cwd(self.remote_dir)
-                        self._create_remote_dir_from_path(remote_dir)
-                        try:
-                            self.ftp.cwd(self.remote_dir + remote_dir)
-                        except:
-                            # Fallback: try absolute path if self.remote_dir is already part of connection
-                            self.ftp.cwd(remote_dir)
-                    
-                    # Upload file
+                    # Upload file using relative path, assuming CWD is self.remote_dir
+                    # Most FTP servers support STOR path/to/file
                     with open(filepath, 'rb') as f:
-                        self.ftp.storbinary(f'STOR {remote_file}', f)
-                    
-                    # Return to base directory
-                    self.ftp.cwd(self.remote_dir)
+                        self.ftp.storbinary(f'STOR {target_path}', f)
             else:
                 # Simple upload to base directory
                 with open(filepath, 'rb') as f:
                     with self.connection_lock:
                         self.ftp.storbinary(f'STOR {target_path}', f)
+
             
             file_size = path.stat().st_size
             self.stats['uploads_success'] += 1
@@ -305,24 +291,40 @@ class FTPPublisher:
     
     def _create_remote_dir_from_path(self, path):
         """
-        Create remote directory structure from path
+        Create remote directory structure from path (relative to current CWD)
         
         Args:
-            path: Path like /thermal/2025/12/15
+            path: Path like 'thermal/2025/12/15'
         """
-        if not path or path == '/':
+        if not path or path == '.' or path == '/':
             return
         
         parts = path.strip('/').split('/')
-        current = ''
         
+        # Keep track of where we started
+        try:
+            start_pwd = self.ftp.pwd()
+        except:
+            start_pwd = None
+
         for part in parts:
-            current += '/' + part
             try:
-                self.ftp.mkd(current)
-                self.logger.debug(f"Created FTP directory: {current}")
+                self.ftp.mkd(part)
+                self.logger.debug(f"Created FTP directory: {part}")
             except:
-                # Directory might already exist
+                pass
+            
+            # Try to enter it to continue creating subdirs
+            try:
+                self.ftp.cwd(part)
+            except:
+                pass
+        
+        # Return to start
+        if start_pwd:
+            try:
+                self.ftp.cwd(start_pwd)
+            except:
                 pass
     
     def upload_batch(self, data_list, prefix='batch'):
