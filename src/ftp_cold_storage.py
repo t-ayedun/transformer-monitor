@@ -113,6 +113,11 @@ class FTPColdStorage:
 
                 if self.upload_rules.get('animal_events', {}).get('enabled', False):
                     self._process_animal_events()
+                
+                # Process temperature CSV files
+                if self.upload_rules.get('temperature_csv', {}).get('enabled', True):
+                    self._process_temperature_csvs()
+
 
                 # Log stats periodically
                 if self.stats['files_uploaded'] > 0:
@@ -312,6 +317,40 @@ class FTPColdStorage:
 
                 except Exception as e:
                     self.logger.error(f"Error processing animal event {image_file}: {e}")
+    
+    def _process_temperature_csvs(self):
+        """Upload temperature CSV files to FTP"""
+        rule = self.upload_rules.get('temperature_csv', {})
+        upload_after_hours = rule.get('upload_after_hours', 1)
+        delete_after_upload = rule.get('delete_after_upload', True)
+        
+        temp_dir = Path('/data/temperature')
+        if not temp_dir.exists():
+            return
+        
+        cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
+        
+        # Find all CSV files recursively
+        for csv_file in temp_dir.rglob('*.csv'):
+            try:
+                file_mtime = datetime.fromtimestamp(csv_file.stat().st_mtime)
+                
+                if file_mtime < cutoff_time:
+                    # Preserve directory structure: temperature/YYYY/MM/DD/filename.csv
+                    relative_path = csv_file.relative_to(temp_dir)
+                    remote_path = f"temperature/{relative_path}"
+                    success = self._upload_file(csv_file, remote_path)
+                    
+                    if success and delete_after_upload:
+                        file_size = csv_file.stat().st_size
+                        csv_file.unlink()
+                        self.stats['files_deleted'] += 1
+                        self.stats['bytes_freed'] += file_size
+                        self.logger.debug(f"Uploaded and deleted temperature CSV: {csv_file.name}")
+                        
+            except Exception as e:
+                self.logger.error(f"Error processing temperature CSV {csv_file}: {e}")
+
 
     def _upload_file(self, local_path: Path, remote_path: str) -> bool:
         """

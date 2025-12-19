@@ -36,6 +36,7 @@ from aws_publisher import AWSPublisher
 from ftp_publisher import FTPPublisher
 from media_uploader import MediaUploader
 from thermal_image_generator import ThermalImageGenerator
+from temperature_data_collector import TemperatureDataCollector
 
 
 class TransformerMonitor:
@@ -65,6 +66,7 @@ class TransformerMonitor:
         self.media_uploader = None
         self.thermal_image_gen = None
         self.last_thermal_image_time = 0
+        self.temp_data_collector = None
         
     def initialize(self):
         """Initialize all components"""
@@ -170,6 +172,19 @@ class TransformerMonitor:
                 self.logger.error(f"Failed to initialize FTP cold storage: {e}")
                 self.ftp_cold_storage = None
 
+        
+        # Initialize temperature data collector
+        temp_export_enabled = self.config.get('temperature_export.enabled', True)
+        if temp_export_enabled:
+            self.logger.info("Initializing temperature data collector...")
+            try:
+                base_dir = self.config.get('temperature_export.base_dir', '/data/temperature')
+                self.temp_data_collector = TemperatureDataCollector(self.config, base_dir=base_dir)
+            except Exception as e:
+                self.logger.error(f"Failed to initialize temperature data collector: {e}")
+                self.temp_data_collector = None
+        else:
+            self.logger.info("Temperature data export disabled")
         
         # Initialize thermal image generator
         self.logger.info("Initializing thermal image generator...")
@@ -359,6 +374,13 @@ class TransformerMonitor:
                 self.ftp_publisher.upload_telemetry_data(telemetry_payload)
             except Exception as e:
                 self.logger.error(f"Failed to queue telemetry for FTP: {e}")
+        
+        # Record temperature data for CSV export
+        if self.temp_data_collector:
+            try:
+                self.temp_data_collector.record_reading(processed_data)
+            except Exception as e:
+                self.logger.error(f"Failed to record temperature data: {e}")
 
         # Update web interface with thermal frame
         if self.camera_web:
@@ -524,6 +546,10 @@ class TransformerMonitor:
         # Stop FTP cold storage
         if self.ftp_cold_storage:
             self.ftp_cold_storage.stop()
+        
+        # Flush temperature data
+        if self.temp_data_collector:
+            self.temp_data_collector.force_flush()
         
         # Stop media uploader
         if self.media_uploader:
