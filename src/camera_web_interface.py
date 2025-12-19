@@ -461,25 +461,28 @@ class CameraWebInterface:
         else:
             normalized = np.zeros_like(thermal_frame, dtype=np.uint8)
 
-        # Apply colormap (INFERNO or JET for thermal imaging)
-        colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO)
-
-        # Apply rotation if configured
+        # Apply rotation if configured (on the raw normalized data)
         rotation = self.config.get('thermal_camera.rotation', 0)
         if rotation == 90:
-            colored = cv2.rotate(colored, cv2.ROTATE_90_CLOCKWISE)
+            normalized = cv2.rotate(normalized, cv2.ROTATE_90_CLOCKWISE)
         elif rotation == 180:
-            colored = cv2.rotate(colored, cv2.ROTATE_180)
+            normalized = cv2.rotate(normalized, cv2.ROTATE_180)
         elif rotation == 270:
-            colored = cv2.rotate(colored, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            normalized = cv2.rotate(normalized, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-        # Resize for better visibility (24x32 -> 480x640 or adjusted for rotation)
+        # Upscale for better visibility (Super-Resolution)
+        # We upscale the grayscale image BEFORE colormapping for smoother gradients
         if rotation in [90, 270]:
-            resized = cv2.resize(colored, (480, 640), interpolation=cv2.INTER_CUBIC)
+            target_size = (480, 640)
         else:
-            resized = cv2.resize(colored, (640, 480), interpolation=cv2.INTER_CUBIC)
+            target_size = (640, 480)
+            
+        resized_gray = cv2.resize(normalized, target_size, interpolation=cv2.INTER_CUBIC)
 
-        return resized
+        # Apply colormap (INFERNO or JET for thermal imaging)
+        colored = cv2.applyColorMap(resized_gray, cv2.COLORMAP_INFERNO)
+
+        return colored
 
     def _draw_roi_overlays(self, img, thermal_frame):
         """Draw ROI rectangles and temperature values on image"""
