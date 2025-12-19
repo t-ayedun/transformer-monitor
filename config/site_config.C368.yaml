@@ -1,0 +1,266 @@
+# CONFIGURATION FOR SITE C368
+site:
+  id: "C368"
+  name: "Transformer Site C368"
+  location:
+    address: "Site C368 Location"
+  timezone: "Africa/Lagos"
+
+transformer:
+  type: "Distribution Unit"
+  rating_kva: 500
+
+thermal_camera:
+  model: "MLX90640"
+  i2c_address: 0x33
+  i2c_bus: 1
+  refresh_rate: 8
+  resolution: [32, 24]
+  emissivity: 0.95
+  rotation: 0
+
+# Pi Camera Configuration (Low Bandwidth Mode)
+pi_camera:
+  enabled: true
+  model: "Pi Camera 3"
+  resolution: [1920, 1080]
+  framerate: 30
+  quality: 85
+  
+  motion_detection:
+    enabled: true
+    threshold: 1500
+    min_area: 500
+    
+  recording:
+    pre_record_seconds: 10
+    post_record_seconds: 10
+    max_duration_seconds: 300
+    
+  snapshot_interval: 1800  # 30 minutes
+  
+  night_mode:
+    enabled: true
+    start_hour: 18
+    end_hour: 6
+    ir_leds_enabled: false
+    
+  storage:
+    max_local_storage_gb: 5
+    video_retention_hours: 4
+    snapshot_retention_hours: 24
+    
+  live_view:
+    enabled: false  # Disabled for low bandwidth
+    port: 5000
+    require_auth: false
+
+# Event Detection
+event_detection:
+  enabled: true
+  sensitivity: "medium"
+
+  maintenance_visit:
+    detection_hours: "08:00-17:00"
+    detection_days: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    min_duration_seconds: 120
+    min_object_size_percent: 30
+
+  security_breach:
+    alert_enabled: true
+    alert_hours: "18:00-07:00"
+    alert_days: ["saturday", "sunday"]
+
+  animal:
+    max_duration_seconds: 30
+    max_object_size_percent: 20
+
+  storage:
+    keep_hours: 48
+    max_events_per_day: 100
+    video_retention_hours: 4
+
+  performance:
+    frame_skip: 3
+    motion_detection_resolution: [640, 480]
+    sleep_between_checks: 0.1
+    cpu_monitoring:
+      enabled: true
+      log_interval: 300
+
+  cloud_publishing:
+    enabled: true
+    publish_all_events: false
+    event_topic: "transformers/C368/events"
+
+    maintenance_visit:
+      publish_telemetry: true
+      upload_images: false
+
+    security_breach:
+      publish_telemetry: true
+      upload_images: true
+
+    animal:
+      publish_telemetry: false
+      upload_images: false
+
+# Data Capture
+data_capture:
+  interval: 60
+  save_full_frame_interval: 10
+  buffer_size: 100
+
+# Thermal Data Publishing
+thermal_publishing:
+  enabled: true
+  telemetry:
+    publish_interval: 60
+    include_roi_details: true
+    include_frame_stats: false
+  alerts:
+    publish_immediately: true
+    alert_levels: ["warning", "critical", "emergency"]
+  thermal_images:
+    upload_to_s3: true
+    upload_on_alert: true
+    upload_periodic: false
+    alert_levels: ["critical", "emergency"]
+
+# Local Storage
+local_storage:
+  enabled: true
+  database_path: "/data/buffer/readings.db"
+  max_size_mb: 500
+  retention_days: 2
+
+# FTP Cold Storage
+ftp_storage:
+  enabled: true
+  host: "ftp.example.com"  # REPLACE WITH ACTUAL HOST
+  port: 21
+  username: "user"         # REPLACE WITH ACTUAL USERNAME
+  password: "password"     # REPLACE WITH ACTUAL PASSWORD
+  remote_dir: "C368"  # SITE SPECIFIC FOLDER (Relative to FTP root)
+  passive: true
+
+  upload_rules:
+    videos:
+      enabled: true
+      upload_after_hours: 2
+      delete_after_upload: true
+      retention_days: 30
+
+    thermal_frames:
+      enabled: true
+      upload_after_hours: 6
+      delete_after_upload: true
+      retention_days: 90
+
+    event_images:
+      enabled: true
+      upload_after_hours: 24
+      delete_after_upload: true
+      retention_days: 90
+      skip_security_breach: true
+
+    periodic_snapshots:
+      enabled: true
+      upload_after_hours: 12
+      delete_after_upload: true
+      retention_days: 30
+
+    animal_events:
+      enabled: true
+      upload_immediately: true
+      delete_after_upload: true
+      retention_days: 14
+    
+    temperature_csv:
+      enabled: true
+      upload_after_hours: 1
+      delete_after_upload: true
+      retention_days: 90
+
+  upload_interval: 300
+  max_upload_retries: 3
+  retry_delay: 60
+
+# Temperature Data Export
+temperature_export:
+  enabled: true
+  export_format: "csv"
+  export_interval: 60
+  base_dir: "/data/temperature"
+
+# AWS IoT Core
+aws_iot:
+  enabled: false
+  endpoint: ""
+  thing_name: "transformer-monitor-C368"
+  certs_dir: "/data/certs"
+  telemetry_interval: 60
+  heartbeat_interval: 300
+  compression: true
+  bandwidth_limit_kbps: 50
+
+# FTP (Legacy/Redundant - kept for compatibility if needed)
+ftp:
+  enabled: true
+  host: "ftp.example.com"  # REPLACE WITH ACTUAL HOST
+  port: 21
+  username: "user"         # REPLACE WITH ACTUAL USERNAME
+  password: "password"     # REPLACE WITH ACTUAL PASSWORD
+  remote_dir: "/transformer_data/C368"
+  passive_mode: true
+  thermal_image_interval: 600
+  telemetry_upload_interval: 300
+  batch_telemetry: true
+  organize_by_date: true
+  upload_on_alert: true
+
+# Web Interface
+web_interface:
+  enabled: true
+  live_streaming: false
+  on_demand_refresh_interval: 30
+  image_cache_duration: 10
+
+# Data Format
+data_format:
+  timestamp_format: "iso8601"
+  timezone: "UTC"
+
+# Media
+media:
+  thermal_images:
+    colormap: "hot"
+    resolution: [640, 480]
+    quality: 90
+  visual_images:
+    quality: 85
+    add_timestamp: true
+  videos:
+    upload_after_recording: true
+    keep_local_days: 1
+
+# Network
+network:
+  router:
+    local_ip: "192.168.1.1"
+  pi:
+    static_ip: "192.168.1.100"
+  connectivity:
+    check_interval: 60
+
+# Heartbeat
+heartbeat:
+  enabled: true
+  interval: 300
+
+# Logging
+logging:
+  level: "INFO"
+  max_file_size_mb: 10
+  backup_count: 5
+  log_to_console: true
