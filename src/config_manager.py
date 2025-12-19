@@ -18,7 +18,13 @@ class ConfigManager:
         self.logger = logging.getLogger(__name__)
         
         # Configuration file paths
-        self.config_dir = Path('/app/config')
+        # Configuration file paths
+        # Detect if we are in container (/app) or local development
+        if Path('/app/config').exists():
+            self.config_dir = Path('/app/config')
+        else:
+            # Assume running from src/..
+            self.config_dir = Path(__file__).parent.parent / 'config'
         self.data_config_dir = Path('/home/smartie/transformer_monitor_data/config')
         self.data_config_dir.mkdir(parents=True, exist_ok=True)
         

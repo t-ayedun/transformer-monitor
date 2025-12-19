@@ -5,11 +5,12 @@ echo "Stopping service..."
 sudo systemctl stop transformer-monitor
 
 echo "Copying config..."
-cp /home/smartie/transformer-monitor/config/site_config.C468.yaml /home/smartie/transformer-monitor/config/site_config.yaml
+mkdir -p /home/smartie/transformer_monitor_data/config
+cp /home/smartie/transformer-monitor/config/site_config.C468.yaml /home/smartie/transformer_monitor_data/config/site_config.yaml
 
 echo "Verifying config has required fields..."
-grep "id:" /home/smartie/transformer-monitor/config/site_config.yaml | head -1
-grep "i2c_address:" /home/smartie/transformer-monitor/config/site_config.yaml | head -1
+grep "id:" /home/smartie/transformer_monitor_data/config/site_config.yaml | head -1
+grep "i2c_address:" /home/smartie/transformer_monitor_data/config/site_config.yaml | head -1
 
 echo "Creating directories..."
 mkdir -p /home/smartie/transformer_monitor_data/{videos,images,temperature,logs,buffer}
