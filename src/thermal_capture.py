@@ -566,6 +566,10 @@ class ThermalCapture:
             hotspot_pixels = frame[labeled == i]
             hotspot_coords = np.argwhere(labeled == i)
 
+            # Skip if no pixels found (shouldn't happen but safety check)
+            if len(hotspot_pixels) == 0 or len(hotspot_coords) == 0:
+                continue
+
             # Calculate hotspot properties
             max_temp = np.max(hotspot_pixels)
             avg_temp = np.mean(hotspot_pixels)
