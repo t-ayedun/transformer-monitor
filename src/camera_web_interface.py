@@ -340,93 +340,6 @@ class CameraWebInterface:
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
 
-<<<<<<< HEAD
-        @self.app.route('/api/recent-files')
-        def get_recent_files():
-            """Get list of recent recordings and snapshots"""
-            try:
-                recent_files = {
-                    'recordings': [],
-                    'snapshots': []
-                }
-
-                # Get recent recordings (videos)
-                video_dir = Path('/data/videos')
-                if video_dir.exists():
-                    video_files = sorted(video_dir.glob('*.h264'), key=lambda p: p.stat().st_mtime, reverse=True)
-                    recent_files['recordings'] = [
-                        {
-                            'filename': f.name,
-                            'size': f.stat().st_size,
-                            'timestamp': f.stat().st_mtime,
-                            'url': f'/videos/{f.name}'
-                        }
-                        for f in video_files[:10]  # Last 10 recordings
-                    ]
-
-                # Get recent snapshots (images)
-                image_dir = Path('/data/images')
-                if image_dir.exists():
-                    image_files = sorted(image_dir.glob('*.jpg'), key=lambda p: p.stat().st_mtime, reverse=True)
-                    recent_files['snapshots'] = [
-                        {
-                            'filename': f.name,
-                            'size': f.stat().st_size,
-                            'timestamp': f.stat().st_mtime,
-                            'url': f'/snapshots/{f.name}'
-                        }
-                        for f in image_files[:10]  # Last 10 snapshots
-                    ]
-
-                return jsonify(recent_files)
-            except Exception as e:
-                self.logger.error(f"Error getting recent files: {e}")
-                return jsonify({'error': str(e)}), 500
-
-        @self.app.route('/snapshots/<filename>')
-        def serve_snapshot(filename):
-            """Serve captured snapshot images"""
-            try:
-                # Snapshots are stored in /data/images or local path
-                snapshot_dir = Path('/data/images') if Path('/data/images').exists() else Path('.')
-                filepath = snapshot_dir / filename
-
-                if filepath.exists():
-                    return send_file(str(filepath), mimetype='image/jpeg')
-                else:
-                    return jsonify({'error': 'Snapshot not found'}), 404
-            except Exception as e:
-                self.logger.error(f"Error serving snapshot: {e}")
-                return jsonify({'error': str(e)}), 500
-
-        @self.app.route('/video/thermal')
-        def thermal_stream():
-            """MJPEG stream of thermal camera with ROI overlay"""
-            response = Response(
-                self._generate_thermal_stream(),
-                mimetype='multipart/x-mixed-replace; boundary=frame'
-            )
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-            return response
-
-        @self.app.route('/video/visual')
-        def visual_stream():
-            """MJPEG stream of Pi camera"""
-            response = Response(
-                self._generate_visual_stream(),
-                mimetype='multipart/x-mixed-replace; boundary=frame'
-            )
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-            return response
-
-    def _generate_thermal_stream(self):
-        """Generate thermal camera stream with ROI overlays"""
-        while self.running:
-=======
         @self.app.route('/api/snapshot/<type>')
         def get_snapshot(type):
             """Get on-demand snapshot (thermal, visual, or fusion)"""
@@ -443,7 +356,6 @@ class CameraWebInterface:
                 )
 
             # Generate new image
->>>>>>> fix/pi4-mlx90640
             try:
                 img_data = None
                 if type == 'thermal':
@@ -495,8 +407,6 @@ class CameraWebInterface:
         if not self.smart_camera or not self.smart_camera.camera:
             return None
 
-<<<<<<< HEAD
-=======
         # Capture frame
         frame = self.smart_camera.camera.capture_array("main")
 
@@ -540,7 +450,6 @@ class CameraWebInterface:
         _, buffer = cv2.imencode('.jpg', fusion, [cv2.IMWRITE_JPEG_QUALITY, 85])
         return buffer.tobytes()
 
->>>>>>> fix/pi4-mlx90640
     def _thermal_to_rgb(self, thermal_frame):
         """Convert thermal frame to RGB image with colormap"""
         # Normalize to 0-255

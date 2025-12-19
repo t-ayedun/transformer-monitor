@@ -415,19 +415,7 @@ class ThermalCapture:
 
                 return frame_array
 
-<<<<<<< HEAD
-            except RuntimeError as e:
-                # Pi 5 specific: "Too many retries" error
-                if "Too many retries" in str(e):
-                    self.logger.warning(f"Pi 5 timing issue (attempt {attempt + 1}/{max_retries}), retrying with longer delay...")
-                    time.sleep(1.0)  # Longer delay for Pi 5
-                else:
-                    self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
-                    time.sleep(0.5)
-            except Exception as e:
-                self.logger.error(f"Frame capture error (attempt {attempt + 1}): {e}")
-                time.sleep(0.5)
-=======
+
                 return frame_array
 
             except (OSError, RuntimeError) as e:
@@ -437,7 +425,7 @@ class ThermalCapture:
             except Exception as e:
                 self.logger.error(f"Frame capture unexpected error (attempt {attempt + 1}): {e}")
                 time.sleep(0.1)
->>>>>>> fix/pi4-mlx90640
+
 
         self.logger.warning("Failed to capture valid frame after retries")
         return None
@@ -573,6 +561,10 @@ class ThermalCapture:
             # Get pixels in this hotspot
             hotspot_pixels = frame[labeled == i]
             hotspot_coords = np.argwhere(labeled == i)
+
+            # Skip if no pixels found (shouldn't happen but safety check)
+            if len(hotspot_pixels) == 0 or len(hotspot_coords) == 0:
+                continue
 
             # Calculate hotspot properties
             max_temp = np.max(hotspot_pixels)
