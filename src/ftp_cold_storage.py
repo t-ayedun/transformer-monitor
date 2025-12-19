@@ -74,6 +74,12 @@ class FTPColdStorage:
             'bytes_freed': 0,
             'upload_failures': 0
         }
+        
+        # Base Data Directory for scanning
+        self.base_dir = Path.home() / 'transformer_monitor_data'
+        self.video_dir = self.base_dir / 'videos'
+        self.image_dir = self.base_dir / 'images'
+        self.temp_dir = self.base_dir / 'temperature'
 
     def start(self):
         """Start background monitoring thread"""
@@ -138,13 +144,13 @@ class FTPColdStorage:
         upload_after_hours = rule.get('upload_after_hours', 2)
         delete_after_upload = rule.get('delete_after_upload', True)
 
-        video_dir = Path('/data/video')
-        if not video_dir.exists():
+        # video_dir = Path('/data/video') - OLD
+        if not self.video_dir.exists():
             return
 
         cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
 
-        for video_file in video_dir.glob('*.h264'):
+        for video_file in self.video_dir.glob('*.h264'):
             try:
                 file_mtime = datetime.fromtimestamp(video_file.stat().st_mtime)
 
@@ -169,13 +175,13 @@ class FTPColdStorage:
         upload_after_hours = rule.get('upload_after_hours', 6)
         delete_after_upload = rule.get('delete_after_upload', True)
 
-        thermal_dir = Path('/data/images')
-        if not thermal_dir.exists():
+        # thermal_dir = Path('/data/images') - OLD
+        if not self.image_dir.exists():
             return
 
         cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
 
-        for thermal_file in thermal_dir.glob('*_thermal_*.npy'):
+        for thermal_file in self.image_dir.glob('*_thermal_*.npy'):
             try:
                 file_mtime = datetime.fromtimestamp(thermal_file.stat().st_mtime)
 
@@ -199,7 +205,7 @@ class FTPColdStorage:
         delete_after_upload = rule.get('delete_after_upload', True)
         skip_security_breach = rule.get('skip_security_breach', True)
 
-        events_dir = Path('/data/images/events')
+        events_dir = self.image_dir / 'events'
         if not events_dir.exists():
             return
 
@@ -257,7 +263,7 @@ class FTPColdStorage:
         upload_after_hours = rule.get('upload_after_hours', 12)
         delete_after_upload = rule.get('delete_after_upload', True)
 
-        snapshots_dir = Path('/data/images/snapshots')
+        snapshots_dir = self.image_dir / 'snapshots'
         if not snapshots_dir.exists():
             return
 
@@ -286,7 +292,7 @@ class FTPColdStorage:
         upload_immediately = rule.get('upload_immediately', True)
         delete_after_upload = rule.get('delete_after_upload', True)
 
-        events_dir = Path('/data/images/events')
+        events_dir = self.image_dir / 'events'
         if not events_dir.exists():
             return
 
@@ -324,20 +330,20 @@ class FTPColdStorage:
         upload_after_hours = rule.get('upload_after_hours', 1)
         delete_after_upload = rule.get('delete_after_upload', True)
         
-        temp_dir = Path('/data/temperature')
-        if not temp_dir.exists():
+        # temp_dir = Path('/data/temperature') - OLD
+        if not self.temp_dir.exists():
             return
         
         cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
         
         # Find all CSV files recursively
-        for csv_file in temp_dir.rglob('*.csv'):
+        for csv_file in self.temp_dir.rglob('*.csv'):
             try:
                 file_mtime = datetime.fromtimestamp(csv_file.stat().st_mtime)
                 
                 if file_mtime < cutoff_time:
                     # Preserve directory structure: temperature/YYYY/MM/DD/filename.csv
-                    relative_path = csv_file.relative_to(temp_dir)
+                    relative_path = csv_file.relative_to(self.temp_dir)
                     remote_path = f"temperature/{relative_path}"
                     success = self._upload_file(csv_file, remote_path)
                     
