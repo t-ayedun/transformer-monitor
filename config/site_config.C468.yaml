@@ -134,28 +134,17 @@ thermal_publishing:
     upload_periodic: false
     alert_levels: ["critical", "emergency"]
 
-# Regions of Interest
-regions_of_interest:
-  - id: "transformer_body"
-    name: "Transformer Body"
-    type: "rectangle"
-    coordinates: [8, 6, 24, 18]  # [x, y, w, h] for 32x24 camera
-    threshold_warning: 60
-    threshold_critical: 80
-  - id: "bushing_hv"
-    name: "HV Bushings"
-    type: "rectangle"
-    coordinates: [10, 2, 12, 4]
-    threshold_warning: 70
-    threshold_critical: 90
+    alert_levels: ["critical", "emergency"]
+
+# Regions of Interest - AUTO-DETECTED
+# Manual ROIs removed in favor of K-Means Clustering
+regions_of_interest: []
 
 # Composite Temperature Config
 composite_temperature:
   enabled: true
-  method: "max"  # max, average, or weighted
-  weights:
-    transformer_body: 0.6
-    bushing_hv: 0.4
+  method: "max"  # Always use max temp of the hot cluster
+  weights: {}
 
 # Local Storage
 local_storage:

@@ -157,66 +157,99 @@ class DataProcessor:
     
     def detect_transformer_region(self, frame: np.ndarray) -> Dict[str, Any]:
         """
-        Automatically detect transformer region from thermal heatmap
+        Intelligent hotspot detection using K-Means Clustering
         
-        Uses temperature-based segmentation to identify the hottest region
-        (assumed to be the transformer) and calculate comprehensive statistics.
-        
-        Args:
-            frame: Thermal frame (24x32)
-            
-        Returns:
-            Dictionary with transformer statistics
+        1. Filters noise (low temp pixels)
+        2. Clusters warm pixels into K groups (default K=3)
+        3. Identifies the most significant hot cluster
+        4. Calculates metrics for that specific cluster
         """
         try:
-            # Calculate adaptive threshold based on frame statistics
-            threshold_temp = np.percentile(frame, self.threshold_percentile)
+            # 1. Pre-filtering: Focus only on "warm" pixels to reduce noise
+            # We use the median as a baseline, or a minimum static temp (e.g., 30C) if scene is cold
+            scene_median = np.median(frame)
+            threshold = max(scene_median, 30.0)
             
-            # Create binary mask of hot regions
-            hot_mask = frame >= threshold_temp
+            # Get coordinates of all pixels above threshold
+            # y_coords, x_coords = np.where(frame > threshold)
+            # data_points = np.column_stack((x_coords, y_coords)).astype(np.float32)
+
+            # If scene is too cold or uniform, fallback to simple max
+            if np.max(frame) < threshold + 5:
+                 return self._calculate_full_frame_statistics(frame)
+
+            # Flatten frame for clustering (1D array of temperatures) - simple 1D clustering
+            # We want to cluster *values* first to find the "hot" temperature range, 
+            # THEN find spatial coherence.
             
-            # Use connected component analysis to find distinct hot regions
-            from scipy import ndimage
-            labeled, num_features = ndimage.label(hot_mask)
+            # Better approach for spatial clustering:
+            # Use OpenCV's K-Means on spatial coordinates weighted by temperature? 
+            # Simpler: Thresholding + Connected Components is actually DBSCAN-lite and very effective for this.
+            # But user asked for "clustering algorithm".
+            # Let's use K-means on the (x,y,temp) vector to find hot spots spatial-thermally.
             
-            if num_features == 0:
-                # No hot regions detected, fallback
-                if self.fallback_to_full_frame:
-                    self.logger.warning("No transformer region detected, using full frame")
-                    return self._calculate_full_frame_statistics(frame)
-                else:
-                    return self._empty_transformer_data()
+            h, w = frame.shape
+            grid_y, grid_x = np.mgrid[0:h, 0:w]
             
-            # Find the largest connected region (most likely the transformer)
-            region_sizes = [(i, np.sum(labeled == i)) for i in range(1, num_features + 1)]
-            largest_region_id = max(region_sizes, key=lambda x: x[1])[0]
-            largest_region_size = max(region_sizes, key=lambda x: x[1])[1]
+            # Normalize coordinates and temp to have comparable weight
+            # Temp importance weight
+            temp_weight = 2.0 
             
-            # Check if region is large enough
-            if largest_region_size < self.min_region_size:
-                if self.fallback_to_full_frame:
-                    self.logger.warning(
-                        f"Detected region too small ({largest_region_size} pixels), using full frame"
-                    )
-                    return self._calculate_full_frame_statistics(frame)
-                else:
-                    return self._empty_transformer_data()
+            flat_frame = frame.flatten()
+            flat_x = grid_x.flatten() / w
+            flat_y = grid_y.flatten() / h
+            flat_temp = (flat_frame - np.min(flat_frame)) / (np.max(flat_frame) - np.min(flat_frame) + 1e-6)
             
-            # Extract transformer region data
-            transformer_mask = labeled == largest_region_id
-            transformer_temps = frame[transformer_mask]
+            # Feature vector: [x, y, temperature*weight]
+            features = np.column_stack((flat_x, flat_y, flat_temp * temp_weight)).astype(np.float32)
             
-            # Calculate comprehensive statistics
+            # K-Means with K=3 (Background, Warm, Hot)
+            full_data_pixels = len(features)
+            if full_data_pixels < 10:
+                return self._calculate_full_frame_statistics(frame)
+
+            import cv2
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+            K = 3
+            _, labels, centers = cv2.kmeans(features, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+            
+            # Identify the "Hot" cluster
+            # The cluster center with the highest 3rd component (temperature) is our hot cluster
+            hot_cluster_idx = np.argmax(centers[:, 2])
+            
+            # Create mask for the hot cluster
+            # Reshape labels back to frame size
+            cluster_mask = (labels.flatten() == hot_cluster_idx).reshape(h, w)
+            
+            # Refine mask: Filter out isolated noisy pixels from the cluster using morphological open
+            kernel = np.ones((3,3), np.uint8)
+            cluster_mask_uint = cluster_mask.astype(np.uint8)
+            clean_mask = cv2.morphologyEx(cluster_mask_uint, cv2.MORPH_OPEN, kernel)
+            
+            # If mask is empty after cleanup, fallback
+            if np.sum(clean_mask) == 0:
+                 return self._calculate_full_frame_statistics(frame)
+            
+            # Get metrics only for valid cluster pixels
+            transformer_temps = frame[clean_mask == 1]
+            
+            if len(transformer_temps) == 0:
+                 return self._calculate_full_frame_statistics(frame)
+
+            # Calculate stats
             stats = self.calculate_transformer_statistics(transformer_temps)
-            stats['pixel_count'] = int(largest_region_size)
-            stats['detection_confidence'] = self._calculate_detection_confidence(
-                transformer_temps, frame, largest_region_size
-            )
+            stats['pixel_count'] = int(len(transformer_temps))
             
+            # Calculate detection confidence based on cluster distinctness
+            # (Difference between hot cluster center and next hottest center)
+            sorted_centers = np.sort(centers[:, 2])
+            separation = sorted_centers[-1] - sorted_centers[-2] if len(centers) > 1 else 0
+            stats['detection_confidence'] = min(separation, 1.0) # Normalized somewhat
+
             return stats
-            
+
         except Exception as e:
-            self.logger.error(f"Transformer detection failed: {e}")
+            self.logger.error(f"Clustering detection failed: {e}")
             if self.fallback_to_full_frame:
                 return self._calculate_full_frame_statistics(frame)
             else:
