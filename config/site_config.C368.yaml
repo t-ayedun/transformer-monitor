@@ -141,7 +141,7 @@ ftp_storage:
   port: 21
   username: "t.ayedun@smarterise.com"
   password: "Sm@rterise"
-  remote_dir: "transformer-monitor/C368"  # SITE SPECIFIC FOLDER (Relative to FTP root)
+  remote_dir: "C368"  # SITE SPECIFIC FOLDER (Relative to FTP root)
   passive: true
 
   upload_rules:
@@ -211,7 +211,7 @@ ftp:
   port: 21
   username: "t.ayedun@smarterise.com"
   password: "Sm@rterise"
-  remote_dir: "transformer-monitor/C368"
+  remote_dir: "C368"
   passive_mode: true
   thermal_image_interval: 600
   telemetry_upload_interval: 300

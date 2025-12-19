@@ -175,7 +175,7 @@ ftp_storage:
   port: 21
   username: "t.ayedun@smarterise.com"
   password: "Sm@rterise"
-  remote_dir: "transformer-monitor/{{SITE_ID}}"
+  remote_dir: "{{SITE_ID}}"
   passive: true
 
   # What to upload and when
@@ -248,7 +248,7 @@ ftp:
   port: 21
   username: "t.ayedun@smarterise.com"
   password: "Sm@rterise"
-  remote_dir: "transformer-monitor"
+  remote_dir: ""
   passive_mode: true
     
   # Upload intervals
