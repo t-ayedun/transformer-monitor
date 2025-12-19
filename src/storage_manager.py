@@ -18,7 +18,8 @@ class StorageManager:
         self.logger = logging.getLogger(__name__)
         self.config = config
         
-        base_path = Path.home() / 'transformer_monitor_data'
+        # Explicitly use smartie's home directory to correct service user mismatch
+        base_path = Path('/home/smartie/transformer_monitor_data')
         self.video_dir = base_path / 'videos'
         self.image_dir = base_path / 'images'
 

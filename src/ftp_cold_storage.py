@@ -75,8 +75,8 @@ class FTPColdStorage:
             'upload_failures': 0
         }
         
-        # Base Data Directory for scanning
-        self.base_dir = Path.home() / 'transformer_monitor_data'
+        # Base Data Directory for scanning (Explicit path to match config)
+        self.base_dir = Path('/home/smartie/transformer_monitor_data')
         self.video_dir = self.base_dir / 'videos'
         self.image_dir = self.base_dir / 'images'
         self.temp_dir = self.base_dir / 'temperature'
