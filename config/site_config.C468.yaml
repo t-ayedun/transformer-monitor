@@ -207,10 +207,10 @@ aws_iot:
 # FTP (Legacy/Redundant - kept for compatibility if needed)
 ftp:
   enabled: true
-  host: "ftp.example.com"  # REPLACE WITH ACTUAL HOST
+  host: "ftp.smarterise.com"
   port: 21
-  username: "user"         # REPLACE WITH ACTUAL USERNAME
-  password: "password"     # REPLACE WITH ACTUAL PASSWORD
+  username: "t.ayedun@smarterise.com"
+  password: "Sm@rterise"
   remote_dir: "/transformer_data/C468"
   passive_mode: true
   thermal_image_interval: 600

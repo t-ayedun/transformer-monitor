@@ -244,10 +244,10 @@ aws_iot:
 # FTP Configuration
 ftp:
   enabled: true
-  host: "ftp.example.com"
+  host: "ftp.smarterise.com"
   port: 21
-  username: "user"
-  password: "password"
+  username: "t.ayedun@smarterise.com"
+  password: "Sm@rterise"
   remote_dir: "/transformer-data"
   passive_mode: true
     
