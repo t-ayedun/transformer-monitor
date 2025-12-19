@@ -210,11 +210,25 @@ ftp_storage:
       upload_immediately: true  # Upload animal events immediately (don't store locally)
       delete_after_upload: true
       retention_days: 14  # Keep on FTP for 14 days
+    
+    temperature_csv:
+      enabled: true
+      upload_after_hours: 1  # Upload completed hourly CSV files after 1 hour
+      delete_after_upload: true
+      retention_days: 90  # Keep on FTP for 90 days
 
   # Upload scheduling
   upload_interval: 300  # Check for files to upload every 5 minutes
   max_upload_retries: 3
   retry_delay: 60  # Retry after 60 seconds on failure
+
+# Temperature Data Export
+temperature_export:
+  enabled: true
+  export_format: "csv"
+  export_interval: 60  # seconds (1 minute - aligns with data capture)
+  base_dir: "/data/temperature"
+
 
 # AWS IoT Core Configuration
 aws_iot:
