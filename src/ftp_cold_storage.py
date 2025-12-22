@@ -465,10 +465,10 @@ class FTPColdStorage:
             for file_path in source_dir.rglob(pattern):
                 try:
                     # Get modification time
-                mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                    mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
                 
-                if mtime >= cutoff_time:
-                    continue # Still current/active hour, skip
+                    if mtime >= cutoff_time:
+                        continue # Still current/active hour, skip
                 
                 # Group key: YYYYMMDD_HH
                 hour_key = mtime.strftime('%Y%m%d_%H')
