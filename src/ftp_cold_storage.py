@@ -449,9 +449,6 @@ class FTPColdStorage:
         files_by_hour = {}
         
         if image_type == 'thermal':
-            pattern = '*_thermal_*.npy' # or png? Config says frames
-            # Current saved files are .npy or .png?
-        if image_type == 'thermal':
             # We want both Raw Data (.npy) and Visualizations (.png)
             # Since rglob takes one pattern, we'll scan for both extensions
             patterns = ['*.npy', '*.png']
@@ -470,11 +467,11 @@ class FTPColdStorage:
                     if mtime >= cutoff_time:
                         continue # Still current/active hour, skip
                 
-                # Group key: YYYYMMDD_HH
-                hour_key = mtime.strftime('%Y%m%d_%H')
-                if hour_key not in files_by_hour:
-                    files_by_hour[hour_key] = []
-                files_by_hour[hour_key].append(file_path)
+                    # Group key: YYYYMMDD_HH
+                    hour_key = mtime.strftime('%Y%m%d_%H')
+                    if hour_key not in files_by_hour:
+                        files_by_hour[hour_key] = []
+                    files_by_hour[hour_key].append(file_path)
             except Exception as e:
                 pass
                 
