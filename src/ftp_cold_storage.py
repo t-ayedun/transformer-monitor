@@ -205,92 +205,106 @@ class FTPColdStorage:
                 self.logger.error(f"Error processing thermal frame {thermal_file}: {e}")
 
     def _process_event_images(self):
-        """Upload old event images to FTP"""
-        rule = self.upload_rules['event_images']
-        upload_after_hours = rule.get('upload_after_hours', 24)
-        delete_after_upload = rule.get('delete_after_upload', True)
-        skip_security_breach = rule.get('skip_security_breach', True)
-
-        events_dir = self.image_dir / 'events'
-        if not events_dir.exists():
-            return
-
-        cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
-
-        # Iterate through date directories
-        for date_dir in events_dir.iterdir():
-            if not date_dir.is_dir():
-                continue
-
-            # Iterate through event type directories
-            for event_type_dir in date_dir.iterdir():
-                if not event_type_dir.is_dir():
+        """Upload old event images to FTP (Hourly Zipped)"""
+        # Note: This will flatten event folder structure into the zip, 
+        # but filenames usually contain type/timestamp.
+        if self.config.get('ftp_storage.upload_rules.zip_hourly_images', False):
+             events_dir = self.image_dir / 'events'
+             if events_dir.exists():
+                 self._zip_and_upload_images('visual', events_dir)
+        else:
+            # Fallback to old logic
+            rule = self.upload_rules['event_images']
+            upload_after_hours = rule.get('upload_after_hours', 24)
+            delete_after_upload = rule.get('delete_after_upload', True)
+            skip_security_breach = rule.get('skip_security_breach', True)
+    
+            events_dir = self.image_dir / 'events'
+            if not events_dir.exists():
+                return
+    
+            cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
+    
+            # Iterate through date directories
+            for date_dir in events_dir.iterdir():
+                if not date_dir.is_dir():
                     continue
-
-                # Skip security breach if configured (they go to S3)
-                if skip_security_breach and 'security_breach' in event_type_dir.name:
-                    continue
-
-                # Process images in this event type
-                for image_file in event_type_dir.glob('*.jpg'):
+    
+                # Iterate through event type directories
+                for event_type_dir in date_dir.iterdir():
+                    if not event_type_dir.is_dir():
+                        continue
+    
+                    # Skip security breach if configured (they go to S3)
+                    if skip_security_breach and 'security_breach' in event_type_dir.name:
+                        continue
+    
+                    # Process images in this event type
+                    for image_file in event_type_dir.glob('*.jpg'):
+                        try:
+                            file_mtime = datetime.fromtimestamp(image_file.stat().st_mtime)
+    
+                            if file_mtime < cutoff_time:
+                                remote_path = f"events/{date_dir.name}/{event_type_dir.name}/{image_file.name}"
+                                success = self._upload_file(image_file, remote_path)
+    
+                                if success and delete_after_upload:
+                                    file_size = image_file.stat().st_size
+                                    image_file.unlink()
+                                    self.stats['files_deleted'] += 1
+                                    self.stats['bytes_freed'] += file_size
+    
+                        except Exception as e:
+                            self.logger.error(f"Error processing event image {image_file}: {e}")
+    
+                    # Clean up empty directories
                     try:
-                        file_mtime = datetime.fromtimestamp(image_file.stat().st_mtime)
-
-                        if file_mtime < cutoff_time:
-                            remote_path = f"events/{date_dir.name}/{event_type_dir.name}/{image_file.name}"
-                            success = self._upload_file(image_file, remote_path)
-
-                            if success and delete_after_upload:
-                                file_size = image_file.stat().st_size
-                                image_file.unlink()
-                                self.stats['files_deleted'] += 1
-                                self.stats['bytes_freed'] += file_size
-
-                    except Exception as e:
-                        self.logger.error(f"Error processing event image {image_file}: {e}")
-
-                # Clean up empty directories
+                        if not any(event_type_dir.iterdir()):
+                            event_type_dir.rmdir()
+                    except:
+                        pass
+    
+                # Clean up empty date directories
                 try:
-                    if not any(event_type_dir.iterdir()):
-                        event_type_dir.rmdir()
+                    if not any(date_dir.iterdir()):
+                        date_dir.rmdir()
                 except:
                     pass
 
-            # Clean up empty date directories
-            try:
-                if not any(date_dir.iterdir()):
-                    date_dir.rmdir()
-            except:
-                pass
-
     def _process_snapshots(self):
-        """Upload old periodic snapshots to FTP"""
-        rule = self.upload_rules['periodic_snapshots']
-        upload_after_hours = rule.get('upload_after_hours', 12)
-        delete_after_upload = rule.get('delete_after_upload', True)
-
-        snapshots_dir = self.image_dir / 'snapshots'
-        if not snapshots_dir.exists():
-            return
-
-        cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
-
-        for snapshot_file in snapshots_dir.glob('*.jpg'):
-            try:
-                file_mtime = datetime.fromtimestamp(snapshot_file.stat().st_mtime)
-
-                if file_mtime < cutoff_time:
-                    remote_path = f"snapshots/{snapshot_file.name}"
-                    success = self._upload_file(snapshot_file, remote_path)
-
-                    if success and delete_after_upload:
-                        file_size = snapshot_file.stat().st_size
-                        snapshot_file.unlink()
-                        self.stats['files_deleted'] += 1
-                        self.stats['bytes_freed'] += file_size
-
-            except Exception as e:
-                self.logger.error(f"Error processing snapshot {snapshot_file}: {e}")
+        """Upload old periodic snapshots to FTP (Hourly Zipped)"""
+        if self.config.get('ftp_storage.upload_rules.zip_hourly_images', False):
+             snapshots_dir = self.image_dir / 'snapshots'
+             if snapshots_dir.exists():
+                 self._zip_and_upload_images('visual', snapshots_dir)
+        else:
+             # Fallback to old logic
+             rule = self.upload_rules['periodic_snapshots']
+             upload_after_hours = rule.get('upload_after_hours', 12)
+             delete_after_upload = rule.get('delete_after_upload', True)
+    
+             snapshots_dir = self.image_dir / 'snapshots'
+             if not snapshots_dir.exists():
+                 return
+    
+             cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
+    
+             for snapshot_file in snapshots_dir.glob('*.jpg'):
+                 try:
+                     file_mtime = datetime.fromtimestamp(snapshot_file.stat().st_mtime)
+    
+                     if file_mtime < cutoff_time:
+                         remote_path = f"snapshots/{snapshot_file.name}"
+                         success = self._upload_file(snapshot_file, remote_path)
+    
+                         if success and delete_after_upload:
+                             file_size = snapshot_file.stat().st_size
+                             snapshot_file.unlink()
+                             self.stats['files_deleted'] += 1
+                             self.stats['bytes_freed'] += file_size
+    
+                 except Exception as e:
+                     self.logger.error(f"Error processing snapshot {snapshot_file}: {e}")
 
     def _process_animal_events(self):
         """Upload animal events immediately (or based on rules)"""
