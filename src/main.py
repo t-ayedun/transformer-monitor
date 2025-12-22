@@ -328,10 +328,12 @@ class TransformerMonitor:
                 
                 # Thermal capture
                 if current_time - last_thermal_capture >= capture_interval:
+                    self.logger.info(f"Starting thermal capture #{capture_count}...")
                     try:
                         self.capture_thermal_data(capture_count)
                         last_thermal_capture = current_time
                         capture_count += 1
+                        self.logger.info(f"Thermal capture #{capture_count-1} complete")
                     except Exception as e:
                         self.logger.error(f"Thermal capture failed: {e}", exc_info=True)
                 
