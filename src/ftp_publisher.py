@@ -59,13 +59,8 @@ class FTPPublisher:
             if self.passive:
                 self.ftp.set_pasv(True)
             
-            # Change to remote directory
-            try:
-                self.ftp.cwd(self.remote_dir)
-            except ftplib.error_perm:
-                # Directory doesn't exist, try to create it
-                self._create_remote_dir(self.remote_dir)
-                self.ftp.cwd(self.remote_dir)
+            # Stay in root directory - all paths are now relative (e.g., "C368/thermal/...")
+            # No need to cd into site directory anymore
             
             self.last_connection_time = time.time()
             self.logger.info(f"Connected to FTP server: {self.host}")
@@ -142,8 +137,8 @@ class FTPPublisher:
                 'records': current_batch
             }
             
-            # Generate remote path: /telemetry/YYYY/MM/DD/site_telemetry_timestamp.json
-            remote_path = f"/telemetry/{date_path}/{site_id}_telemetry_{file_ts}.json"
+            # Generate remote path: C368/telemetry/YYYY/MM/DD/site_telemetry_timestamp.json
+            remote_path = f"{site_id}/telemetry/{date_path}/{site_id}_telemetry_{file_ts}.json"
             
             # Upload
             if self.upload_data(batch_data, remote_path, is_remote_path=True):
