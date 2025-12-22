@@ -451,19 +451,20 @@ class FTPColdStorage:
         if image_type == 'thermal':
             pattern = '*_thermal_*.npy' # or png? Config says frames
             # Current saved files are .npy or .png?
-            # DataProcessor saves snapshots as .jpg (visual) or .png/npy (thermal)
-            # Let's assume .npy for frames as per old code, or check what IS saved.
-            # Old code used: self.image_dir.glob('*_thermal_*.npy') for thermal frames.
-            pattern = '*.npy' # Broaden to catch all thermal frames
+        if image_type == 'thermal':
+            # We want both Raw Data (.npy) and Visualizations (.png)
+            # Since rglob takes one pattern, we'll scan for both extensions
+            patterns = ['*.npy', '*.png']
             prefix = 'ThermalFrames'
         else:
-             pattern = '*.jpg'
+             patterns = ['*.jpg']
              prefix = 'Images'
 
         # SCAN
-        for file_path in source_dir.rglob(pattern):
-            try:
-                # Get modification time
+        for pattern in patterns:
+            for file_path in source_dir.rglob(pattern):
+                try:
+                    # Get modification time
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
                 
                 if mtime >= cutoff_time:
