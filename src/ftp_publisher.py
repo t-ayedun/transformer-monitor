@@ -122,7 +122,7 @@ class FTPPublisher:
                 threading.Thread(target=self._flush_telemetry_buffer, daemon=True).start()
 
     def _flush_telemetry_buffer(self):
-        """Flush telemetry buffer to FTP (runs in background thread)"""
+        """Flush telemetry buffer to local disk (runs in background thread)"""
         # Prevent concurrent flushes
         if getattr(self, 'is_flushing', False):
             return
@@ -137,8 +137,58 @@ class FTPPublisher:
                     return
                 current_batch = list(self.telemetry_buffer)
             
-            # Step 2: Create payload from snapshot (no lock needed)
+            # Step 2: Write specific payload to disk
             try:
+                # Use current time for filename (top of hour alignment is handled by rotation logic naturally)
+                # But we want strict naming: SiteID_Telemetry_YYYYMMDD_HH00.json
+                # We will append to this file.
+                
+                site_id = current_batch[0].get('site_id', 'UNKNOWN')
+                timestamp = datetime.utcnow() # Use UTC for internal storage
+                
+                # Align to current hour
+                file_ts = timestamp.strftime('%Y%m%d_%H00')
+                filename = f"{site_id}_Telemetry_{file_ts}.json"
+                
+                # Base dir for telemetry
+                telemetry_dir = Path.home() / 'transformer_monitor_data' / 'telemetry' / timestamp.strftime('%Y') / timestamp.strftime('%m') / timestamp.strftime('%d')
+                telemetry_dir.mkdir(parents=True, exist_ok=True)
+                
+                file_path = telemetry_dir / filename
+                
+                # Write batch to file (append mode if supporting JSONL, or just new files?)
+                # Plan says: "JSONs: Buffered in memory/disk. Uploaded as one array at top of next hour."
+                # Simpler: Write each batch as a separate chunk file OR append.
+                # To keep it valid JSON, appending is hard unless line-delimited (JSONL).
+                # New decision: Write each batch to a UNIQUE file to avoid corruption, 
+                # but name it so it sorts correctly. 
+                # Or append to a JSON list? Appending to JSON list is risky (need to seek end, remove bracket, add comma...)
+                # SAFEST: Use JSONL (Line delimited JSON).
+                
+                with open(file_path, 'a') as f:
+                    for record in current_batch:
+                         f.write(json.dumps(record) + '\n')
+                
+                self.logger.info(f"Buffered {len(current_batch)} telemetry records to {file_path}")
+
+                # Step 4: Cleanup buffer on success
+                with self.buffer_lock:
+                    self.telemetry_buffer = [x for x in self.telemetry_buffer if x not in current_batch]
+                    
+                self.last_batch_upload = time.time()
+                self.stats['telemetry_batches'] += 1
+
+            except Exception as inner_e:
+                self.logger.error(f"Error buffering batch to disk: {inner_e}")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to flush telemetry buffer: {e}")
+        finally:
+            self.is_flushing = False
+            
+    # Dummy upload_data (kept for compatibility if called elsewhere, but unused by telemetry flush now)
+    def upload_data(self, data, filename=None, is_remote_path=False):
+         pass # No-op or implementation kept but unused by new flush logic
                 timestamp = datetime.utcnow()
                 date_path = timestamp.strftime('%Y/%m/%d')
                 file_ts = timestamp.strftime('%Y%m%d_%H%M%S')

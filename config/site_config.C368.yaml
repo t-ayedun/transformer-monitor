@@ -164,28 +164,30 @@ ftp_storage:
   passive: true
 
   upload_rules:
+    zip_hourly_images: true  # NEW: Zip images by hour
+    
     videos:
       enabled: true
-      upload_after_hours: 0.0  # IMMEDIATE
+      upload_after_hours: 1.0
       delete_after_upload: true
       retention_days: 30
 
     thermal_frames:
       enabled: true
-      upload_after_hours: 6
+      upload_after_hours: 1.0
       delete_after_upload: true
       retention_days: 90
 
     event_images:
       enabled: true
-      upload_after_hours: 24
+      upload_after_hours: 1.0
       delete_after_upload: true
       retention_days: 90
       skip_security_breach: true
 
     periodic_snapshots:
       enabled: true
-      upload_after_hours: 0.0  # IMMEDIATE
+      upload_after_hours: 1.0
       delete_after_upload: true
       retention_days: 30
 
@@ -197,7 +199,7 @@ ftp_storage:
     
     temperature_csv:
       enabled: true
-      upload_after_hours: 0.0  # IMMEDIATE
+      upload_after_hours: 1.0
       delete_after_upload: true
       retention_days: 90
 

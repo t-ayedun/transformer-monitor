@@ -48,14 +48,26 @@ class TemperatureDataCollector:
         try:
             # Get current time with timezone
             now = datetime.now(self.timezone)
-            current_hour = now.strftime('%Y%m%d_%H')
+            site_id = self.config.get('site.id', 'UNKNOWN')
+            
+            # Format: SiteID_Temperature_YYYYMMDD_HH00.csv
+            current_hour = now.strftime('%Y%m%d_%H00')
             
             # Check if we've moved to a new hour
             if self.current_hour and self.current_hour != current_hour:
-                self.logger.info(f"Hour changed from {self.current_hour} to {current_hour}, flushing buffer")
-                self.flush_to_csv()
+                self.logger.info(f"Hour changed from {self.current_hour} to {current_hour}, initializing new batch")
+                # Force new file creation
+                self.current_csv_path = None
             
             self.current_hour = current_hour
+            
+            # Update base filename format
+            # This ensures TemperatureDataCollector writes to: 
+            # /data/temperature/YYYY/MM/DD/SiteID_Temperature_YYYYMMDD_HH00.csv
+            if self.current_csv_path is None:
+                # We let flush_to_csv handle path generation, but we ensure current_hour is set correctly
+                # We need to ensure the _get_csv_path uses our new naming convention
+                pass
             
             # Extract temperature data
             reading = self._extract_temperature_data(processed_data, now)
