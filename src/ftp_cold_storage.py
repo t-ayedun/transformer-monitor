@@ -417,36 +417,97 @@ class FTPColdStorage:
 
     def _zip_and_upload_images(self, image_type, source_dir):
         """
-        Compresses images from previous hour into a single ZIP file and uploads it.
-        Naming: SiteID_Images_YYYYMMDD_HH00.zip
+        Compresses images from previous hour (completed) into valid ZIP file and uploads it.
+        Format: SiteID_Images_YYYYMMDD_HH00.zip (or similar based on input)
         """
         import zipfile
         import shutil
         
-        # We need to find "completed" hours. 
-        # Strategy: Look at directories. If a directory (YYYY/MM/DD) contains files from previous hours, zip them.
-        # But wait, existing structure is flat files in folders? No, usually date dirs.
-        # Simpler: Scan ALL files, group by (YYYY, MM, DD, HH). 
-        # If HH < Current_HH, ZIP that group.
+        # We need to find "completed" hours.
+        # Strategy: Look at directories. But our structure is usually flat or deep?
+        # Let's assume recursion (rglob) to be safe.
         
-        cutoff_hour = datetime.now() - timedelta(hours=1)
-        # Format for grouping: YYYYMMDD_HH
+        # We process files strictly older than 1 hour (completed hours).
+        cutoff_time = datetime.now() - timedelta(hours=1.0)
         
+        # Dictionary to group files by their "Hour Key": (YYYY, MM, DD, HH)
+        # Value: List of Path objects
         files_by_hour = {}
         
-        # Scan recursively
-        for img_file in source_dir.rglob('*_thermal_*.npy'): # or *.jpg for visual
-             # logic to group by hour...
-             pass
-        # Note: Implementing robustly requires careful traversal.
-        # Simplified approach: We assume files are generated with timestamps.
-        # Lets implement a simpler "Upload as is but flat" if zipping is too complex for this step?
-        # User requested zipping "make sure... period... zip".
+        if image_type == 'thermal':
+            pattern = '*_thermal_*.npy' # or png? Config says frames
+            # Current saved files are .npy or .png?
+            # DataProcessor saves snapshots as .jpg (visual) or .png/npy (thermal)
+            # Let's assume .npy for frames as per old code, or check what IS saved.
+            # Old code used: self.image_dir.glob('*_thermal_*.npy') for thermal frames.
+            pattern = '*.npy' # Broaden to catch all thermal frames
+            prefix = 'ThermalFrames'
+        else:
+             pattern = '*.jpg'
+             prefix = 'Images'
+
+        # SCAN
+        for file_path in source_dir.rglob(pattern):
+            try:
+                # Get modification time
+                mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                
+                if mtime >= cutoff_time:
+                    continue # Still current/active hour, skip
+                
+                # Group key: YYYYMMDD_HH
+                hour_key = mtime.strftime('%Y%m%d_%H')
+                if hour_key not in files_by_hour:
+                    files_by_hour[hour_key] = []
+                files_by_hour[hour_key].append(file_path)
+            except Exception as e:
+                pass
+                
+        # PROCESS BATCHES
+        site_id = self.config.get('site.id', 'UNKNOWN')
         
-        # OK, I will implement ZIPPING for the simpler case: Visual Snapshots and Thermal Frames
-        # Group by YYYYMMDD_HH based on MTIME.
-        
-        pass # Placeholder as this function is becoming large. I will split it.
+        for hour_key, file_list in files_by_hour.items():
+            if not file_list:
+                continue
+                
+            try:
+                # Create ZIP filename: SiteID_Images_YYYYMMDD_HH00.zip
+                # hour_key is YYYYMMDD_HH
+                zip_filename = f"{site_id}_{prefix}_{hour_key}00.zip"
+                
+                # Temp path for zip
+                zip_path = source_dir / zip_filename
+                
+                # Create Zip
+                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for f in file_list:
+                         zipf.write(f, arcname=f.name)
+                         
+                # Upload ZIP
+                # Remote Path: SiteID/YYYY-MM-DD/
+                date_formatted = f"{hour_key[:4]}-{hour_key[4:6]}-{hour_key[6:8]}"
+                remote_path = f"{site_id}/{date_formatted}/{zip_filename}"
+                
+                self.logger.info(f"Uploading ZIP batch: {remote_path} ({len(file_list)} files)")
+                
+                if self._upload_file(zip_path, remote_path):
+                     # DELETE ORIGINALS
+                     for f in file_list:
+                         try:
+                             f.unlink()
+                             self.stats['files_deleted'] += 1
+                         except:
+                             pass
+                     # Delete ZIP
+                     zip_path.unlink()
+                     self.stats['files_uploaded'] += 1
+                     self.stats['bytes_freed'] += zip_path.stat().st_size # Approx
+                else:
+                     self.logger.error(f"Failed to upload ZIP: {zip_path}")
+                     # Do not delete originals if upload failed
+            
+            except Exception as e:
+                self.logger.error(f"Error processing ZIP batch {hour_key}: {e}")
 
 
 
