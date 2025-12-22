@@ -111,14 +111,27 @@ class FTPPublisher:
             
             # Check if buffer is full or time interval reached
             current_time = time.time()
-            if (len(self.telemetry_buffer) >= 50 or 
-                current_time - self.last_batch_upload >= self.batch_interval):
-                self._flush_telemetry_buffer()
+            should_flush = (len(self.telemetry_buffer) >= 50 or 
+                           current_time - self.last_batch_upload >= self.batch_interval)
+            
+        if should_flush:
+            # Run flush in background thread to not block main loop
+            # Check if we're already flushing (simple lock check)
+            if not getattr(self, 'is_flushing', False):
+                import threading
+                threading.Thread(target=self._flush_telemetry_buffer, daemon=True).start()
 
     def _flush_telemetry_buffer(self):
-        """Flush telemetry buffer to FTP"""
-        if not self.telemetry_buffer:
+        """Flush telemetry buffer to FTP (runs in background thread)"""
+        # Prevent concurrent flushes
+        if getattr(self, 'is_flushing', False):
             return
+            
+        self.is_flushing = True
+        try:
+            with self.buffer_lock:
+                if not self.telemetry_buffer:
+                    return
 
         try:
             # Create batch payload
@@ -164,6 +177,8 @@ class FTPPublisher:
             
         except Exception as e:
             self.logger.error(f"Failed to flush telemetry buffer: {e}")
+        finally:
+            self.is_flushing = False
 
     def upload_data(self, data, filename=None, is_remote_path=False):
         """
