@@ -349,28 +349,36 @@ class TransformerMonitor:
     
     def capture_thermal_data(self, capture_count):
         """Capture and process thermal data"""
+        self.logger.debug("[1/9] Getting thermal frame...")
         # Capture thermal frame
         thermal_frame = self.thermal_camera.get_frame()
+        self.logger.debug("[1/9] Got thermal frame")
         
         if thermal_frame is None:
             self.logger.warning("Failed to capture thermal frame")
             return
         
+        self.logger.debug("[2/9] Processing thermal data...")
         # Process data
         processed_data = self.data_processor.process(thermal_frame)
+        self.logger.debug("[2/9] Processed thermal data")
         
         # Add metadata
         processed_data['site_id'] = self.config.get('site.id')
         processed_data['capture_count'] = capture_count
         processed_data['sensor_temp'] = self.thermal_camera.get_sensor_temp()
         
+        self.logger.debug("[3/9] Detecting hotspots...")
         # Detect hotspots
         hotspots = self.thermal_camera.detect_hotspots(thermal_frame)
+        self.logger.debug("[3/9] Detected hotspots")
         if hotspots:
             processed_data['hotspots'] = hotspots
         
+        self.logger.debug("[4/9] Storing to local buffer...")
         # Save to local buffer
         self.local_buffer.store(processed_data)
+        self.logger.debug("[4/9] Stored to local buffer")
 
         # Publish to AWS IoT via MQTT (if enabled)
         if self.aws_publisher:
@@ -382,9 +390,11 @@ class TransformerMonitor:
         
         # Upload to FTP (if enabled)
         if self.ftp_publisher:
+            self.logger.debug("[5/9] Uploading to FTP...")
             try:
                 telemetry_payload = self._format_telemetry_payload(processed_data)
                 self.ftp_publisher.upload_telemetry_data(telemetry_payload)
+                self.logger.debug("[5/9] Uploaded to FTP")
             except Exception as e:
                 self.logger.error(f"Failed to queue telemetry for FTP: {e}")
         
