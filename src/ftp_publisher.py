@@ -129,52 +129,55 @@ class FTPPublisher:
             
         self.is_flushing = True
         try:
+            current_batch = []
+            
+            # Step 1: Capture snapshot of buffer securely
             with self.buffer_lock:
                 if not self.telemetry_buffer:
                     return
-
-        try:
-            # Create batch payload
-            timestamp = datetime.utcnow()
-            date_path = timestamp.strftime('%Y/%m/%d')
-            file_ts = timestamp.strftime('%Y%m%d_%H%M%S')
-            site_id = self.telemetry_buffer[0].get('site_id', 'UNKNOWN')
+                current_batch = list(self.telemetry_buffer)
             
-            # Take a snapshot of current buffer
-            current_batch = list(self.telemetry_buffer)
-            
-            batch_data = {
-                'batch_id': f"{site_id}_{file_ts}",
-                'timestamp': timestamp.isoformat() + 'Z',
-                'record_count': len(current_batch),
-                'records': current_batch
-            }
-            
-            # Generate remote path: C368/telemetry/YYYY/MM/DD/site_telemetry_timestamp.json
-            remote_path = f"{site_id}/telemetry/{date_path}/{site_id}_telemetry_{file_ts}.json"
-            
-            # Upload
-            if self.upload_data(batch_data, remote_path, is_remote_path=True):
-                # Only clear buffer if upload succeeded
-                # Use slicing to remove only the items we just uploaded
-                # (in case new items were added during upload)
-                with self.buffer_lock:
-                    # Remove the items we just uploaded
-                    # This is a bit simplistic, assumes FIFO. 
-                    # For now just clear what we took.
-                    self.telemetry_buffer = [x for x in self.telemetry_buffer if x not in current_batch]
+            # Step 2: Create payload from snapshot (no lock needed)
+            try:
+                timestamp = datetime.utcnow()
+                date_path = timestamp.strftime('%Y/%m/%d')
+                file_ts = timestamp.strftime('%Y%m%d_%H%M%S')
+                site_id = current_batch[0].get('site_id', 'UNKNOWN')
+                
+                batch_data = {
+                    'batch_id': f"{site_id}_{file_ts}",
+                    'timestamp': timestamp.isoformat() + 'Z',
+                    'record_count': len(current_batch),
+                    'records': current_batch
+                }
+                
+                # Generate remote path
+                remote_path = f"{site_id}/telemetry/{date_path}/{site_id}_telemetry_{file_ts}.json"
+                
+                # Step 3: Upload (takes time, runs without lock)
+                if self.upload_data(batch_data, remote_path, is_remote_path=True):
+                    # Step 4: Cleanup buffer on success (need lock again)
+                    with self.buffer_lock:
+                        # Remove only the items we just uploaded
+                        # Using list comprehension to filter out items that were in the batch
+                        # This preserves new items added during upload
+                        self.telemetry_buffer = [x for x in self.telemetry_buffer if x not in current_batch]
+                        
+                    self.last_batch_upload = time.time()
+                    self.stats['telemetry_batches'] += 1
+                    self.logger.info(f"Uploaded telemetry batch: {remote_path} ({len(current_batch)} records)")
+                else:
+                    self.logger.warning(f"Failed to upload telemetry batch, keeping {len(current_batch)} records in buffer")
                     
-                self.last_batch_upload = time.time()
-                self.stats['telemetry_batches'] += 1
-                self.logger.info(f"Uploaded telemetry batch: {remote_path} ({len(current_batch)} records)")
-            else:
-                self.logger.warning(f"Failed to upload telemetry batch, keeping {len(current_batch)} records in buffer")
-                # Optional: Limit buffer size to prevent OOM
-                with self.buffer_lock:
-                    if len(self.telemetry_buffer) > 1000:
-                        self.telemetry_buffer = self.telemetry_buffer[-1000:]
-                        self.logger.warning("Telemetry buffer trimmed to 1000 records")
-            
+                    # Optional: Limit buffer size to prevent OOM
+                    with self.buffer_lock:
+                        if len(self.telemetry_buffer) > 1000:
+                            self.telemetry_buffer = self.telemetry_buffer[-1000:]
+                            self.logger.warning("Telemetry buffer trimmed to 1000 records")
+                            
+            except Exception as inner_e:
+                self.logger.error(f"Error processing batch: {inner_e}")
+                
         except Exception as e:
             self.logger.error(f"Failed to flush telemetry buffer: {e}")
         finally:
