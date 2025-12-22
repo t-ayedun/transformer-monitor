@@ -186,37 +186,28 @@ class FTPPublisher:
                 filename = f"{site_id}_data_{timestamp}.json"
             
             # Handle remote directory structure
-            target_file = filename
             if is_remote_path and '/' in filename:
-                remote_dir = '/'.join(filename.split('/')[:-1])
-                target_file = filename.split('/')[-1]
-                
                 # Ensure directory exists
+                remote_dir = '/'.join(filename.split('/')[:-1])
                 with self.connection_lock:
                     self._create_remote_dir_from_path(remote_dir)
-                    try:
-                        self.ftp.cwd(self.remote_dir + remote_dir)
-                    except:
-                        # Try absolute if relative failed
-                        try:
-                            self.ftp.cwd(remote_dir)
-                        except:
-                            pass
+                
+                # Use full path in STOR command (no cwd needed)
+                target_path = filename
+            else:
+                # Simple filename, use as-is
+                target_path = filename
             
             # Convert data to JSON bytes
             json_str = json.dumps(data, indent=2)
             json_bytes = json_str.encode('utf-8')
             
-            # Upload
+            # Upload using full path
             with self.connection_lock:
                 self.ftp.storbinary(
-                    f'STOR {target_file}',
+                    f'STOR {target_path}',
                     io.BytesIO(json_bytes)
                 )
-                
-                # Return to base directory if we changed it
-                if is_remote_path:
-                    self.ftp.cwd(self.remote_dir)
             
             self.stats['uploads_success'] += 1
             self.stats['bytes_uploaded'] += len(json_bytes)
