@@ -365,9 +365,18 @@ class FTPColdStorage:
                     # New Flattened Structure: SiteID/YYYY-MM-DD/Filename.csv
                     # Extract date from filename or mtime
                     # Filename format: SiteID_Temperature_YYYYMMDD_HH00.csv
+                    # Robust parsing: find part that looks like date
                     try:
-                        date_str = csv_file.stem.split('_')[2] # YYYYMMDD
-                        date_formatted = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                        date_formatted = None
+                        parts = csv_file.stem.split('_')
+                        for part in parts:
+                            if len(part) == 8 and part.isdigit():
+                                date_str = part
+                                date_formatted = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                                break
+                        
+                        if not date_formatted:
+                            raise ValueError("Date not found in filename")
                     except:
                         # Fallback to file creation date
                         date_formatted = file_mtime.strftime('%Y-%m-%d')
@@ -472,8 +481,8 @@ class FTPColdStorage:
                     if hour_key not in files_by_hour:
                         files_by_hour[hour_key] = []
                     files_by_hour[hour_key].append(file_path)
-            except Exception as e:
-                pass
+                except Exception as e:
+                    pass
                 
         # PROCESS BATCHES
         site_id = self.config.get('site.id', 'UNKNOWN')
@@ -510,10 +519,14 @@ class FTPColdStorage:
                              self.stats['files_deleted'] += 1
                          except:
                              pass
+                     
+                     # Check size BEFORE delete
+                     zip_size = zip_path.stat().st_size
+                     
                      # Delete ZIP
                      zip_path.unlink()
                      self.stats['files_uploaded'] += 1
-                     self.stats['bytes_freed'] += zip_path.stat().st_size # Approx
+                     self.stats['bytes_freed'] += zip_size
                 else:
                      self.logger.error(f"Failed to upload ZIP: {zip_path}")
                      # Do not delete originals if upload failed
