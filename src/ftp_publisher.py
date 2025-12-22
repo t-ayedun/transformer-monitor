@@ -202,12 +202,42 @@ class FTPPublisher:
             json_str = json.dumps(data, indent=2)
             json_bytes = json_str.encode('utf-8')
             
-            # Upload using full path
-            with self.connection_lock:
-                self.ftp.storbinary(
-                    f'STOR {target_path}',
-                    io.BytesIO(json_bytes)
-                )
+            # Upload using full path with timeout protection
+            upload_success = False
+            upload_error = None
+            
+            def do_upload():
+                nonlocal upload_success, upload_error
+                try:
+                    with self.connection_lock:
+                        self.ftp.storbinary(
+                            f'STOR {target_path}',
+                            io.BytesIO(json_bytes)
+                        )
+                    upload_success = True
+                except Exception as e:
+                    upload_error = e
+            
+            # Run upload in thread with timeout
+            import threading
+            upload_thread = threading.Thread(target=do_upload, daemon=True)
+            upload_thread.start()
+            upload_thread.join(timeout=10.0)  # 10 second timeout
+            
+            if upload_thread.is_alive():
+                # Upload timed out
+                self.logger.error(f"FTP upload timed out after 10s: {target_path}")
+                self.ftp = None  # Force reconnect
+                self.stats['uploads_failed'] += 1
+                return False
+            
+            if upload_error:
+                raise upload_error
+            
+            if not upload_success:
+                self.logger.error(f"FTP upload failed for unknown reason: {target_path}")
+                self.stats['uploads_failed'] += 1
+                return False
             
             self.stats['uploads_success'] += 1
             self.stats['bytes_uploaded'] += len(json_bytes)
