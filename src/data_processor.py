@@ -80,19 +80,19 @@ class DataProcessor:
         return self._sanitize_for_json(result)
 
     def _sanitize_for_json(self, obj):
-        """Recursively convert Numpy types to Python native types"""
+        """Recursively convert Numpy types to Python native types (NumPy 2.0 compatible)"""
         if isinstance(obj, dict):
             return {k: self._sanitize_for_json(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [self._sanitize_for_json(v) for v in obj]
-        elif isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
-                            np.int16, np.int32, np.int64, np.uint8,
-                            np.uint16, np.uint32, np.uint64)):
+        elif isinstance(obj, np.integer):
             return int(obj)
-        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
+        elif isinstance(obj, np.floating):
             return float(obj)
-        elif isinstance(obj, (np.ndarray,)):
+        elif isinstance(obj, np.ndarray):
             return self._sanitize_for_json(obj.tolist())
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
         return obj
     
     def _process_roi(self, frame: np.ndarray, roi_config: Dict) -> Dict[str, Any]:
