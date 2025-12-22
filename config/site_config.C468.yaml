@@ -88,8 +88,8 @@ event_detection:
     video_retention_hours: 4
 
   performance:
-    frame_skip: 3
-    motion_detection_resolution: [640, 480]
+    frame_skip: 5
+    motion_detection_resolution: [320, 240]
     sleep_between_checks: 0.1
     cpu_monitoring:
       enabled: true

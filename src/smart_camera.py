@@ -192,7 +192,7 @@ class SmartCamera:
                     "format": "RGB888"
                 },
                 lores={
-                    "size": (640, 480),  # Low-res for motion detection
+                    "size": self.motion_detection_resolution,  # Use configured resolution
                     "format": "YUV420"
                 },
                 encode="main"  # Encode the main stream for recording
