@@ -189,7 +189,7 @@ class MediaUploader:
         """
         Generate organized remote path with date-based folders
         
-        Format: /{media_type}/{YYYY}/{MM}/{DD}/{filename}
+        Format: /{SiteID}/{YYYY-MM-DD}/{media_type}/{filename}
         
         Args:
             filepath: Local file path
@@ -211,9 +211,13 @@ class MediaUploader:
                 dt = datetime.now()
         except:
             dt = datetime.now()
+            
+        # Get Site ID
+        site_id = self.config.get('site.id', 'UNKNOWN')
+        date_str = dt.strftime('%Y-%m-%d')
         
-        # Build path: thermal/2025/12/15/filename.png (Relative path)
-        remote_path = f"{media_type}/{dt.year:04d}/{dt.month:02d}/{dt.day:02d}/{filename}"
+        # Build path: C468/2025-01-05/thermal/filename.png
+        remote_path = f"{site_id}/{date_str}/{media_type}/{filename}"
         
         return remote_path
     

@@ -150,19 +150,21 @@ class FTPColdStorage:
         upload_after_hours = rule.get('upload_after_hours', 2)
         delete_after_upload = rule.get('delete_after_upload', True)
 
-        # video_dir = Path('/data/video') - OLD
         if not self.video_dir.exists():
             return
 
         cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
+        site_id = self.config.get('site.id', 'UNKNOWN')
 
         for video_file in self.video_dir.glob('*.h264'):
             try:
                 file_mtime = datetime.fromtimestamp(video_file.stat().st_mtime)
 
                 if file_mtime < cutoff_time:
-                    # File is old enough to upload
-                    remote_path = f"videos/{video_file.name}"
+                    # New Format: SiteID/YYYY-MM-DD/videos/filename
+                    date_str = file_mtime.strftime('%Y-%m-%d')
+                    remote_path = f"{site_id}/{date_str}/videos/{video_file.name}"
+                    
                     success = self._upload_file(video_file, remote_path)
 
                     if success and delete_after_upload:
@@ -181,7 +183,14 @@ class FTPColdStorage:
         upload_after_hours = rule.get('upload_after_hours', 6)
         delete_after_upload = rule.get('delete_after_upload', True)
 
-        # thermal_dir = Path('/data/images') - OLD
+        # Logic modified to support ZIPPING
+        if self.config.get('ftp_storage.upload_rules.zip_hourly_images', False):
+            self._zip_and_upload_images('thermal', self.image_dir)
+            return
+
+        # Fallback to old logic (individual uploads)
+        site_id = self.config.get('site.id', 'UNKNOWN')
+
         if not self.image_dir.exists():
             return
 
@@ -192,7 +201,10 @@ class FTPColdStorage:
                 file_mtime = datetime.fromtimestamp(thermal_file.stat().st_mtime)
 
                 if file_mtime < cutoff_time:
-                    remote_path = f"thermal/{thermal_file.name}"
+                    # New Format: SiteID/YYYY-MM-DD/thermal/filename
+                    date_str = file_mtime.strftime('%Y-%m-%d')
+                    remote_path = f"{site_id}/{date_str}/thermal/{thermal_file.name}"
+                    
                     success = self._upload_file(thermal_file, remote_path)
 
                     if success and delete_after_upload:
@@ -206,8 +218,6 @@ class FTPColdStorage:
 
     def _process_event_images(self):
         """Upload old event images to FTP (Hourly Zipped)"""
-        # Note: This will flatten event folder structure into the zip, 
-        # but filenames usually contain type/timestamp.
         if self.config.get('ftp_storage.upload_rules.zip_hourly_images', False):
              events_dir = self.image_dir / 'events'
              if events_dir.exists():
@@ -218,6 +228,7 @@ class FTPColdStorage:
             upload_after_hours = rule.get('upload_after_hours', 24)
             delete_after_upload = rule.get('delete_after_upload', True)
             skip_security_breach = rule.get('skip_security_breach', True)
+            site_id = self.config.get('site.id', 'UNKNOWN')
     
             events_dir = self.image_dir / 'events'
             if not events_dir.exists():
@@ -245,7 +256,10 @@ class FTPColdStorage:
                             file_mtime = datetime.fromtimestamp(image_file.stat().st_mtime)
     
                             if file_mtime < cutoff_time:
-                                remote_path = f"events/{date_dir.name}/{event_type_dir.name}/{image_file.name}"
+                                # New Format: SiteID/YYYY-MM-DD/events/Type/filename
+                                date_str = file_mtime.strftime('%Y-%m-%d')
+                                remote_path = f"{site_id}/{date_str}/events/{event_type_dir.name}/{image_file.name}"
+                                
                                 success = self._upload_file(image_file, remote_path)
     
                                 if success and delete_after_upload:
@@ -282,6 +296,7 @@ class FTPColdStorage:
              rule = self.upload_rules['periodic_snapshots']
              upload_after_hours = rule.get('upload_after_hours', 12)
              delete_after_upload = rule.get('delete_after_upload', True)
+             site_id = self.config.get('site.id', 'UNKNOWN')
     
              snapshots_dir = self.image_dir / 'snapshots'
              if not snapshots_dir.exists():
@@ -294,7 +309,10 @@ class FTPColdStorage:
                      file_mtime = datetime.fromtimestamp(snapshot_file.stat().st_mtime)
     
                      if file_mtime < cutoff_time:
-                         remote_path = f"snapshots/{snapshot_file.name}"
+                         # New Format: SiteID/YYYY-MM-DD/snapshots/filename
+                         date_str = file_mtime.strftime('%Y-%m-%d')
+                         remote_path = f"{site_id}/{date_str}/snapshots/{snapshot_file.name}"
+                         
                          success = self._upload_file(snapshot_file, remote_path)
     
                          if success and delete_after_upload:
@@ -311,6 +329,7 @@ class FTPColdStorage:
         rule = self.upload_rules['animal_events']
         upload_immediately = rule.get('upload_immediately', True)
         delete_after_upload = rule.get('delete_after_upload', True)
+        site_id = self.config.get('site.id', 'UNKNOWN')
 
         events_dir = self.image_dir / 'events'
         if not events_dir.exists():
@@ -332,7 +351,10 @@ class FTPColdStorage:
                     file_mtime = datetime.fromtimestamp(image_file.stat().st_mtime)
 
                     if file_mtime < cutoff_time:
-                        remote_path = f"events/{date_dir.name}/animal/{image_file.name}"
+                        # New Format: SiteID/YYYY-MM-DD/events/animal/filename
+                        date_str = file_mtime.strftime('%Y-%m-%d')
+                        remote_path = f"{site_id}/{date_str}/events/animal/{image_file.name}"
+                        
                         success = self._upload_file(image_file, remote_path)
 
                         if success and delete_after_upload:

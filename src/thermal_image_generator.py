@@ -49,6 +49,7 @@ class ThermalImageGenerator:
         
         self.logger.info(f"Thermal image generator initialized: {colormap} colormap, {output_resolution} resolution")
     
+    
     def generate_image(self, 
                       thermal_frame: np.ndarray,
                       rois: Optional[List[Dict]] = None,
@@ -85,6 +86,9 @@ class ThermalImageGenerator:
         # Add temperature scale
         if add_scale:
             thermal_img = self._add_temperature_scale(thermal_img, thermal_frame)
+            
+        # Add stats overlay (Min/Max/Avg)
+        thermal_img = self._add_stats_overlay(thermal_img, thermal_frame)
         
         # Add metadata overlay
         if metadata:
@@ -262,6 +266,50 @@ class ThermalImageGenerator:
         
         return image
     
+
+    
+    def _add_stats_overlay(self, image: np.ndarray, thermal_frame: np.ndarray) -> np.ndarray:
+        """
+        Add min/max/avg temperature stats to top-left corner
+        """
+        temp_min = np.min(thermal_frame)
+        temp_max = np.max(thermal_frame)
+        temp_avg = np.mean(thermal_frame)
+        
+        text_lines = [
+            f"Max: {temp_max:.1f} °C",
+            f"Avg: {temp_avg:.1f} °C",
+            f"Min: {temp_min:.1f} °C"
+        ]
+        
+        # Position at top-left
+        x_pos = 10
+        y_pos = 20
+        line_height = 20
+        
+        # Add background
+        max_width = 0
+        for line in text_lines:
+            (w, h), _ = cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            max_width = max(max_width, w)
+            
+        cv2.rectangle(image,
+                     (x_pos - 5, y_pos - 15),
+                     (x_pos + max_width + 5, y_pos + (len(text_lines) * line_height) - 5),
+                     (0, 0, 0), -1)
+        
+        # Draw stats
+        for i, line in enumerate(text_lines):
+            # Color code: Max=Red, Avg=White, Min=Blue
+            if i == 0: color = (0, 0, 255) # Red (BGR)
+            elif i == 2: color = (255, 0, 0) # Blue
+            else: color = (255, 255, 255) # White
+            
+            cv2.putText(image, line, (x_pos, y_pos + (i * line_height)),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+            
+        return image
+
     def _add_metadata_overlay(self, image: np.ndarray, metadata: Dict) -> np.ndarray:
         """
         Add metadata overlay (site ID, timestamp) to bottom-left corner
