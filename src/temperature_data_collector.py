@@ -204,7 +204,7 @@ class TemperatureDataCollector:
         if not self.current_hour:
             # Use current time if no hour set
             now = datetime.now(self.timezone)
-            self.current_hour = now.strftime('%Y%m%d_%H')
+            self.current_hour = now.strftime('%Y%m%d_%H00')
         
         # Parse hour to get date components
         date_str = self.current_hour[:8]  # YYYYMMDD
@@ -214,7 +214,7 @@ class TemperatureDataCollector:
         
         # Build path
         site_id = self.config.get('site.id', 'UNKNOWN')
-        filename = f"{site_id}_temp_{self.current_hour}.csv"
+        filename = f"{site_id}_Temperature_{self.current_hour}.csv"
         
         csv_path = self.base_dir / year / month / day / filename
         
