@@ -30,19 +30,20 @@ thermal_camera:
 pi_camera:
   enabled: true
   model: "Pi Camera 3"
-  resolution: [1920, 1080]
-  framerate: 30
+  resolution: [1280, 720] # Reduced from 1080p to save data
+  framerate: 15           # Reduced from 30fps to save data
   quality: 85
   
   motion_detection:
     enabled: true
-    threshold: 1500
-    min_area: 500
+    threshold: 3000      # Increased from 1500 to ignore shadows
+    min_area: 2500       # Increased from 500 to ignore small reflections
+    cooldown_seconds: 300 # Wait 5 mins between recordings to save data
     
   recording:
-    pre_record_seconds: 10
-    post_record_seconds: 10
-    max_duration_seconds: 300
+    pre_record_seconds: 5 # Reduced to save buffer RAM
+    post_record_seconds: 5 # Reduced to keep clips short
+    max_duration_seconds: 60 # Cap at 1 minute per event
     
   snapshot_interval: 1800  # 30 minutes
   

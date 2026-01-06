@@ -31,9 +31,14 @@ class CloudinarySyncer:
         self.ftp.login(self.ftp_config['user'], self.ftp_config['password'])
         logger.info("Connected to FTP")
 
-    def sync_thermal_images(self):
-        """Sync thermal images from /{SiteID}/... to Cloudinary"""
-        logger.info(f"Syncing thermal images for {self.site_id}...")
+    def sync_thermal_images(self, days_back=2):
+        """
+        Sync thermal images from /{SiteID}/... to Cloudinary
+        
+        Args:
+            days_back: Number of recent days to scan (default 2: today + yesterday)
+        """
+        logger.info(f"Syncing thermal images for {self.site_id} (last {days_back} days)...")
         
         # Path: /{SiteID}/
         try:
@@ -42,14 +47,30 @@ class CloudinarySyncer:
             logger.error(f"Site directory {self.site_id} not found: {e}")
             return
 
+        # Calculate target dates
+        from datetime import  timedelta
+        target_dates = set()
+        for i in range(days_back):
+            d = datetime.now() - timedelta(days=i)
+            target_dates.add(d.strftime('%Y-%m-%d'))
+            
         # Iterate Date Folders (YYYY-MM-DD)
-        dates = []
-        self.ftp.retrlines('LIST', dates.append)
+        try:
+            items = []
+            self.ftp.retrlines('LIST', items.append)
+        except Exception as e:
+            logger.error(f"Failed to list directory: {e}")
+            return
         
-        for date_item in dates:
-            parts = date_item.split()
+        for item in items:
+            parts = item.split()
             date_dir = parts[-1]
-            if not date_dir.replace('-','').isdigit(): continue # Skip non-date folders
+            
+            # Optimization: Only process relevant dates
+            if date_dir not in target_dates:
+                continue
+            
+            logger.info(f"Scanning date: {date_dir}")
             
             # Enter Date Dir
             try:
@@ -70,7 +91,10 @@ class CloudinarySyncer:
     def _process_directory(self, date_context, category):
         """Upload images in current directory"""
         files = []
-        self.ftp.retrlines('LIST', files.append)
+        try:
+            self.ftp.retrlines('LIST', files.append)
+        except:
+            return
         
         for file_item in files:
             parts = file_item.split()
@@ -78,7 +102,6 @@ class CloudinarySyncer:
             
             if filename.endswith('.png') or filename.endswith('.jpg'):
                 try:
-                    # Check if relevant (redundant check, but safe)
                     # Upload
                     self._upload_to_cloudinary(filename, date_context, category)
                 except Exception as e:
@@ -90,53 +113,93 @@ class CloudinarySyncer:
         self.ftp.retrbinary(f"RETR {filename}", bio.write)
         bio.seek(0)
         
-        # Cloudinary Folder: thermal_images/{SiteID}/{YYYY-MM-DD}
-        # date_context is "SiteID/YYYY-MM-DD"
-        # User example: thermal_images/{SiteID}/
-        # Let's use: thermal_images/{SiteID}/{YYYY-MM-DD}/
-        
-        # User requested: "C368 images: .../thermal_images/C368/"
-        # Ideally we follow that but keep dates?
-        # Let's assume folder structure: thermal_images/{SiteID}/{YYYY-MM-DD} is cleaner.
-        # Or flatten to thermal_images/{SiteID} if user insistence.
-        # User output suggests "C368 images: .../thermal_images/C368/" implies flat or maybe just root?
-        # I'll use `thermal_images/{SiteID}` and let filename sort it, or filename with date.
-        
+        # Cloudinary Folder: thermal_images/{SiteID}
+        # We flatten daily folders into one SiteID bucket for easier web app access,
+        # relying on filename timestamps for sorting.
         parts = date_context.split('/') # [SiteID, Date]
         folder = f"thermal_images/{parts[0]}"
         
         public_id = filename.rsplit('.', 1)[0]
-        # Ensure public_id is unique if flat folder, or append date?
-        # Filename usually has timestamp, so unique.
         
-        logger.info(f"Uploading {filename} to {folder}...")
+        # Check if already exists? Cloudinary handles this with 'overwrite=True' 
+        # but for speed we might want to skip.
+        # However, checking existence is an API call too.
+        # We'll just upload (overwrite ensures updates).
         
-        resp = cloudinary.uploader.upload(
-            bio,
-            folder=folder,
-            public_id=public_id,
-            resource_type="image",
-            overwrite=True # Set to False to prevent re-upload if needed, but True ensures latest
-        )
-        logger.info(f"  ✓ URL: {resp['secure_url']}")
+        # logger.info(f"Uploading {filename} to {folder}...")
+        
+        try:
+            resp = cloudinary.uploader.upload(
+                bio,
+                folder=folder,
+                public_id=public_id,
+                resource_type="image",
+                overwrite=True
+            )
+            logger.info(f"  ✓ Uploaded {filename}")
+        except Exception as e:
+            logger.error(f"Cloudinary error: {e}")
 
     def close(self):
         if self.ftp:
             self.ftp.quit()
 
+# AWS Lambda Handler
+def lambda_handler(event, context):
+    """
+    AWS Lambda Entry Point
+    Expects environment variables:
+    - FTP_HOST
+    - FTP_USER
+    - FTP_PASS
+    - SITE_ID
+    - CLOID_NAME
+    - API_KEY
+    - API_SECRET
+    """
+    ftp_config = {
+        'host': os.environ.get('FTP_HOST', 'ftp.smarterise.com'),
+        'user': os.environ['FTP_USER'], # Required
+        'password': os.environ['FTP_PASS'] # Required
+    }
+    
+    cloudinary_config = {
+        'cloud_name': os.environ.get('CLOUD_NAME', 'dfn84o2fl'),
+        'api_key': os.environ.get('API_KEY', '474218481819232'),
+        'api_secret': os.environ.get('API_SECRET', 'Z1ZRyYP2nD-Z6IhA_J8PbfyiBig')
+    }
+    
+    site_id = os.environ.get('SITE_ID', 'C468')
+    
+    syncer = CloudinarySyncer(ftp_config, cloudinary_config, site_id)
+    try:
+        syncer.connect_ftp()
+        syncer.sync_thermal_images(days_back=2)
+        return {'statusCode': 200, 'body': 'Sync completed'}
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        return {'statusCode': 500, 'body': str(e)}
+    finally:
+        syncer.close()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ftp-host', default='ftp.smarterise.com')
-    parser.add_argument('--ftp-user', required=True)
-    parser.add_argument('--ftp-pass', required=True)
-    parser.add_argument('--site-id', required=True)
+    parser.add_argument('--ftp-host', default=os.environ.get('FTP_HOST', 'ftp.smarterise.com'))
+    parser.add_argument('--ftp-user', default=os.environ.get('FTP_USER'))
+    parser.add_argument('--ftp-pass', default=os.environ.get('FTP_PASS'))
+    parser.add_argument('--site-id', default=os.environ.get('SITE_ID'))
     
     # Cloudinary
-    parser.add_argument('--cloud-name', default='dfn84o2fl')
-    parser.add_argument('--api-key', default='474218481819232')
-    parser.add_argument('--api-secret', default='Z1ZRyYP2nD-Z6IhA_J8PbfyiBig')
+    parser.add_argument('--cloud-name', default=os.environ.get('CLOUD_NAME', 'dfn84o2fl'))
+    parser.add_argument('--api-key', default=os.environ.get('API_KEY', '474218481819232'))
+    parser.add_argument('--api-secret', default=os.environ.get('API_SECRET', 'Z1ZRyYP2nD-Z6IhA_J8PbfyiBig'))
     
     args = parser.parse_args()
+    
+    # Validation for CLI
+    if not args.ftp_user or not args.ftp_pass or not args.site_id:
+        print("Error: --ftp-user, --ftp-pass, and --site-id are required (or set via env vars)")
+        exit(1)
     
     syncer = CloudinarySyncer(
         {'host': args.ftp_host, 'user': args.ftp_user, 'password': args.ftp_pass},
@@ -146,6 +209,6 @@ if __name__ == "__main__":
     
     try:
         syncer.connect_ftp()
-        syncer.sync_thermal_images()
+        syncer.sync_thermal_images(days_back=2)
     finally:
         syncer.close()
