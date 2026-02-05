@@ -14,13 +14,15 @@
 4. [Raspberry Pi Initial Setup](#raspberry-pi-initial-setup)
 5. [Software Installation](#software-installation)
 6. [Site Configuration](#site-configuration)
-7. [AWS IoT Core Setup](#aws-iot-core-setup)
-8. [ROI Configuration](#roi-configuration)
-9. [Remote Access (RMS Connect)](#remote-access-rms-connect)
-10. [Testing & Validation](#testing--validation)
-11. [Production Deployment](#production-deployment)
-12. [Troubleshooting](#troubleshooting)
-13. [Maintenance](#maintenance)
+7. [AWS IoT Core Setup (Optional)](#aws-iot-core-setup-optional)
+8. [FTP Data Transfer (Recommended)](#ftp-data-transfer-recommended)
+9. [ROI Configuration](#roi-configuration)
+10. [Remote Access (RMS Connect)](#remote-access-rms-connect)
+11. [Testing & Validation](#testing--validation)
+12. [Production Deployment](#production-deployment)
+13. [Troubleshooting](#troubleshooting)
+14. [Maintenance](#maintenance)
+15. [Quick Command Reference](#quick-command-reference)
 
 ---
 
@@ -432,7 +434,7 @@ aws:
 
 ---
 
-## 7. AWS IoT Core Setup
+## 7. AWS IoT Core Setup (Optional)
 
 ### ☁️ **AWS Console Configuration**
 
@@ -586,7 +588,57 @@ thermal_publishing:
 
 ---
 
-## 8. ROI Configuration
+
+---
+
+## 8. FTP Data Transfer (Recommended)
+
+Infrastructure is managed via FTP to your cPanel server. This is the primary method for long-term data storage.
+
+### 8.1 Create FTP Account
+1. Log in to **cPanel** → **Files** → **FTP Accounts**
+2. **Username**: `transformer-monitor` (example)
+3. **Directory**: `transformer-data` (Remove `public_html/` prefix for privacy)
+4. **Quota**: Unlimited or 10GB+
+
+### 8.2 Directory Structure
+The system automatically creates:
+```
+/transformer-data/
+├── telemetry/YYYY/MM/DD/  # JSON metrics
+├── thermal/YYYY/MM/DD/    # Raw thermal images
+├── visual/YYYY/MM/DD/     # Visual snapshots
+└── videos/YYYY/MM/DD/     # Motion event recordings
+```
+
+### 8.3 Configuration
+Update `/data/config/site_config.yaml`:
+```yaml
+ftp:
+  enabled: true
+  host: "ftp.yourdomain.com"
+  port: 21
+  username: "transformer-monitor@yourdomain.com"
+  password: "YOUR_STRONG_PASSWORD"  # OR use env var FTP_PASSWORD
+  remote_dir: "/transformer-data"
+  passive_mode: true
+  
+  # Intervals
+  thermal_image_interval: 600    # 10 mins
+  telemetry_upload_interval: 300 # 5 mins
+  batch_telemetry: true
+  organize_by_date: true
+```
+
+### 8.4 Troubleshooting FTP
+- **Connection Refused**: Whitelist Pi's IP in cPanel/Firewall.
+- **Passive Mode**: Ensure `passive_mode: true` is set (critical for NAT).
+- **Permissions**: Ensure FTP user has Write access.
+
+---
+
+## 9. ROI Configuration
+
 
 ### 🎯 **Region of Interest Setup**
 
@@ -1395,3 +1447,33 @@ Your transformer monitoring system is now fully operational. The system will:
 **Last Updated:** December 2024  
 **Author:** Teniola Ayedun  
 **License:** Proprietary - Smarterise Energy Solutions
+
+---
+
+## 15. Quick Command Reference
+
+```bash
+# Start monitoring (foreground)
+./run.sh
+
+# Start as service (background)
+sudo systemctl start transformer-monitor
+
+# Stop service
+sudo systemctl stop transformer-monitor
+
+# View logs
+sudo journalctl -u transformer-monitor -f
+
+# Check status
+sudo systemctl status transformer-monitor
+
+# Access dashboard
+http://<pi-ip>:5000
+
+# Update code
+git pull origin stable-deployment
+
+# Reinstall dependencies
+venv/bin/pip install -r requirements.txt
+```
