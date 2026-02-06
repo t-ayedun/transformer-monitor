@@ -80,7 +80,10 @@ class SmartCamera:
         # Recording settings
         self.pre_record_seconds = config.get('pi_camera.recording.pre_record_seconds', 10)
         self.post_record_seconds = config.get('pi_camera.recording.post_record_seconds', 10)
-        self.max_record_duration = config.get('pi_camera.recording.max_duration_seconds', 300)
+        # Reduced default from 300s to 60s to prevent large files
+        self.max_record_duration = config.get('pi_camera.recording.max_duration_seconds', 60)
+        # Hard limit for file size (50MB)
+        self.max_file_size_bytes = 50 * 1024 * 1024
 
         # Snapshot settings
         self.snapshot_interval = config.get('pi_camera.snapshot_interval', 1800)
@@ -583,12 +586,24 @@ class SmartCamera:
                     self.event_snapshots = []
                     self.event_classifier.reset_motion_tracking()
 
-                # Safety: Stop recording if max duration reached
+                # Safety: Stop recording if max duration reached OR file too large
                 if self.is_recording and self.recording_start_time:
                     recording_duration = time.time() - self.recording_start_time
-                    if recording_duration >= self.max_record_duration:
+                    
+                    # Check file size if path exists
+                    file_size_exceeded = False
+                    if self.current_recording_path and os.path.exists(self.current_recording_path):
+                        try:
+                            if os.path.getsize(self.current_recording_path) > self.max_file_size_bytes:
+                                file_size_exceeded = True
+                                self.logger.warning(f"Max file size ({self.max_file_size_bytes/1024/1024}MB) exceeded, forcing stop")
+                        except OSError:
+                            pass
+
+                    if recording_duration >= self.max_record_duration or file_size_exceeded:
+                        reason = "duration" if recording_duration >= self.max_record_duration else "size"
                         self.logger.warning(
-                            f"Max recording duration ({self.max_record_duration}s) reached, stopping"
+                            f"Recording limit reached ({reason}), stopping. Duration: {recording_duration:.1f}s"
                         )
                         motion_detected = False
 
