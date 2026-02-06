@@ -28,26 +28,27 @@ for VIDEO_DIR in "${VIDEO_DIRS[@]}"; do
         continue
     fi
 
-# List files found
-echo "$FOUND_FILES" | while read -r file; do
-    size=$(du -h "$file" | cut -f1)
-    echo "Found: $file ($size)" | tee -a "$LOG_FILE"
-done
-
-# Check mode
-if [ "$1" == "dry-run" ]; then
-    echo "--- DRY RUN: No files deleted ---" | tee -a "$LOG_FILE"
-else
-    # Delete files
+    # List files found
     echo "$FOUND_FILES" | while read -r file; do
-        rm "$file"
-        if [ $? -eq 0 ]; then
-            echo "Deleted: $file" | tee -a "$LOG_FILE"
-        else
-            echo "Failed to delete: $file" | tee -a "$LOG_FILE"
-        fi
+        size=$(du -h "$file" | cut -f1)
+        echo "Found: $file ($size)" | tee -a "$LOG_FILE"
     done
-fi
+
+    # Check mode
+    if [ "$1" == "dry-run" ]; then
+        echo "--- DRY RUN: No files deleted in $VIDEO_DIR ---" | tee -a "$LOG_FILE"
+    else
+        # Delete files
+        echo "$FOUND_FILES" | while read -r file; do
+            rm "$file"
+            if [ $? -eq 0 ]; then
+                echo "Deleted: $file" | tee -a "$LOG_FILE"
+            else
+                echo "Failed to delete: $file" | tee -a "$LOG_FILE"
+            fi
+        done
+    fi
+done
 
 echo "=== Cleanup Complete: $(date) ===" | tee -a "$LOG_FILE"
 echo ""
