@@ -3,8 +3,9 @@
 # Removes video files larger than 100MB to prevent bandwidth exhaustion
 # Usage: ./cleanup_videos.sh [dry-run]
 
-VIDEO_DIR="/home/smartie/transformer_monitor_data/videos"
-MAX_SIZE__MB=100
+# Check multiple possible video directories
+VIDEO_DIRS=("/data/videos" "/home/smartie/transformer_monitor_data/videos")
+MAX_SIZE__MB=20  # Lowered limit to catch smaller stuck files (like the 40MB one)
 LOG_FILE="/home/smartie/transformer_monitor_data/logs/cleanup.log"
 
 # Ensure log directory exists
@@ -12,20 +13,20 @@ mkdir -p $(dirname "$LOG_FILE")
 
 echo "=== Video Cleanup Started: $(date) ===" | tee -a "$LOG_FILE"
 
-# Check if directory exists
-if [ ! -d "$VIDEO_DIR" ]; then
-    echo "Error: Video directory $VIDEO_DIR not found." | tee -a "$LOG_FILE"
-    exit 1
-fi
+for VIDEO_DIR in "${VIDEO_DIRS[@]}"; do
+    if [ ! -d "$VIDEO_DIR" ]; then
+        echo "Skipping missing directory: $VIDEO_DIR" | tee -a "$LOG_FILE"
+        continue
+    fi
 
-# Find large files
-echo "Scanning for files larger than ${MAX_SIZE__MB}MB in $VIDEO_DIR..." | tee -a "$LOG_FILE"
-FOUND_FILES=$(find "$VIDEO_DIR" -type f -size +${MAX_SIZE__MB}M)
+    # Find large files
+    echo "Scanning for files larger than ${MAX_SIZE__MB}MB in $VIDEO_DIR..." | tee -a "$LOG_FILE"
+    FOUND_FILES=$(find "$VIDEO_DIR" -type f -size +${MAX_SIZE__MB}M)
 
-if [ -z "$FOUND_FILES" ]; then
-    echo "No large files found." | tee -a "$LOG_FILE"
-    exit 0
-fi
+    if [ -z "$FOUND_FILES" ]; then
+        echo "No large files found in $VIDEO_DIR." | tee -a "$LOG_FILE"
+        continue
+    fi
 
 # List files found
 echo "$FOUND_FILES" | while read -r file; do
