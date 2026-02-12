@@ -213,7 +213,7 @@ ftp_storage:
     
     temperature_csv:
       enabled: true
-      upload_after_hours: 0.083  # Upload completed hourly CSV files after 5 minutes
+      upload_after_hours: 1.0  # Upload completed hourly CSV files after 1 hour
       delete_after_upload: true
       retention_days: 90  # Keep on FTP for 90 days
 

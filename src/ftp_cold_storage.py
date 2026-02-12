@@ -375,11 +375,21 @@ class FTPColdStorage:
         if not self.temp_dir.exists():
             return
         
-        # Calculate strict cutoff (e.g. 1 hour ago)
+        # Calculate strict cutoff
         cutoff_time = datetime.now() - timedelta(hours=upload_after_hours)
+        
+        # SAFETY: Determine current hour string to strictly avoid uploading the active file
+        # Matches format in TemperatureDataCollector: YYYYMMDD_HH00
+        # Check both UTC and Local to be safe against timezone diffs
+        current_hour_local = datetime.now().strftime('%Y%m%d_%H00')
+        current_hour_utc = datetime.utcnow().strftime('%Y%m%d_%H00')
         
         for csv_file in self.temp_dir.rglob('*_Temperature_*.csv'):
             try:
+                # SAFETY CHECK 1: Skip if filename matches current hour (it's still being written)
+                if current_hour_local in csv_file.name or current_hour_utc in csv_file.name:
+                    continue
+
                 # Check modification time to ensure file is "done" (rotated)
                 file_mtime = datetime.fromtimestamp(csv_file.stat().st_mtime)
                 
