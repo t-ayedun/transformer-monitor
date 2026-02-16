@@ -30,6 +30,13 @@ class FTPPublisher:
         self.connection_timeout = 300  # Reconnect after 5 minutes
         self.ftp = None
         
+        # Circuit breaker to prevent connection spam when server is unreachable
+        self.circuit_breaker_active = False
+        self.circuit_breaker_until = 0
+        self.circuit_breaker_duration = 300  # 5 minutes pause after failures
+        self.consecutive_failures = 0
+        self.max_failures_before_break = 3  # Trip circuit after 3 failures
+        
         self.stats = {
             'uploads_success': 0,
             'uploads_failed': 0,
@@ -45,6 +52,17 @@ class FTPPublisher:
     
     def _connect(self):
         """Establish FTP connection"""
+        # Check circuit breaker
+        if self.circuit_breaker_active:
+            if time.time() < self.circuit_breaker_until:
+                # Still in circuit breaker cooldown
+                return False
+            else:
+                # Circuit breaker cooldown expired, reset and try again
+                self.logger.info("Circuit breaker cooldown expired, attempting reconnection...")
+                self.circuit_breaker_active = False
+                self.consecutive_failures = 0
+        
         try:
             if self.ftp:
                 try:
@@ -63,12 +81,28 @@ class FTPPublisher:
             # No need to cd into site directory anymore
             
             self.last_connection_time = time.time()
+            
+            # Reset circuit breaker on successful connection
+            self.consecutive_failures = 0
+            self.circuit_breaker_active = False
+            
             self.logger.info(f"Connected to FTP server: {self.host}")
             return True
             
         except Exception as e:
             self.logger.error(f"FTP connection failed: {e}")
             self.ftp = None
+            
+            # Increment failure counter and check if we should trip the circuit breaker
+            self.consecutive_failures += 1
+            if self.consecutive_failures >= self.max_failures_before_break:
+                self.circuit_breaker_active = True
+                self.circuit_breaker_until = time.time() + self.circuit_breaker_duration
+                self.logger.warning(
+                    f"FTP circuit breaker activated after {self.consecutive_failures} failures. "
+                    f"Pausing connection attempts for {self.circuit_breaker_duration}s (until {time.strftime('%H:%M:%S', time.localtime(self.circuit_breaker_until))})"
+                )
+            
             return False
     
     def _create_remote_dir(self, path):
@@ -86,6 +120,10 @@ class FTPPublisher:
     
     def _ensure_connection(self):
         """Ensure FTP connection is active"""
+        # Quick check for circuit breaker before acquiring lock
+        if self.circuit_breaker_active and time.time() < self.circuit_breaker_until:
+            return False
+        
         with self.connection_lock:
             # Check if connection is stale
             if (not self.ftp or 
@@ -397,8 +435,40 @@ class FTPPublisher:
                 (self.stats['uploads_success'] + self.stats['uploads_failed'])
                 if (self.stats['uploads_success'] + self.stats['uploads_failed']) > 0 
                 else 0
-            )
+            ),
+            'circuit_breaker_active': self.circuit_breaker_active,
+            'circuit_breaker_until': self.circuit_breaker_until if self.circuit_breaker_active else None,
+            'consecutive_failures': self.consecutive_failures
         }
+    
+    def pause_uploads(self, duration_seconds=None):
+        """
+        Manually activate circuit breaker to pause FTP uploads
+        
+        Args:
+            duration_seconds: How long to pause (default: use circuit_breaker_duration)
+        """
+        if duration_seconds is None:
+            duration_seconds = self.circuit_breaker_duration
+        
+        self.circuit_breaker_active = True
+        self.circuit_breaker_until = time.time() + duration_seconds
+        self.logger.warning(
+            f"FTP uploads manually paused for {duration_seconds}s (until {time.strftime('%H:%M:%S', time.localtime(self.circuit_breaker_until))})"
+        )
+    
+    def resume_uploads(self):
+        """Manually deactivate circuit breaker to resume FTP uploads"""
+        self.circuit_breaker_active = False
+        self.circuit_breaker_until = 0
+        self.consecutive_failures = 0
+        self.logger.info("FTP uploads manually resumed")
+    
+    def is_paused(self):
+        """Check if FTP uploads are currently paused"""
+        if self.circuit_breaker_active and time.time() < self.circuit_breaker_until:
+            return True
+        return False
     
     def close(self):
         """Close FTP connection"""
