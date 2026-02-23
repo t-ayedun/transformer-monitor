@@ -31,7 +31,7 @@ pi_camera:
   enabled: true
   model: "Pi Camera 3"
   resolution: [1280, 720] # Reduced from 1080p to save data
-  framerate: 15           # Reduced from 30fps to save data
+  framerate: 10           # Reduced from 15fps → 10fps to lower CPU load
   quality: 85
   
   motion_detection:
@@ -89,9 +89,9 @@ event_detection:
     video_retention_hours: 4
 
   performance:
-    frame_skip: 5
+    frame_skip: 10         # Process every 10th frame (was 5) — halves motion detection CPU
     motion_detection_resolution: [320, 240]
-    sleep_between_checks: 0.1
+    sleep_between_checks: 0.2  # 5Hz polling (was 0.1s/10Hz) — reduces idle CPU
     cpu_monitoring:
       enabled: true
       log_interval: 300

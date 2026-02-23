@@ -15,8 +15,9 @@ else
 fi
 
 # Pull latest changes
-echo "Pulling latest changes from git..."
-git pull
+echo "Pulling latest changes from git (stable-deployment)..."
+git pull origin stable-deployment
+
 
 # Update dependencies
 echo "Updating Python dependencies..."

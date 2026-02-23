@@ -1,0 +1,18 @@
+[Unit]
+Description=Transformer Monitor Auto-Updater
+Documentation=https://github.com/t-ayedun/transformer-monitor
+# Only run if network is up
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=smartie
+# Allow systemctl restart inside the script
+# (sudo NOPASSWD for this command must be configured — see install note)
+ExecStart=/bin/bash /home/smartie/transformer-monitor/scripts/auto_update.sh
+StandardOutput=journal
+StandardError=journal
+
+# Safety: kill the update if it takes more than 3 minutes
+TimeoutStartSec=180

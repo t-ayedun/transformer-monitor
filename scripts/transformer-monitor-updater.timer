@@ -1,0 +1,13 @@
+[Unit]
+Description=Transformer Monitor Auto-Update Timer (runs every hour)
+
+[Timer]
+# Wait 2 minutes after boot before first check (let the service settle)
+OnBootSec=2min
+# Then check every hour
+OnUnitActiveSec=1h
+# Run even if the previous run was missed (e.g. Pi was off)
+Persistent=true
+
+[Install]
+WantedBy=timers.target

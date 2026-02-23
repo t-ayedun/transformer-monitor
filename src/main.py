@@ -283,7 +283,7 @@ class TransformerMonitor:
         Runs at ~8 Hz (thermal camera native refresh rate) for smooth live feed.
         """
         self.logger.info("Web frame update loop started")
-        update_interval = 0.125  # 8 Hz (1/8 = 0.125 seconds)
+        update_interval = 0.5    # 2 Hz — thermal data only updates every 60s; 8 Hz was wasteful
 
         while self.running:
             try:
