@@ -138,7 +138,23 @@ class TransformerMonitor:
         # Initialize FTP publisher (if configured)
         # Check new config key 'ftp_storage' first, fallback to legacy 'ftp'
         ftp_enabled = self.config.get('ftp_storage.enabled', False) or self.config.get('ftp.enabled', False)
-        
+
+        # Also respect the persistent state file (written by scripts/ftp_control.py).
+        # This overrides the config so FTP can be disabled without editing the live config file.
+        import json as _json
+        _state_file = Path('/home/smartie/transformer_monitor_data/ftp_state.json')
+        if ftp_enabled and _state_file.exists():
+            try:
+                _state = _json.loads(_state_file.read_text())
+                if not _state.get('enabled', True):
+                    self.logger.warning(
+                        "FTP disabled by ftp_state.json — skipping FTP initialisation. "
+                        "Run 'python scripts/ftp_control.py enable' then restart to re-enable."
+                    )
+                    ftp_enabled = False
+            except Exception as _e:
+                self.logger.warning(f"Could not read ftp_state.json at startup: {_e}")
+
         if ftp_enabled:
             self.logger.info("FTP enabled, initializing publisher...")
             
