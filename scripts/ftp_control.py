@@ -1,143 +1,169 @@
 #!/usr/bin/env python3
 """
 FTP Control Utility
-Manually pause/resume FTP uploads or check status
+===================
+Controls the FTP cold-storage service on the running Raspberry Pi by writing
+to a persistent state file that the service reads at the start of every cycle.
+Changes take effect immediately — NO service restart required.
+
+State file location:
+    /home/smartie/transformer_monitor_data/ftp_state.json
+
+Usage:
+    python ftp_control.py status              - Show current FTP state
+    python ftp_control.py disable             - Pause all FTP uploads immediately
+    python ftp_control.py enable              - Resume FTP uploads immediately
+    python ftp_control.py interval <seconds>  - Change upload interval (e.g. 3600)
+    python ftp_control.py reset               - Remove state file (revert to config defaults)
+
+Examples:
+    python ftp_control.py disable
+    python ftp_control.py enable
+    python ftp_control.py interval 3600       # Upload at most once per hour
+    python ftp_control.py interval 86400      # Upload once per day
+    python ftp_control.py status
 """
 
 import sys
+import json
 import os
+from pathlib import Path
+from datetime import datetime
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# ── State file path ─────────────────────────────────────────────────────────
+STATE_FILE = Path('/home/smartie/transformer_monitor_data/ftp_state.json')
 
-from config_manager import ConfigManager
-from ftp_publisher import FTPPublisher
-import time
+# Default state written when enabling for the first time (easy to re-enable)
+DEFAULT_ENABLED_STATE = {
+    "enabled": True,
+    "upload_interval_seconds": 3600,   # 1 hour — conservative, avoids IP bans
+    "note": "Managed by scripts/ftp_control.py. Edit carefully.",
+    "last_modified": None
+}
 
 
-def get_ftp_publisher():
-    """Initialize FTP publisher from config"""
-    config = ConfigManager()
-    config.load_configs()
-    
-    # Check if FTP is enabled
-    ftp_enabled = config.get('ftp_storage.enabled', False) or config.get('ftp.enabled', False)
-    
-    if not ftp_enabled:
-        print("ERROR: FTP is not enabled in configuration")
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _read_state() -> dict:
+    """Read current state from file, or return a sensible default."""
+    if STATE_FILE.exists():
+        try:
+            with open(STATE_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"WARNING: Could not parse state file: {e}")
+    # No state file — FTP runs at whatever the config says
+    return {"enabled": True, "note": "(no state file — service uses config defaults)"}
+
+
+def _write_state(state: dict):
+    """Write state to file, creating parent directories as needed."""
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    state['last_modified'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(STATE_FILE, 'w') as f:
+        json.dump(state, f, indent=2)
+    print(f"  State file written: {STATE_FILE}")
+
+
+def _print_state(state: dict):
+    enabled = state.get('enabled', True)
+    interval = state.get('upload_interval_seconds', '(config default)')
+    modified = state.get('last_modified', 'never')
+
+    print("\n=== FTP Control State ===")
+    print(f"  Status  : {'✅ ENABLED  (FTP running)' if enabled else '🚫 DISABLED (FTP paused)'}")
+    print(f"  Interval: {interval}s  ({int(interval)//60} min)" if isinstance(interval, int) else f"  Interval: {interval}")
+    print(f"  Modified: {modified}")
+    if not STATE_FILE.exists():
+        print("  (no state file on disk — service using config defaults)")
+    print()
+
+
+# ── Commands ─────────────────────────────────────────────────────────────────
+
+def cmd_status():
+    state = _read_state()
+    _print_state(state)
+
+
+def cmd_disable():
+    state = _read_state()
+    state['enabled'] = False
+    if 'upload_interval_seconds' not in state:
+        state['upload_interval_seconds'] = DEFAULT_ENABLED_STATE['upload_interval_seconds']
+    _write_state(state)
+    print("\n🚫 FTP uploads DISABLED.")
+    print("   The running service will pause on its next cycle (within the current interval).")
+    print("   To re-enable: python ftp_control.py enable\n")
+
+
+def cmd_enable():
+    # Build a clean enabled state, preserving existing interval if set
+    existing = _read_state()
+    state = {**DEFAULT_ENABLED_STATE}
+    state['enabled'] = True
+    if 'upload_interval_seconds' in existing and isinstance(existing['upload_interval_seconds'], int):
+        state['upload_interval_seconds'] = existing['upload_interval_seconds']
+    _write_state(state)
+    print("\n✅ FTP uploads ENABLED.")
+    print("   The running service will resume on its next cycle.")
+    print(f"   Upload interval: {state['upload_interval_seconds']}s ({state['upload_interval_seconds']//60} min)\n")
+
+
+def cmd_interval(seconds_str: str):
+    try:
+        seconds = int(seconds_str)
+        if seconds < 60:
+            print("ERROR: Interval must be at least 60 seconds (to avoid hammering the server).")
+            sys.exit(1)
+    except ValueError:
+        print(f"ERROR: '{seconds_str}' is not a valid number of seconds.")
         sys.exit(1)
-    
-    # Determine which config section to use
-    if config.get('ftp_storage.enabled'):
-        ftp_config_prefix = 'ftp_storage'
+
+    state = _read_state()
+    old_interval = state.get('upload_interval_seconds', '(config default)')
+    state['upload_interval_seconds'] = seconds
+    _write_state(state)
+
+    print(f"\n⏱  Upload interval changed: {old_interval}s → {seconds}s ({seconds//60} min)")
+    print("   Takes effect on the running service within the current cycle.\n")
+
+
+def cmd_reset():
+    if STATE_FILE.exists():
+        STATE_FILE.unlink()
+        print(f"\n🔄 State file removed: {STATE_FILE}")
+        print("   The service will revert to settings in site_config.yaml on its next cycle.\n")
     else:
-        ftp_config_prefix = 'ftp'
-    
-    # Get password from env var or config
-    ftp_password = os.getenv('FTP_PASSWORD') or config.get(f'{ftp_config_prefix}.password', '')
-    
-    publisher = FTPPublisher(
-        host=config.get(f'{ftp_config_prefix}.host'),
-        username=config.get(f'{ftp_config_prefix}.username'),
-        password=ftp_password,
-        remote_dir=config.get(f'{ftp_config_prefix}.remote_dir', '/transformer-data'),
-        port=config.get(f'{ftp_config_prefix}.port', 21),
-        passive=config.get(f'{ftp_config_prefix}.passive', True)
-    )
-    
-    return publisher
+        print("\nNothing to reset — no state file exists.\n")
 
 
-def show_status(publisher):
-    """Show FTP upload status"""
-    stats = publisher.get_stats()
-    
-    print("\n=== FTP Upload Status ===")
-    print(f"Circuit Breaker Active: {stats['circuit_breaker_active']}")
-    
-    if stats['circuit_breaker_active'] and stats['circuit_breaker_until']:
-        remaining = stats['circuit_breaker_until'] - time.time()
-        if remaining > 0:
-            print(f"Paused until: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stats['circuit_breaker_until']))}")
-            print(f"Time remaining: {int(remaining)} seconds ({int(remaining/60)} minutes)")
-        else:
-            print("Circuit breaker expired, will retry on next upload attempt")
-    
-    print(f"\nConsecutive Failures: {stats['consecutive_failures']}")
-    print(f"Total Uploads Success: {stats['uploads_success']}")
-    print(f"Total Uploads Failed: {stats['uploads_failed']}")
-    print(f"Success Rate: {stats['success_rate']*100:.1f}%")
-    print(f"Total Bytes Uploaded: {stats['bytes_uploaded']:,} bytes")
-    print()
-
-
-def pause_uploads(publisher, duration_minutes):
-    """Pause FTP uploads for specified duration"""
-    duration_seconds = duration_minutes * 60
-    publisher.pause_uploads(duration_seconds)
-    print(f"\n✓ FTP uploads paused for {duration_minutes} minutes")
-    print(f"  Will resume at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + duration_seconds))}")
-    print()
-
-
-def resume_uploads(publisher):
-    """Resume FTP uploads"""
-    publisher.resume_uploads()
-    print("\n✓ FTP uploads resumed")
-    print()
-
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage:")
-        print("  python ftp_control.py status              - Show FTP upload status")
-        print("  python ftp_control.py pause <minutes>     - Pause FTP uploads for N minutes")
-        print("  python ftp_control.py resume              - Resume FTP uploads")
-        print()
-        print("Examples:")
-        print("  python ftp_control.py status")
-        print("  python ftp_control.py pause 60            - Pause for 1 hour")
-        print("  python ftp_control.py pause 1440          - Pause for 24 hours")
-        print("  python ftp_control.py resume")
+        print(__doc__)
         sys.exit(1)
-    
+
     command = sys.argv[1].lower()
-    
-    # Note: This creates a separate FTP publisher instance just to set the circuit breaker state
-    # The actual running service will pick up the state from the shared FTP connection
-    # For a production solution, you'd want to use IPC or a shared state file
-    print("\nWARNING: This utility creates a separate FTP publisher instance.")
-    print("To control the running service, you need to restart it after making changes.")
-    print("For immediate effect, consider adding a control endpoint to the web interface.\n")
-    
-    publisher = get_ftp_publisher()
-    
+
     if command == 'status':
-        show_status(publisher)
-    
-    elif command == 'pause':
+        cmd_status()
+    elif command == 'disable':
+        cmd_disable()
+    elif command == 'enable':
+        cmd_enable()
+    elif command == 'interval':
         if len(sys.argv) < 3:
-            print("ERROR: Please specify duration in minutes")
-            print("Example: python ftp_control.py pause 60")
+            print("ERROR: Please provide interval in seconds.")
+            print("  Example: python ftp_control.py interval 3600")
             sys.exit(1)
-        
-        try:
-            duration_minutes = int(sys.argv[2])
-            if duration_minutes <= 0:
-                print("ERROR: Duration must be positive")
-                sys.exit(1)
-            
-            pause_uploads(publisher, duration_minutes)
-        except ValueError:
-            print("ERROR: Duration must be a number")
-            sys.exit(1)
-    
-    elif command == 'resume':
-        resume_uploads(publisher)
-    
+        cmd_interval(sys.argv[2])
+    elif command == 'reset':
+        cmd_reset()
     else:
         print(f"ERROR: Unknown command '{command}'")
-        print("Valid commands: status, pause, resume")
+        print("Valid commands: status, disable, enable, interval, reset")
         sys.exit(1)
 
 

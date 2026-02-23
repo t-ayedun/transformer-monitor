@@ -12,6 +12,7 @@ Monitors local directories and uploads:
 """
 
 import os
+import json
 import logging
 import time
 from pathlib import Path
@@ -20,6 +21,11 @@ from threading import Thread, Event
 from typing import Dict, List
 
 from ftp_publisher import FTPPublisher
+
+# Path to the persistent FTP control state file.
+# Write {"enabled": false} here to instantly pause FTP on the running service.
+# Use scripts/ftp_control.py to manage this file safely.
+FTP_STATE_FILE = Path('/home/smartie/transformer_monitor_data/ftp_state.json')
 
 
 class FTPColdStorage:
@@ -81,6 +87,9 @@ class FTPColdStorage:
         self.image_dir = self.base_dir / 'images'
         self.temp_dir = self.base_dir / 'temperature'
 
+        # Runtime pause flag — controlled via ftp_state.json / ftp_control.py
+        self._ftp_paused = False
+
     def start(self):
         """Start background monitoring thread"""
         if not self.ftp_enabled:
@@ -100,9 +109,53 @@ class FTPColdStorage:
             self.monitor_thread.join(timeout=10)
             self.logger.info("FTP cold storage stopped")
 
+    def _read_state_file(self):
+        """
+        Read FTP control state from the persistent state file.
+        Called at the start of every monitor loop cycle so that changes
+        made by ftp_control.py take immediate effect without a service restart.
+
+        State file format (JSON):
+            {
+                "enabled": false,           // pause all FTP uploads
+                "upload_interval_seconds": 3600  // optional: override interval
+            }
+        """
+        try:
+            if FTP_STATE_FILE.exists():
+                with open(FTP_STATE_FILE, 'r') as f:
+                    state = json.load(f)
+                previously_paused = self._ftp_paused
+                self._ftp_paused = not state.get('enabled', True)
+                # Log state transitions only (avoid spamming logs every cycle)
+                if self._ftp_paused and not previously_paused:
+                    self.logger.warning(
+                        "FTP uploads PAUSED via ftp_state.json. "
+                        "Run 'python scripts/ftp_control.py enable' to resume."
+                    )
+                elif not self._ftp_paused and previously_paused:
+                    self.logger.info("FTP uploads RESUMED via ftp_state.json.")
+                # Apply optional interval override
+                override_interval = state.get('upload_interval_seconds')
+                if override_interval and isinstance(override_interval, (int, float)):
+                    self.upload_interval = int(override_interval)
+            else:
+                # No state file — run normally
+                self._ftp_paused = False
+        except Exception as e:
+            self.logger.warning(f"Could not read ftp_state.json: {e}. Continuing with current state.")
+
     def _monitor_loop(self):
         """Background thread that monitors and uploads files"""
         while not self.stop_event.is_set():
+            # Re-read state file every cycle so pause/resume/interval changes
+            # from ftp_control.py take immediate effect.
+            self._read_state_file()
+
+            if self._ftp_paused:
+                self.stop_event.wait(self.upload_interval)
+                continue
+
             try:
                 # Check each upload rule
                 if self.upload_rules.get('videos', {}).get('enabled', False):

@@ -169,8 +169,15 @@ local_storage:
   retention_days: 2  # Keep only 2 days locally (rest goes to FTP)
 
 # FTP Cold Storage (for bulk data - videos, thermal frames, etc.)
+# ──────────────────────────────────────────────────────────────────────────────
+# FTP IS CURRENTLY DISABLED to prevent IP blacklisting on ftp.smarterise.com.
+# To re-enable:
+#   1. Set enabled: true below
+#   2. SSH into Pi and run: python scripts/ftp_control.py enable
+#   3. Optionally adjust the interval: python scripts/ftp_control.py interval 3600
+# ──────────────────────────────────────────────────────────────────────────────
 ftp_storage:
-  enabled: true  # Enable FTP for cold storage
+  enabled: false  # ← DISABLED. Change to true to re-enable FTP uploads.
   host: "ftp.smarterise.com"
   port: 21
   username: "t.ayedun@smarterise.com"
@@ -181,10 +188,10 @@ ftp_storage:
   # What to upload and when
   upload_rules:
     videos:
-      enabled: true
-      upload_after_hours: 0.25  # Upload videos after 15 minutes (fast testing)
-      delete_after_upload: true  # Delete local copy after successful upload
-      retention_days: 30  # Keep on FTP for 30 days
+      enabled: false  # Disabled — use cleanup_local_data.sh to manage videos locally
+      upload_after_hours: 0.25
+      delete_after_upload: true
+      retention_days: 30
 
     thermal_frames:
       enabled: true
@@ -200,16 +207,16 @@ ftp_storage:
       skip_security_breach: true  # Don't upload security images to FTP (use AWS S3)
 
     periodic_snapshots:
-      enabled: true
-      upload_after_hours: 0.25  # Upload snapshots after 15 minutes
+      enabled: false  # Disabled — snapshots cleaned locally by cleanup_local_data.sh
+      upload_after_hours: 0.25
       delete_after_upload: true
-      retention_days: 30  # Keep on FTP for 30 days
+      retention_days: 30
 
     animal_events:
-      enabled: true
-      upload_immediately: true  # Upload animal events immediately (don't store locally)
+      enabled: false  # Disabled — too frequent, causes connection spam
+      upload_immediately: true
       delete_after_upload: true
-      retention_days: 14  # Keep on FTP for 14 days
+      retention_days: 14
     
     temperature_csv:
       enabled: true
@@ -218,9 +225,9 @@ ftp_storage:
       retention_days: 90  # Keep on FTP for 90 days
 
   # Upload scheduling
-  upload_interval: 60  # Check for files to upload every 1 minute
+  upload_interval: 3600  # Check for files every 1 hour (was 60s — reduced to prevent IP bans)
   max_upload_retries: 3
-  retry_delay: 60  # Retry after 60 seconds on failure
+  retry_delay: 300  # Retry after 5 minutes on failure (was 60s)
 
 # Temperature Data Export
 temperature_export:
@@ -241,9 +248,9 @@ aws_iot:
   compression: true  # Compress MQTT payloads (50-70% reduction)
   bandwidth_limit_kbps: 50  # Bandwidth throttling limit
 
-# FTP Configuration
+# FTP Configuration (legacy section — ftp_storage above is preferred)
 ftp:
-  enabled: true
+  enabled: false  # ← DISABLED. Mirror of ftp_storage.enabled above.
   host: "ftp.smarterise.com"
   port: 21
   username: "t.ayedun@smarterise.com"
